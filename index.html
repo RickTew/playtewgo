@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEWGO - Five in a row. Two to capture.</title>
+<meta name="description" content="TEWGO is a fast, elegant strategy board game for iPhone and iPad. Get five in a row or capture five pairs. Eight themed worlds, online multiplayer, earn-through-play unlocks.">
+<style>
+  :root {
+    --bg: #0a0a14;
+    --bg2: #12122a;
+    --gold: #ffd60a;
+    --text: #f2f2f7;
+    --muted: #9a9ab0;
+    --card: rgba(255,255,255,0.05);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .stars {
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(1px 1px at 20% 30%, #fff8, transparent 40%),
+      radial-gradient(1px 1px at 70% 15%, #fff6, transparent 40%),
+      radial-gradient(1.5px 1.5px at 40% 70%, #fff7, transparent 40%),
+      radial-gradient(1px 1px at 85% 55%, #fff5, transparent 40%),
+      radial-gradient(1px 1px at 10% 85%, #fff6, transparent 40%),
+      radial-gradient(1.5px 1.5px at 55% 40%, #fff4, transparent 40%),
+      radial-gradient(1px 1px at 30% 10%, #fff5, transparent 40%),
+      radial-gradient(1px 1px at 92% 88%, #fff7, transparent 40%),
+      radial-gradient(ellipse 80% 50% at 50% -10%, #1c1c4a 0%, transparent 60%),
+      var(--bg);
+  }
+  header { text-align: center; padding: 72px 24px 32px; }
+  .logo {
+    font-size: clamp(56px, 12vw, 104px);
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-shadow: 0 0 40px rgba(255,214,10,0.25);
+  }
+  .logo .go { color: var(--gold); }
+  .tagline { font-size: clamp(17px, 3vw, 22px); color: var(--muted); margin-top: 4px; }
+  .tagline b { color: var(--text); }
+  main { max-width: 960px; margin: 0 auto; padding: 0 24px 80px; }
+  section { margin-top: 64px; }
+  h2 {
+    font-size: 24px; margin-bottom: 16px;
+    color: var(--gold); letter-spacing: 1px; text-transform: uppercase; font-size: 16px;
+  }
+  .cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
+  .btn {
+    display: inline-block; padding: 14px 28px; border-radius: 14px;
+    font-weight: 700; text-decoration: none; font-size: 17px;
+  }
+  .btn-gold { background: var(--gold); color: #000; }
+  .btn-ghost { border: 1px solid #ffffff40; color: var(--text); }
+  .shots {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px; margin-top: 8px;
+  }
+  .shots img {
+    width: 100%; height: auto; border-radius: 24px;
+    border: 1px solid #ffffff1f;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .card { background: var(--card); border: 1px solid #ffffff14; border-radius: 18px; padding: 22px; }
+  .card h3 { font-size: 18px; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: 15px; }
+  #play .card { text-align: center; padding: 48px 24px; }
+  #play .soon {
+    display: inline-block; margin-top: 10px; padding: 6px 14px; border-radius: 999px;
+    background: #ffd60a1a; color: var(--gold); font-size: 13px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  footer {
+    border-top: 1px solid #ffffff14; text-align: center;
+    padding: 32px 24px 48px; color: var(--muted); font-size: 14px;
+  }
+  footer a { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<header>
+  <div class="logo">TEW<span class="go">GO</span></div>
+  <p class="tagline"><b>Five in a row.</b> &middot; <b>Two to capture.</b></p>
+  <div class="cta">
+    <a class="btn btn-gold" href="#" id="appstore-link">Download on the App Store</a>
+    <a class="btn btn-ghost" href="#support">Support</a>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2>Eight worlds. One game.</h2>
+    <div class="shots">
+      <img src="assets/shot_ocean.png" alt="TEWGO in the Ocean theme: pirate and mermaid pieces under sun rays and kelp">
+      <img src="assets/shot_space.png" alt="TEWGO in the Space theme: robot and astronaut pieces on a starfield">
+      <img src="assets/shot_feudalJapan.png" alt="TEWGO in the Feudal Japan theme: ninja and geisha pieces with Mount Fuji">
+      <img src="assets/shot_western.png" alt="TEWGO in the Western theme: cowboy and sheriff pieces at sunset">
+    </div>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <div class="rules">
+      <div class="card">
+        <h3>Two ways to win</h3>
+        <p>Line up five of your pieces in a row, or capture five pairs of your opponent's. Every move attacks and defends at once.</p>
+      </div>
+      <div class="card">
+        <h3>Play anyone</h3>
+        <p>A friend on the same device, players online in real-time or turn-based matches through Game Center, or an AI with three difficulty levels.</p>
+      </div>
+      <div class="card">
+        <h3>Make it yours</h3>
+        <p>Space, Feudal Japan, Dungeon, Ocean, Undead, Western, Desert, Classic. Your board, your pieces, your music. Everything unlocks by playing, never by paying to win.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="play">
+    <h2>Play in your browser</h2>
+    <!-- The future web build of TEWGO mounts here. Keep this container. -->
+    <div class="card" id="game">
+      <h3>The browser version of TEWGO is in the works.</h3>
+      <p style="color:var(--muted)">Same rules, same worlds, right here on this page.</p>
+      <span class="soon">Coming soon</span>
+    </div>
+  </section>
+
+  <section id="support">
+    <h2>Support</h2>
+    <div class="card">
+      <p>Questions, bug reports, or ideas? Email <a href="mailto:info@ricktew.com" style="color:var(--gold)">info@ricktew.com</a> and we'll get back to you within a couple of days.</p>
+      <p style="margin-top:12px; color:var(--muted); font-size:14px;">Privacy: TEWGO does not collect any personal data. Game settings are stored on your device, and online matches use Apple's Game Center.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>TEWGO &mdash; TEW is two, the pair you capture. GO is five in Japanese, the row you need.</p>
+  <p style="margin-top:8px;">&copy; 2026 Rick Tew &middot; <a href="mailto:info@ricktew.com">info@ricktew.com</a></p>
+</footer>
+</body>
+</html>
