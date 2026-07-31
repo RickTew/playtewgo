@@ -7,9 +7,11 @@ The TEWGO website AND the browser version of the game. Two things live here:
   friends on Android can play TEWGO.
 
 ## Relationship to the iOS app
-The iOS app lives in `~/Dev/TEWGO` (repo RickTew/TEWGO) and is the SOURCE OF
-TRUTH for game rules, AI behavior, and design decisions (see its GAME_DESIGN.md
-and CLAUDE.md). `play/engine/` is a direct JavaScript port of:
+The iOS app lives in `~/Dev/TEWGO` and is the SOURCE OF TRUTH for game
+rules, AI behavior, and design decisions (see its GAME_DESIGN.md and
+CLAUDE.md). NOTE (verified 2026-07-31): that repo has NO git remote on
+this Mac - it is local-only, so FEATURES.md commits there cannot be
+pushed. Ask Rick if it should get a GitHub remote. `play/engine/` is a direct JavaScript port of:
 - `TEWGO/Game/GameBoard.swift` -> `play/engine/board.js`
 - `TEWGO/Game/GameState.swift` -> `play/engine/state.js`
 - `TEWGO/Game/GameAI.swift` -> `play/engine/ai.js`
@@ -24,8 +26,8 @@ repo is read-only reference from here; never edit it from this project.
   asking for one.
 - Plain JavaScript, not TypeScript, so the browser and Node run the same files.
 - Tests use Node's built-in runner: `npm test` (ports of the iOS
-  GameBoardTests/GameStateTests/GameAITests, 22 tests). Run them before every
-  commit that touches `play/engine/`.
+  GameBoardTests/GameStateTests/GameAITests plus progression tests,
+  28 total). Run them before every commit that touches `play/engine/`.
 - Game auto-saves to localStorage via the same JSON state shape as the iOS
   multiplayer codec (`tewgo.web.game`, `tewgo.web.difficulty`).
 
@@ -55,7 +57,12 @@ root, then open /play/).
   (focus quirk). Always click twice or wait 2s after navigate before the
   first meaningful click.
 - Synthetic PointerEvents via javascript_tool DO fire the game's handlers
-  (placement works) but are untrusted: no activation, no audio.
+  (placement works) but are untrusted: no activation, no audio. A
+  pointerdown with `pointerType: 'mouse'` places a stone immediately
+  (click-to-place path), which makes end-to-end game tests easy: seed a
+  near-won board through encodeState into tewgo.web.game, reload, then
+  dispatch one such event at the winning cell (progression E2E was
+  verified exactly this way).
 
 ## Built so far (2026-07-31)
 - Engine + AI + 22 tests; canvas board with hover ghost, pop/capture
@@ -143,9 +150,11 @@ until games > 0), victory overlay announces the unlock the moment the
 where it is still locked (iOS parity).
 
 ## Not yet built (candidates, in rough order)
-Themes are DONE (2026-07-31, all eight worlds at parity). What's left,
-in the order updates.html promises it:
-- Online multiplayer (would need a backend; Supabase is available)
+Themes and progression are DONE (2026-07-31). What's left, in the
+order updates.html promises it:
+- Online multiplayer, the last big roadmap item (needs a backend;
+  Supabase is available; the state codec already matches the iOS
+  multiplayer payload shape, which was built for exactly this)
 - Service worker for offline play (skipped deliberately: cache
   invalidation risk vs benefit; revisit after family playtests)
 - Whatever family playtests surface (the site exists so family and
