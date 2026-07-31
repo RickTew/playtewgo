@@ -112,11 +112,20 @@
   }
   .overlay {
     position: absolute; inset: 0; display: none;
-    align-items: center; justify-content: center; text-align: center;
+    align-items: flex-start; justify-content: center; text-align: center;
     background: rgba(5,5,26,0.82); backdrop-filter: blur(2px);
-    border-radius: 16px; padding: 24px;
+    border-radius: 16px; padding: 24px; overflow-y: auto;
   }
   .overlay.show { display: flex; }
+  /* margin:auto centers short content and lets tall content scroll from
+     the top instead of clipping (the piece picker got cut off) */
+  .overlay > div { margin: auto; }
+  .setup-rows {
+    display: flex; flex-direction: column; gap: 14px;
+    align-items: center; margin: 20px 0;
+  }
+  .setup-rows label { display: flex; align-items: center; gap: 10px; }
+  .setup-rows select { min-width: 140px; }
   .overlay h2 { font-size: 32px; margin-bottom: 6px; }
   .overlay p { color: var(--muted); margin-bottom: 20px; }
   .btn-gold {
@@ -168,7 +177,7 @@
   .piece-option canvas { width: 34px; height: 44px; }
   .scene-option canvas { width: 56px; height: 36px; border-radius: 6px; border: 1px solid #ffffff1a; }
   .scene-option { width: 175px; }
-  .picker-scroll { max-height: 52vh; overflow-y: auto; padding-right: 4px; flex-wrap: wrap; }
+  .picker-scroll { flex-wrap: wrap; }
   .variant-row { display: flex; gap: 8px; justify-content: center; margin: 6px 0 18px; }
   .variant-btn { width: auto; padding: 8px 16px; margin-top: 0; }
 
@@ -217,6 +226,36 @@
         <button class="btn-gold" id="playAgain">Play again</button>
         <button class="btn-ghost" id="shareBtn">Share</button>
       </div>
+    </div>
+  </div>
+  <div class="overlay" id="setup">
+    <div>
+      <h2 style="font-size:28px">New game</h2>
+      <div class="setup-rows">
+        <label>Theme
+          <select id="setupTheme">
+            <option value="space">Space</option>
+            <option value="ocean">Ocean</option>
+          </select>
+        </label>
+        <label>Mode
+          <select id="setupMode">
+            <option value="ai">vs AI</option>
+            <option value="2p">2 players</option>
+          </select>
+        </label>
+        <label id="setupDiffRow">AI level
+          <select id="setupDiff">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+      </div>
+      <p style="color:var(--muted); font-size:14px; margin-bottom:18px">
+        Pieces, board, background and sound can be changed any time below the board.
+      </p>
+      <button class="btn-gold" id="startGame">Start game</button>
     </div>
   </div>
   <div class="overlay" id="scenePicker">

@@ -47,6 +47,7 @@ Space and Ocean are the worked examples of every step.
 
 ## 6. Verify (all in the browser before pushing)
 - [ ] Theme select shows it; switching re-skins live and swaps music.
+- [ ] New game setup screen lists it in the Theme dropdown.
 - [ ] 👥 picker: full roster in both columns, previews correct, Type row
       (Flat/Chip/Half/Tall), Finish row (Classic/3D), Color swatches all
       render with the new figures.

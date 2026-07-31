@@ -1047,8 +1047,10 @@ modeEl.addEventListener('change', () => {
 // resetting the game in progress, matching the iOS model where a theme
 // is purely visual.
 const themeEl = document.getElementById('theme');
-themeEl.addEventListener('change', () => {
-  theme = THEMES[themeEl.value] ? themeEl.value : 'space';
+
+function applyTheme(key) {
+  theme = THEMES[key] ? key : 'space';
+  themeEl.value = theme;
   try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
   resetMusicForTheme();
   loadThemePrefs();
@@ -1056,6 +1058,48 @@ themeEl.addEventListener('change', () => {
   rebuildBoardSelect();
   applyScene();
   ensureMusic();
+}
+
+themeEl.addEventListener('change', () => applyTheme(themeEl.value));
+
+// ----- New game setup screen -----
+// Arriving fresh (no game in progress) lands on choices first, not
+// straight onto a board. Start applies the picks, then the VS intro runs.
+
+const setupEl = document.getElementById('setup');
+
+function openSetup() {
+  if (!setupEl) {
+    showIntro();
+    return;
+  }
+  document.getElementById('setupTheme').value = theme;
+  document.getElementById('setupMode').value = mode;
+  document.getElementById('setupDiff').value = difficultyEl.value;
+  document.getElementById('setupDiffRow').style.display = mode === 'ai' ? '' : 'none';
+  setupEl.classList.add('show');
+}
+
+document.getElementById('setupMode')?.addEventListener('change', () => {
+  document.getElementById('setupDiffRow').style.display =
+    document.getElementById('setupMode').value === 'ai' ? '' : 'none';
+});
+
+document.getElementById('startGame')?.addEventListener('click', () => {
+  const pickedTheme = document.getElementById('setupTheme').value;
+  const pickedMode = document.getElementById('setupMode').value === '2p' ? '2p' : 'ai';
+  difficultyEl.value = document.getElementById('setupDiff').value;
+  try { localStorage.setItem(DIFFICULTY_KEY, difficultyEl.value); } catch { /* ignore */ }
+  if (pickedMode !== mode) {
+    mode = pickedMode;
+    modeEl.value = pickedMode;
+    try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ }
+    applyModeUI();
+  }
+  if (THEMES[pickedTheme] && pickedTheme !== theme) applyTheme(pickedTheme);
+  setupEl.classList.remove('show');
+  ensureMusic();
+  newGame();
 });
 // Install-as-app: the button appears only when the browser offers a
 // native install prompt (Chrome/Edge on Android and desktop; iOS Safari
@@ -1135,7 +1179,7 @@ applyScene();
 
 const resumed = restore();
 if (resumed && isAiGame() && current === AI_PLAYER) scheduleAiMove();
-if (!resumed) showIntro();
+if (!resumed) openSetup();
 updateToggles();
 draw();
 updateHud();
