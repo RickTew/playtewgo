@@ -1082,10 +1082,12 @@ function openSetup() {
   document.getElementById('setupMode').value = mode;
   document.getElementById('setupDiff').value = difficultyEl.value;
   document.getElementById('setupDiffRow').style.display = mode === 'ai' ? '' : 'none';
-  // Back only makes sense when there is a live game behind the overlay
+  // Continue only makes sense when there is a live game behind the overlay
   const hasLiveGame = !gameOver && board.grid.some((row) => row.some((v) => v !== 0));
   const cancelEl = document.getElementById('setupCancel');
   if (cancelEl) cancelEl.style.display = hasLiveGame ? '' : 'none';
+  const startEl = document.getElementById('startGame');
+  if (startEl) startEl.className = hasLiveGame ? 'btn-ghost' : 'btn-gold';
   setupEl.classList.add('show');
 }
 
@@ -1190,9 +1192,12 @@ rebuildBoardSelect();
 applyModeUI();
 applyScene();
 
+// The options screen is the front door on every arrival; a saved game
+// adds a gold "Continue game" button (Rick: "Continue and New so we can
+// see the options screen from the front").
 const resumed = restore();
 if (resumed && isAiGame() && current === AI_PLAYER) scheduleAiMove();
-if (!resumed) openSetup();
+openSetup();
 updateToggles();
 draw();
 updateHud();
