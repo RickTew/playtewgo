@@ -451,6 +451,81 @@ export const FIGURES = {
   },
 };
 
+// Classic roster: eight material variants sharing five shapes (pawn, stone,
+// rook, meeple, die, hourglass). `band` names the eye-band/detail shape when
+// it differs from the entry key.
+const PAWN_POINTS = [
+  [0.85, 0.00], [0.85, 0.25], [0.55, 0.45], [0.45, 0.80], [0.35, 1.40],
+  [0.30, 1.95], [0.50, 2.10], [0.30, 2.30], [0.50, 2.55], [0.55, 2.85],
+  [0.40, 3.10], [0.00, 3.18], [-0.40, 3.10], [-0.55, 2.85], [-0.50, 2.55],
+  [-0.30, 2.30], [-0.50, 2.10], [-0.30, 1.95], [-0.35, 1.40], [-0.45, 0.80],
+  [-0.55, 0.45], [-0.85, 0.25], [-0.85, 0.00],
+];
+const STONE_POINTS = [
+  [0.95, 0.00], [0.95, 0.20], [0.85, 0.45], [0.60, 0.70], [0.30, 0.85],
+  [0.00, 0.90], [-0.30, 0.85], [-0.60, 0.70], [-0.85, 0.45], [-0.95, 0.20],
+  [-0.95, 0.00],
+];
+const ROOK_POINTS = [
+  [0.85, 0.00], [0.85, 0.25], [0.55, 0.45], [0.48, 1.00], [0.45, 2.10],
+  [0.62, 2.30], [0.62, 3.05], [0.36, 3.05], [0.36, 2.72], [0.13, 2.72],
+  [0.13, 3.05], [-0.13, 3.05], [-0.13, 2.72], [-0.36, 2.72], [-0.36, 3.05],
+  [-0.62, 3.05], [-0.62, 2.30], [-0.45, 2.10], [-0.48, 1.00], [-0.55, 0.45],
+  [-0.85, 0.25], [-0.85, 0.00],
+];
+const MEEPLE_POINTS = [
+  [0.80, 0.00], [0.80, 0.40], [0.52, 0.85], [0.95, 1.30], [0.88, 1.72],
+  [0.42, 1.80], [0.50, 2.10], [0.42, 2.55], [0.00, 2.75], [-0.42, 2.55],
+  [-0.50, 2.10], [-0.42, 1.80], [-0.88, 1.72], [-0.95, 1.30], [-0.52, 0.85],
+  [-0.80, 0.40], [-0.80, 0.00], [-0.30, 0.00], [0.00, 0.45], [0.30, 0.00],
+];
+const DICE_POINTS = [
+  [0.62, 0.00], [0.80, 0.18], [0.85, 0.50], [0.85, 1.20], [0.80, 1.52],
+  [0.62, 1.70], [-0.62, 1.70], [-0.80, 1.52], [-0.85, 1.20], [-0.85, 0.50],
+  [-0.80, 0.18], [-0.62, 0.00],
+];
+const HOURGLASS_POINTS = [
+  [0.80, 0.00], [0.80, 0.20], [0.62, 0.32], [0.16, 1.22], [0.16, 1.42],
+  [0.62, 2.32], [0.80, 2.44], [0.80, 2.64], [-0.80, 2.64], [-0.80, 2.44],
+  [-0.62, 2.32], [-0.16, 1.42], [-0.16, 1.22], [-0.62, 0.32], [-0.80, 0.20],
+  [-0.80, 0.00],
+];
+
+Object.assign(FIGURES, {
+  onyxPawn: {
+    name: 'Onyx Pawn', primary: '#1A1A1A', stroke: '#737373',
+    glowRgb: '64, 64, 64', accent: '#737373', points: PAWN_POINTS,
+  },
+  onyxStone: {
+    name: 'Onyx Stone', primary: '#14141A', stroke: '#4D4D52',
+    glowRgb: '51, 51, 56', accent: '#4D4D52', points: STONE_POINTS,
+  },
+  onyxRook: {
+    name: 'Onyx Rook', primary: '#1F1F24', stroke: '#7A7A80',
+    glowRgb: '71, 71, 77', accent: '#7A7A80', points: ROOK_POINTS,
+  },
+  walnutMeeple: {
+    name: 'Walnut Meeple', primary: '#6B401F', stroke: '#AD7A47',
+    glowRgb: '140, 89, 46', accent: '#AD7A47', points: MEEPLE_POINTS,
+  },
+  ivoryPawn: {
+    name: 'Ivory Pawn', primary: '#F2F2EB', stroke: '#8C8C85',
+    glowRgb: '217, 217, 209', accent: '#8C8C85', points: PAWN_POINTS,
+  },
+  ivoryStone: {
+    name: 'Ivory Stone', primary: '#F7F5EB', stroke: '#9E998C',
+    glowRgb: '235, 235, 224', accent: '#9E998C', points: STONE_POINTS,
+  },
+  ivoryDie: {
+    name: 'Ivory Die', primary: '#F5F2E6', stroke: '#8C8A80',
+    glowRgb: '230, 230, 219', accent: '#8C8A80', band: 'dice', points: DICE_POINTS,
+  },
+  brassHourglass: {
+    name: 'Brass Hourglass', primary: '#B88C40', stroke: '#EBC773',
+    glowRgb: '217, 173, 82', accent: '#EBC773', band: 'hourglass', points: HOURGLASS_POINTS,
+  },
+});
+
 export const FIGURE_KINDS = Object.keys(FIGURES);
 
 /** Height of a figure in r units (feet at 0). */
@@ -837,6 +912,25 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
       ctx.arc(cx + dx * r, at(2.55), r * 0.05, 0, Math.PI * 2);
       ctx.fill();
     }
+  } else if (kind === 'dice') {
+    // Three pips running diagonally across the die face
+    ctx.fillStyle = '#0d0d0d';
+    for (const [dx, dy] of [[-0.42, 1.22], [0, 0.85], [0.42, 0.48]]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(dy), r * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'hourglass') {
+    // Sand: small pile in the lower bulb + falling trickle
+    ctx.fillStyle = '#EDD48C';
+    ctx.beginPath();
+    ctx.moveTo(cx - r * 0.45, at(0.30));
+    ctx.lineTo(cx + r * 0.45, at(0.30));
+    ctx.lineTo(cx, at(0.75));
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(237, 212, 140, 0.9)';
+    ctx.fillRect(cx - r * 0.03, at(1.62), r * 0.06, r * 0.85);
   }
 }
 
@@ -910,6 +1004,6 @@ export function drawFigure(ctx, kind, cx, feetY, r, alpha = 1, opts = {}) {
     ctx.stroke();
   }
 
-  drawEyeBand(ctx, kind, cx, feetY, r, f.accent);
+  drawEyeBand(ctx, f.band ?? kind, cx, feetY, r, f.accent);
   ctx.restore();
 }

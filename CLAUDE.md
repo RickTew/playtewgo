@@ -82,12 +82,13 @@ in the 🖼️ popup, light boards flip the grid), Ocean theme (6 figures,
 5 scenes, 4 themed boards, audio).
 
 ## Options audit vs iOS (2026-07-31, final pass - deltas CLOSED)
-Space, Ocean, Feudal Japan, Dungeon, Undead, Western, and Desert are
-at full iOS option parity: all scenes (Space 13, the rest 12 each,
-iOS names/order/light flags), full rosters + palettes, 4 piece types,
-Finish (Classic/3D dimensional), Color schemes (11 pairs; Gold
-omitted until web has progression), 7+4 boards each, 4 neutrals,
-audio. Porting a new theme: follow THEME_CHECKLIST.md, every box.
+ALL EIGHT themes are at full iOS option parity (Space, Ocean, Feudal
+Japan, Dungeon, Undead, Western, Desert, Classic): all scenes (Space
+13, the rest 12 each, iOS names/order/light flags), full rosters +
+palettes, 4 piece types, Finish (Classic/3D dimensional), Color
+schemes (11 pairs; Gold omitted until web has progression), 7+4
+boards each, 4 neutrals, audio. THEME_CHECKLIST.md documents how the
+ports were done.
 
 Feudal Japan shipped 2026-07-31 (play/feudaljapan.js): Ninja/Geisha/
 Samurai/Daimyo roster, 12 scenes (Sakura Dawn..Veranda), Kaya Goban/
@@ -114,14 +115,21 @@ Desert shipped 2026-07-31 (play/desert.js): SIX-figure roster
 Oasis), Temple Granite/Reed Mat/Cartouche/Lapis Lazuli boards, audio,
 default scene Pyramids.
 
+Classic shipped 2026-07-31 (play/classic.js): EIGHT material variants
+sharing five shapes (Onyx Pawn/Stone/Rook + Walnut Meeple vs Ivory
+Pawn/Stone/Die + Brass Hourglass; FIGURES entries share point arrays,
+optional `band` key maps to the dice/hourglass detail painter), 12
+scenes (Wood..Park; scene key classicSlate because the neutral owns
+'slate'), Maple Inlay/Picnic Wood/Walnut Inlay/Ivory boards, audio,
+default scene Wood. THE THEME SET IS COMPLETE.
+
 UI conventions (Rick 2026-07-31): selects are chevron-free and compact
 (appearance:none); the 4 control buttons use inline stroke SVGs, not
 emoji; the install button shows /icon-192.png; Board and Piece type are
 also top-level dropdowns in the controls row, kept in sync with pickers.
 
 ## Not yet built (candidates, in rough order)
-- Remaining 1 theme via THEME_CHECKLIST.md (Classic, last by iOS
-  unlock order: unlockAfterGames 38) - then all eight worlds ship
+- (Themes DONE 2026-07-31: all eight worlds shipped at parity)
 - Gold color scheme once the web has win-based progression
 - Online multiplayer (would need a backend; Supabase is available)
 - Service worker for offline play (skipped deliberately: cache

@@ -9,6 +9,7 @@ import { DUNGEON_SCENES } from './dungeon.js';
 import { UNDEAD_SCENES } from './undead.js';
 import { WESTERN_SCENES } from './western.js';
 import { DESERT_SCENES } from './desert.js';
+import { CLASSIC_SCENES } from './classic.js';
 
 export const NEUTRALS = [
   { key: 'sepia', name: 'Sepia', neutral: true, light: true, color: '#F2E0BD' },
@@ -67,9 +68,16 @@ export const THEMES = {
     defaults: ['pharaoh', 'mummy'],
     defaultScene: 'pyramids',
   },
+  classic: {
+    name: 'Classic',
+    scenes: CLASSIC_SCENES,
+    figures: ['onyxPawn', 'onyxStone', 'onyxRook', 'walnutMeeple', 'ivoryPawn', 'ivoryStone', 'ivoryDie', 'brassHourglass'],
+    defaults: ['onyxPawn', 'ivoryPawn'],
+    defaultScene: 'wood',
+  },
 };
 
-const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...FEUDALJAPAN_SCENES, ...DUNGEON_SCENES, ...UNDEAD_SCENES, ...WESTERN_SCENES, ...DESERT_SCENES, ...NEUTRALS];
+const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...FEUDALJAPAN_SCENES, ...DUNGEON_SCENES, ...UNDEAD_SCENES, ...WESTERN_SCENES, ...DESERT_SCENES, ...CLASSIC_SCENES, ...NEUTRALS];
 
 /** Returns undefined for unknown keys; callers fall back to the theme default. */
 export function sceneByKey(key) {

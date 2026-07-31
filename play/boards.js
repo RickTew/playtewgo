@@ -57,6 +57,12 @@ export const THEME_BOARDS = {
     { key: 'cartouche', name: 'Cartouche' },
     { key: 'lapis', name: 'Lapis Lazuli' },
   ],
+  classic: [
+    { key: 'mapleInlay', name: 'Maple Inlay', light: true },
+    { key: 'picnicWood', name: 'Picnic Wood' },
+    { key: 'walnutInlay', name: 'Walnut Inlay' },
+    { key: 'ivory', name: 'Ivory', light: true },
+  ],
 };
 
 export function boardsForTheme(theme) {
@@ -322,6 +328,33 @@ export function paintBoardRect(c, key, x, y, w, h) {
       tonePatches(c, x, y, w, h, rand, '18, 31, 77', 5, 0.30);
       c.strokeStyle = 'rgba(217, 173, 71, 0.50)';
       c.lineWidth = 1.5;
+      c.beginPath();
+      c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
+      c.stroke();
+      break;
+    case 'mapleInlay':
+      slab(c, x, y, w, h, '#9E7A4D', '#2E1A12');
+      tonePatches(c, x, y, w, h, rand, '128, 92, 51', 5, 0.30);
+      break;
+    case 'picnicWood':
+      slab(c, x, y, w, h, '#8C704D', '#574029');
+      tonePatches(c, x, y, w, h, rand, '115, 87, 56', 5, 0.25);
+      cornerDots(c, x, y, w, h, Math.min(11, w * 0.08), Math.min(3, w * 0.025), '#737373', '#333333');
+      break;
+    case 'walnutInlay':
+      slab(c, x, y, w, h, '#472B17', '#1F1208');
+      tonePatches(c, x, y, w, h, rand, '51, 28, 13', 5, 0.28);
+      c.strokeStyle = 'rgba(199, 158, 77, 0.50)';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
+      c.stroke();
+      break;
+    case 'ivory':
+      slab(c, x, y, w, h, '#EBE3CC', '#9E8F6B');
+      tonePatches(c, x, y, w, h, rand, '204, 191, 158', 5, 0.14);
+      c.strokeStyle = 'rgba(204, 168, 87, 0.45)';
+      c.lineWidth = 1;
       c.beginPath();
       c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
       c.stroke();
