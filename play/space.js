@@ -1,27 +1,9 @@
-// Space scene backgrounds + the universal neutral options, echoing the iOS
-// catalog (BackgroundRenderer.swift space scenes, NeutralBackground colors).
-// Painted scenes follow the iOS glow rule: layered soft radial glows, never
-// hard-edged discs. Seeded so each scene is stable between visits.
+// Space scene backgrounds, echoing the iOS catalog (BackgroundRenderer.swift
+// space scenes). Painted scenes follow the iOS glow rule: layered soft radial
+// glows, never hard-edged discs. Seeded so each scene is stable between
+// visits. Shared painting helpers are exported for the other theme files.
 
-export const SCENES = [
-  { key: 'nebula', name: 'Nebula' },
-  { key: 'void', name: 'Void' },
-  { key: 'aurora', name: 'Aurora' },
-  { key: 'crimson', name: 'Crimson' },
-  { key: 'galaxy', name: 'Galaxy' },
-  { key: 'asteroids', name: 'Asteroid Field' },
-  // NeutralBackground constants from BackgroundStyle.swift
-  { key: 'sepia', name: 'Sepia', neutral: true, light: true, color: '#F2E0BD' },
-  { key: 'cleanLight', name: 'Clean Light', neutral: true, light: true, color: '#F5F5F5' },
-  { key: 'cleanDark', name: 'Clean Dark', neutral: true, color: '#141419' },
-  { key: 'slate', name: 'Slate', neutral: true, color: '#3D4250' },
-];
-
-export function sceneByKey(key) {
-  return SCENES.find((s) => s.key === key) ?? SCENES[0];
-}
-
-function mulberry32(seed) {
+export function mulberry32(seed) {
   let a = seed;
   return () => {
     a |= 0;
@@ -32,7 +14,7 @@ function mulberry32(seed) {
   };
 }
 
-function glow(c, x, y, r, rgb, alpha, layers = 3) {
+export function glow(c, x, y, r, rgb, alpha, layers = 3) {
   for (let i = layers; i >= 1; i -= 1) {
     const rr = (r * i) / layers;
     const g = c.createRadialGradient(x, y, 0, x, y, rr);
@@ -46,7 +28,7 @@ function glow(c, x, y, r, rgb, alpha, layers = 3) {
   }
 }
 
-function sky(c, w, h, top, mid, bottom) {
+export function sky(c, w, h, top, mid, bottom) {
   const g = c.createLinearGradient(0, 0, 0, h);
   g.addColorStop(0, top);
   g.addColorStop(0.45, mid);
@@ -55,7 +37,7 @@ function sky(c, w, h, top, mid, bottom) {
   c.fillRect(0, 0, w, h);
 }
 
-function starfield(c, w, h, rand, { density = 6500, aMin = 0.3, aMax = 1.0, glint = 0.06 } = {}) {
+export function starfield(c, w, h, rand, { density = 6500, aMin = 0.3, aMax = 1.0, glint = 0.06 } = {}) {
   const count = Math.round((w * h) / density);
   for (let i = 0; i < count; i += 1) {
     const x = rand() * w;
@@ -217,35 +199,11 @@ function paintAsteroids(c, w, h, m) {
   }
 }
 
-const PAINTERS = {
-  nebula: paintNebula,
-  void: paintVoid,
-  aurora: paintAurora,
-  crimson: paintCrimson,
-  galaxy: paintGalaxy,
-  asteroids: paintAsteroids,
-};
-
-/**
- * Paints a scene onto a canvas. With no explicit size the canvas's CSS size
- * and devicePixelRatio are used (the full-page backdrop); pass w/h to render
- * a fixed-size thumbnail.
- */
-export function paintScene(canvas, key, w, h) {
-  const scene = sceneByKey(key);
-  const cssW = w ?? canvas.clientWidth;
-  const cssH = h ?? canvas.clientHeight;
-  if (cssW === 0 || cssH === 0) return;
-  const dpr = w ? 1 : Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.round(cssW * dpr);
-  canvas.height = Math.round(cssH * dpr);
-  const c = canvas.getContext('2d');
-  c.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  if (scene.neutral) {
-    c.fillStyle = scene.color;
-    c.fillRect(0, 0, cssW, cssH);
-    return;
-  }
-  PAINTERS[scene.key](c, cssW, cssH, Math.min(cssW, cssH));
-}
+export const SPACE_SCENES = [
+  { key: 'nebula', name: 'Nebula', paint: paintNebula },
+  { key: 'void', name: 'Void', paint: paintVoid },
+  { key: 'aurora', name: 'Aurora', paint: paintAurora },
+  { key: 'crimson', name: 'Crimson', paint: paintCrimson },
+  { key: 'galaxy', name: 'Galaxy', paint: paintGalaxy },
+  { key: 'asteroids', name: 'Asteroid Field', paint: paintAsteroids },
+];

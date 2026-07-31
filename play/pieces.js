@@ -61,6 +61,87 @@ export const FIGURES = {
       [0.48, 0.36],
     ],
   },
+  // ----- Ocean roster (ThemeRegistry.ocean palettes) -----
+  pirate: {
+    name: 'Pirate',
+    primary: '#4D332E',
+    stroke: '#D93333',
+    glowRgb: '242, 102, 77',
+    accent: '#FFF2D9',
+    points: [
+      [0.55, 0.00], [0.55, 0.50], [0.50, 1.10], [0.85, 1.30], [0.55, 1.75],
+      [0.45, 2.00], [0.55, 2.20], [0.55, 2.55], [1.00, 2.78], [0.65, 2.95],
+      [0.45, 3.18], [0.20, 3.05], [0.00, 3.22], [-0.20, 3.05], [-0.45, 3.18],
+      [-0.65, 2.95], [-1.00, 2.78], [-0.55, 2.55], [-0.55, 2.20], [-0.45, 2.00],
+      [-0.55, 1.75], [-0.85, 1.30], [-0.50, 1.10], [-0.55, 0.50], [-0.55, 0.00],
+    ],
+  },
+  mermaid: {
+    name: 'Mermaid',
+    primary: '#33A6B3',
+    stroke: '#FF8C8C',
+    glowRgb: '140, 242, 255',
+    accent: '#FFF2D9',
+    points: [
+      [0.95, 0.00], [0.45, 0.30], [0.60, 0.65], [0.40, 1.10], [0.55, 1.50],
+      [0.40, 1.85], [0.85, 2.10], [0.50, 2.35], [0.40, 2.55], [0.55, 2.75],
+      [0.85, 2.95], [0.50, 3.05], [0.00, 3.18], [-0.50, 3.05], [-0.85, 2.95],
+      [-0.55, 2.75], [-0.40, 2.55], [-0.50, 2.35], [-0.85, 2.10], [-0.40, 1.85],
+      [-0.55, 1.50], [-0.40, 1.10], [-0.60, 0.65], [-0.45, 0.30], [-0.95, 0.00],
+    ],
+  },
+  fish: {
+    name: 'Fish',
+    primary: '#F28C33',
+    stroke: '#A64D14',
+    glowRgb: '255, 191, 89',
+    accent: '#1A1A1F',
+    points: [
+      [0.85, 0.00], [0.30, 0.40], [0.45, 0.90], [0.65, 1.50], [0.55, 2.10],
+      [0.70, 2.45], [0.55, 2.85], [0.30, 3.10], [0.00, 3.18], [-0.30, 3.10],
+      [-0.55, 2.85], [-0.70, 2.45], [-0.55, 2.10], [-0.65, 1.50], [-0.45, 0.90],
+      [-0.30, 0.40], [-0.85, 0.00],
+    ],
+  },
+  kraken: {
+    name: 'Kraken',
+    primary: '#521A66',
+    stroke: '#BF4D8C',
+    glowRgb: '217, 51, 166',
+    accent: '#FFD933',
+    points: [
+      [0.55, 0.00], [0.85, 0.18], [0.78, 0.45], [0.55, 0.65], [0.95, 3.00],
+      [0.55, 1.80], [0.30, 3.20], [0.00, 2.00], [-0.30, 3.20], [-0.55, 1.80],
+      [-0.95, 3.00], [-0.55, 0.65], [-0.78, 0.45], [-0.85, 0.18], [-0.55, 0.00],
+    ],
+  },
+  shark: {
+    name: 'Shark',
+    primary: '#667A8C',
+    stroke: '#33404D',
+    glowRgb: '166, 199, 235',
+    accent: '#F2F2F2',
+    points: [
+      [0.85, 0.00], [0.30, 0.40], [0.40, 0.85], [0.60, 1.40], [0.95, 1.85],
+      [0.55, 2.05], [0.55, 2.45], [0.65, 2.75], [0.40, 3.00], [0.10, 2.85],
+      [0.05, 3.20], [-0.05, 3.20], [-0.10, 2.85], [-0.40, 3.00], [-0.65, 2.75],
+      [-0.55, 2.45], [-0.55, 2.05], [-0.95, 1.85], [-0.60, 1.40], [-0.40, 0.85],
+      [-0.30, 0.40], [-0.85, 0.00],
+    ],
+  },
+  frog: {
+    name: 'Frog',
+    primary: '#4DB34D',
+    stroke: '#1F6626',
+    glowRgb: '140, 242, 115',
+    accent: '#FFE64D',
+    points: [
+      [0.85, 0.00], [0.60, 0.40], [0.50, 0.85], [0.75, 1.35], [0.95, 1.85],
+      [0.85, 2.30], [0.75, 2.65], [0.85, 3.00], [0.30, 2.85], [0.00, 2.78],
+      [-0.30, 2.85], [-0.85, 3.00], [-0.75, 2.65], [-0.85, 2.30], [-0.95, 1.85],
+      [-0.75, 1.35], [-0.50, 0.85], [-0.60, 0.40], [-0.85, 0.00],
+    ],
+  },
 };
 
 export const FIGURE_KINDS = Object.keys(FIGURES);
@@ -123,7 +204,69 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
     ctx.beginPath();
     ctx.ellipse(cx, at(1.53), r * 0.29, r * 0.11, 0, 0, Math.PI * 2);
     ctx.fill();
+  } else if (kind === 'pirate') {
+    // One eye, dark patch over the other, strap across the face
+    ctx.fillStyle = '#0d0d0d';
+    roundedRect(ctx, cx, at(2.40), r * 0.55, r * 0.04, r * 0.01);
+    ctx.fill();
+    roundedRect(ctx, cx - r * 0.14, at(2.40), r * 0.22, r * 0.16, r * 0.04);
+    ctx.fill();
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(cx + r * 0.14, at(2.40), r * 0.06, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (kind === 'kraken') {
+    // Eyes peek out of the head bulb at the BOTTOM, looking up
+    for (const dx of [-0.22, 0.22]) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(0.30), r * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(0.30), r * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'mermaid') {
+    ctx.fillStyle = accent;
+    for (const dx of [-0.13, 0.13]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.45), r * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'shark') {
+    // Single side eye + tooth row
+    ctx.fillStyle = '#0d0d0d';
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.30, at(2.65), r * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    roundedRect(ctx, cx, at(2.20), r * 0.55, r * 0.08, r * 0.02);
+    ctx.fill();
+  } else if (kind === 'fish') {
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(cx + r * 0.18, at(2.65), r * 0.10, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (kind === 'frog') {
+    // Two large bulging eyes, wide-set on the dome top
+    for (const dx of [-0.45, 0.45]) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.07, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
+}
+
+/** Builds the silhouette path only (for the Chip variant's logo). */
+export function traceFigure(ctx, kind, cx, feetY, r) {
+  const f = FIGURES[kind];
+  if (f) tracePath(ctx, f.points, cx, feetY, r);
 }
 
 /**

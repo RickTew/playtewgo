@@ -64,9 +64,22 @@ root, then open /play/).
   scenes + the 4 iOS neutrals; light neutrals flip body.light + dark
   grid/dots + darker counter tints, mirroring iOS isLightSurface).
 
+## Theme completeness rule (Rick, 2026-07-31)
+Finish ALL of one theme before starting another: scenes, board options,
+piece roster, piece TYPES (Flat/Chip/Half/Tall), audio. A theme is "done"
+when its 🖼️ and 👥 pickers match what iOS offers for that theme.
+
+Shipped 2026-07-31 (second pass): theme system (themes.js, Theme select,
+per-theme scene/piece persistence, per-theme audio folders), piece TYPE
+variants (Flat/Chip/Half/Tall in the 👥 popup, drawStone in game.js),
+board surfaces (boards.js: 7 universal + Space's 4 themed, Board column
+in the 🖼️ popup, light boards flip the grid), Ocean theme (6 figures,
+5 scenes, audio) - Ocean still needs its 4 themed boards (Deck Hatch/
+Seabed Sand/Sea Chart/Driftwood) to be "done" by the rule above.
+
 ## Not yet built (candidates, in rough order)
-- More themes beyond Space (each = figures + scene + palette, ported from
-  the iOS theme's PieceRenderer paths and BackgroundRenderer scenes)
+- Ocean themed boards (see rule above), then remaining 6 themes one at a
+  time (each = figures + scenes + boards + palette from the iOS theme)
 - Online multiplayer (would need a backend; Supabase is available)
 - Service worker for offline play (skipped deliberately: cache
   invalidation risk vs benefit; revisit after family playtests)

@@ -6,15 +6,16 @@
 import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
-import { SCENES, sceneByKey, paintScene } from './space.js';
-import { FIGURES, FIGURE_KINDS, figureHeight, drawFigure } from './pieces.js';
+import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
+import { FIGURES, figureHeight, drawFigure, traceFigure } from './pieces.js';
+import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
 
 const HUMAN = ONE;
 const AI_PLAYER = TWO;
 const SAVE_KEY = 'tewgo.web.game';
 const DIFFICULTY_KEY = 'tewgo.web.difficulty';
 const MODE_KEY = 'tewgo.web.mode';
-const SCENE_KEY = 'tewgo.web.scene';
+const THEME_KEY = 'tewgo.web.theme';
 const AI_DELAY_MS = 350;
 const POP_MS = 160;
 const FADE_MS = 320;
@@ -46,11 +47,55 @@ let current = HUMAN;
 let gameOver = false;
 let winner = null;
 let mode = 'ai'; // 'ai' | '2p' (pass and play on one device)
-let sceneKey = 'nebula';
-
-// Figure piece per side (Space roster). iOS defaults: Robot vs Alien.
-const PIECE_KEYS = { [ONE]: 'tewgo.web.piece.one', [TWO]: 'tewgo.web.piece.two' };
+let theme = 'space';
+let sceneKey = THEMES.space.defaultScene;
 const pieceKind = { [ONE]: 'robot', [TWO]: 'alien' };
+
+// Piece TYPE (iOS PieceVariant): flat disc / chip / compact figure / tall
+// figure. Global across themes, like tewgo.pieceVariant on iOS.
+const VARIANT_KEY = 'tewgo.web.pieceVariant';
+const VARIANTS = [
+  { key: 'flat', name: 'Flat' },
+  { key: 'chip', name: 'Chip' },
+  { key: 'half', name: 'Half' },
+  { key: 'tall', name: 'Tall' },
+];
+let variant = 'tall';
+
+// Board surface (iOS BoardPanelStyle). Global, like tewgo.boardPanelStyle.
+const BOARD_KEY = 'tewgo.web.board';
+let boardKey = 'none';
+
+function themeDef() {
+  return THEMES[theme];
+}
+
+function pieceStorageKey(side) {
+  return `tewgo.web.piece.${theme}.${side}`;
+}
+
+function sceneStorageKey() {
+  return `tewgo.web.scene.${theme}`;
+}
+
+// Scene + piece choices are remembered per theme, like the iOS
+// tewgo.piece.<themeId> / tewgo.bg.<themeId> keys.
+function loadThemePrefs() {
+  const t = themeDef();
+  [pieceKind[ONE], pieceKind[TWO]] = t.defaults;
+  sceneKey = t.defaultScene;
+  try {
+    for (const side of [ONE, TWO]) {
+      const saved = localStorage.getItem(pieceStorageKey(side));
+      if (saved && t.figures.includes(saved)) pieceKind[side] = saved;
+    }
+    if (pieceKind[ONE] === pieceKind[TWO]) [pieceKind[ONE], pieceKind[TWO]] = t.defaults;
+    const savedScene = localStorage.getItem(sceneStorageKey());
+    if (savedScene && (t.scenes.some((s) => s.key === savedScene) || NEUTRALS.some((n) => n.key === savedScene))) {
+      sceneKey = savedScene;
+    }
+  } catch { /* ignore */ }
+}
 
 function isAiGame() {
   return mode === 'ai';
@@ -93,18 +138,23 @@ let music = null;
 
 function playSfx(name) {
   if (!soundOn) return;
-  const a = new Audio(`audio/${name}.m4a`);
+  const a = new Audio(`audio/${theme}/${name}.m4a`);
   a.play().catch(() => { /* pre-gesture or unsupported: stay silent */ });
 }
 
 function ensureMusic() {
   if (!musicOn || gameOver) return;
   if (!music) {
-    music = new Audio('audio/ingame.m4a');
+    music = new Audio(`audio/${theme}/ingame.m4a`);
     music.loop = true;
     music.volume = 0.45;
   }
   music.play().catch(() => { /* pre-gesture: retried on next interaction */ });
+}
+
+function resetMusicForTheme() {
+  stopMusic();
+  music = null;
 }
 
 function stopMusic() {
@@ -138,6 +188,7 @@ function drawIntroPiece(canvasEl, kind) {
 }
 
 function showIntro() {
+  document.getElementById('introCaption').textContent = themeDef().name.toUpperCase();
   introP1NameEl.textContent = isAiGame() ? `You · ${FIGURES[pieceKind[ONE]].name}` : nameOf(ONE);
   introAiNameEl.textContent = isAiGame() ? `AI · ${difficultyLabel()}` : nameOf(TWO);
   drawIntroPiece(document.getElementById('introP1Piece'), pieceKind[ONE]);
@@ -204,7 +255,7 @@ function renderShareCard() {
   c.fillStyle = 'rgba(255,255,255,0.65)';
   c.font = '700 18px system-ui, -apple-system, sans-serif';
   setSpacing(4);
-  c.fillText('SPACE', size / 2, 690);
+  c.fillText(themeDef().name.toUpperCase(), size / 2, 690);
 
   c.font = '900 48px system-ui, -apple-system, sans-serif';
   setSpacing(0);
@@ -326,11 +377,61 @@ function kickAnims() {
 
 // ----- Rendering -----
 
-// A "stone" is now a figure standing on the intersection. `radius` is the
-// stone footprint from the board metrics; the figure is scaled so a tall
-// figure (~3.2 units) fills the cell without crowding neighbours.
+// A "stone" renders per the chosen piece TYPE (iOS PieceVariant):
+// flat = pebble disc with accent eye; chip = checker disc with the figure
+// silhouette as a logo; half = compact figure (~1 cell); tall = chess-style
+// figure that deliberately overhangs the cell above (drawn top row first,
+// so nearer pieces overlap ones behind).
 function drawStone(x, y, radius, player, alpha = 1) {
-  drawFigure(ctx, pieceKind[player], x, y + radius * 0.98, radius * 0.68, alpha);
+  const kind = pieceKind[player];
+  const f = FIGURES[kind];
+  if (variant === 'half' || variant === 'tall') {
+    const rf = variant === 'tall' ? radius : radius * 0.68;
+    drawFigure(ctx, kind, x, y + radius * 0.98, rf, alpha);
+    return;
+  }
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  const halo = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 1.5);
+  halo.addColorStop(0, `rgba(${f.glowRgb}, 0.18)`);
+  halo.addColorStop(1, `rgba(${f.glowRgb}, 0)`);
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(x, y, radius * 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (variant === 'flat') {
+    ctx.fillStyle = f.primary;
+    ctx.strokeStyle = f.stroke;
+    ctx.lineWidth = Math.max(1, radius * 0.09);
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 0.92, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = f.accent;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // chip: visible depth + white figure-silhouette logo
+    const cr = radius * 1.02;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.beginPath();
+    ctx.arc(x, y + cr * 0.16, cr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = f.primary;
+    ctx.strokeStyle = f.stroke;
+    ctx.lineWidth = Math.max(1, radius * 0.08);
+    ctx.beginPath();
+    ctx.arc(x, y, cr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    const lr = (cr * 1.7) / figureHeight(kind);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    traceFigure(ctx, kind, x, y + (figureHeight(kind) * lr) / 2, lr);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 function draw() {
@@ -346,8 +447,18 @@ function draw() {
   const now = performance.now();
   const radius = m.cell * 0.42;
 
-  // Grid lines (dark overlay on light neutral backgrounds, like iOS)
-  const lightSurface = sceneByKey(sceneKey).light;
+  // Board slab beneath the grid (BoardPanelStyle equivalent)
+  if (boardKey !== 'none') {
+    const pad = m.cell * 0.55;
+    paintBoardRect(ctx, boardKey, m.margin - pad, m.margin - pad,
+      m.size - 2 * (m.margin - pad), m.size - 2 * (m.margin - pad));
+  }
+
+  // Grid lines: dark overlay whenever the surface under them is light
+  // (a light board wins over the scene, like iOS isLightSurface)
+  const lightSurface = boardKey !== 'none'
+    ? !!boardByKey(boardKey)?.light
+    : sceneByKey(sceneKey)?.light;
   ctx.strokeStyle = lightSurface ? 'rgba(20,20,30,0.14)' : 'rgba(255,255,255,0.08)';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -445,7 +556,7 @@ function luminance(hex) {
 function counterColor(kind) {
   const f = FIGURES[kind];
   const sorted = [f.primary, f.stroke].sort((a, b) => luminance(a) - luminance(b));
-  return sceneByKey(sceneKey).light ? sorted[0] : sorted[1];
+  return sceneByKey(sceneKey)?.light ? sorted[0] : sorted[1];
 }
 
 function updateHud() {
@@ -689,25 +800,55 @@ function applyScene() {
   updateHud();
 }
 
+const boardColEl = document.getElementById('boardCol');
+
 function selectScene(key) {
   sceneKey = key;
-  try { localStorage.setItem(SCENE_KEY, key); } catch { /* ignore */ }
+  try { localStorage.setItem(sceneStorageKey(), key); } catch { /* ignore */ }
   applyScene();
   buildScenePicker();
 }
 
+function selectBoard(key) {
+  boardKey = key;
+  try { localStorage.setItem(BOARD_KEY, key); } catch { /* ignore */ }
+  draw();
+  buildScenePicker();
+}
+
+function sceneOptionButton(name, selected, onPick, paintThumb) {
+  const btn = document.createElement('button');
+  btn.className = `piece-option scene-option${selected ? ' selected' : ''}`;
+  const cv = document.createElement('canvas');
+  cv.width = 112;
+  cv.height = 72;
+  paintThumb(cv);
+  const label = document.createElement('span');
+  label.textContent = name;
+  btn.append(cv, label);
+  btn.addEventListener('click', onPick);
+  return btn;
+}
+
 function buildScenePicker() {
+  boardColEl.innerHTML = '';
   sceneColEl.innerHTML = '';
   neutralColEl.innerHTML = '';
-  for (const scene of SCENES) {
-    const btn = document.createElement('button');
-    btn.className = `piece-option scene-option${scene.key === sceneKey ? ' selected' : ''}`;
-    const cv = document.createElement('canvas');
-    paintScene(cv, scene.key, 112, 72);
-    const label = document.createElement('span');
-    label.textContent = scene.name;
-    btn.append(cv, label);
-    btn.addEventListener('click', () => selectScene(scene.key));
+  for (const b of boardsForTheme(theme)) {
+    boardColEl.appendChild(sceneOptionButton(b.name, b.key === boardKey, () => selectBoard(b.key), (cv) => {
+      const cc = cv.getContext('2d');
+      if (b.key === 'none') {
+        cc.strokeStyle = 'rgba(255,255,255,0.25)';
+        cc.setLineDash([5, 4]);
+        cc.strokeRect(8, 8, 96, 56);
+      } else {
+        paintBoardRect(cc, b.key, 6, 6, 100, 60);
+      }
+    }));
+  }
+  for (const scene of [...themeDef().scenes, ...NEUTRALS]) {
+    const btn = sceneOptionButton(scene.name, scene.key === sceneKey,
+      () => selectScene(scene.key), (cv) => paintScene(cv, scene.key, 112, 72));
     (scene.neutral ? neutralColEl : sceneColEl).appendChild(btn);
   }
 }
@@ -730,8 +871,8 @@ const pickerCols = [
 
 function savePieces() {
   try {
-    localStorage.setItem(PIECE_KEYS[ONE], pieceKind[ONE]);
-    localStorage.setItem(PIECE_KEYS[TWO], pieceKind[TWO]);
+    localStorage.setItem(pieceStorageKey(ONE), pieceKind[ONE]);
+    localStorage.setItem(pieceStorageKey(TWO), pieceKind[TWO]);
   } catch { /* ignore */ }
 }
 
@@ -747,11 +888,29 @@ function selectPiece(side, kind) {
   updateHud();
 }
 
+function buildVariantRow() {
+  const rowEl = document.getElementById('variantRow');
+  rowEl.innerHTML = '';
+  for (const v of VARIANTS) {
+    const btn = document.createElement('button');
+    btn.className = `piece-option variant-btn${variant === v.key ? ' selected' : ''}`;
+    btn.textContent = v.name;
+    btn.addEventListener('click', () => {
+      variant = v.key;
+      try { localStorage.setItem(VARIANT_KEY, variant); } catch { /* ignore */ }
+      buildVariantRow();
+      draw();
+    });
+    rowEl.appendChild(btn);
+  }
+}
+
 function buildPicker() {
+  buildVariantRow();
   for (const [colEl, titleEl, side] of pickerCols) {
     titleEl.textContent = isAiGame() ? (side === ONE ? 'You' : 'AI') : `Player ${side}`;
     colEl.innerHTML = '';
-    for (const kind of FIGURE_KINDS) {
+    for (const kind of themeDef().figures) {
       const btn = document.createElement('button');
       btn.className = `piece-option${pieceKind[side] === kind ? ' selected' : ''}`;
       const cv = document.createElement('canvas');
@@ -783,6 +942,20 @@ modeEl.addEventListener('change', () => {
   try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ }
   applyModeUI();
   newGame();
+});
+
+// Theme switch re-skins the world live (scene, pieces, music) without
+// resetting the game in progress, matching the iOS model where a theme
+// is purely visual.
+const themeEl = document.getElementById('theme');
+themeEl.addEventListener('change', () => {
+  theme = THEMES[themeEl.value] ? themeEl.value : 'space';
+  try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
+  resetMusicForTheme();
+  loadThemePrefs();
+  if (!boardsForTheme(theme).some((b) => b.key === boardKey)) boardKey = 'none';
+  applyScene();
+  ensureMusic();
 });
 // Install-as-app: the button appears only when the browser offers a
 // native install prompt (Chrome/Edge on Android and desktop; iOS Safari
@@ -821,14 +994,17 @@ try {
     mode = savedMode;
     modeEl.value = savedMode;
   }
-  for (const side of [ONE, TWO]) {
-    const savedPiece = localStorage.getItem(PIECE_KEYS[side]);
-    if (savedPiece && FIGURE_KINDS.includes(savedPiece)) pieceKind[side] = savedPiece;
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme && THEMES[savedTheme]) {
+    theme = savedTheme;
+    document.getElementById('theme').value = savedTheme;
   }
-  if (pieceKind[ONE] === pieceKind[TWO]) pieceKind[TWO] = pieceKind[ONE] === 'alien' ? 'robot' : 'alien';
-  const savedScene = localStorage.getItem(SCENE_KEY);
-  if (savedScene && SCENES.some((s) => s.key === savedScene)) sceneKey = savedScene;
+  const savedVariant = localStorage.getItem(VARIANT_KEY);
+  if (savedVariant && VARIANTS.some((v) => v.key === savedVariant)) variant = savedVariant;
+  const savedBoard = localStorage.getItem(BOARD_KEY);
+  if (savedBoard && boardsForTheme(theme).some((b) => b.key === savedBoard)) boardKey = savedBoard;
 } catch { /* ignore */ }
+loadThemePrefs();
 applyModeUI();
 applyScene();
 
