@@ -9,9 +9,11 @@ import { encodeState, decodeState } from './engine/state.js';
 import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
 import { FIGURES, figureHeight, drawFigure, traceFigure, COLOR_SCHEMES, paletteFor } from './pieces.js';
 import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
+import { createProgression, GOLD_WIN_THRESHOLD } from './engine/progression.js';
 
 const HUMAN = ONE;
 const AI_PLAYER = TWO;
+const progression = createProgression(localStorage);
 const SAVE_KEY = 'tewgo.web.game';
 const DIFFICULTY_KEY = 'tewgo.web.difficulty';
 const MODE_KEY = 'tewgo.web.mode';
@@ -635,6 +637,10 @@ function showOverlay() {
     if (isAiGame() && winner === HUMAN) {
       overlayTitleEl.textContent = 'You win!';
       overlayReasonEl.textContent = captured ? 'You captured five pairs.' : 'Five in a row.';
+      if (goldJustUnlocked) {
+        goldJustUnlocked = false;
+        overlayReasonEl.textContent += ` Gold colors unlocked for ${themeDef().name}!`;
+      }
     } else if (isAiGame()) {
       overlayTitleEl.textContent = 'AI wins';
       overlayReasonEl.textContent = captured ? 'The AI captured five pairs.' : 'The AI made five in a row.';
@@ -654,6 +660,21 @@ function canPlay() {
   return isAiGame() ? current === HUMAN : true;
 }
 
+// Progression counts finished vs-AI games only, mirroring the iOS rule that
+// pass-and-play never records (a player could grind Gold against themselves
+// in seconds per game). Draws complete a game but record no win or loss.
+let goldJustUnlocked = false;
+function recordFinishedGame() {
+  if (!isAiGame()) return;
+  progression.recordGameCompleted();
+  if (winner === HUMAN) {
+    progression.recordWin(theme);
+    goldJustUnlocked = progression.winsInTheme(theme) === GOLD_WIN_THRESHOLD;
+  } else if (winner !== null) {
+    progression.recordLoss();
+  }
+}
+
 function endIfOver(player) {
   const [r, c] = lastMove;
   if (board.checkWin(player, r, c)) {
@@ -666,6 +687,7 @@ function endIfOver(player) {
   if (gameOver) {
     stopMusic();
     if (winner !== null) playVictory();
+    recordFinishedGame();
     showOverlay();
   }
   return gameOver;
@@ -679,6 +701,7 @@ function scheduleAiMove() {
     if (!move) {
       gameOver = true;
       winner = null;
+      recordFinishedGame();
       showOverlay();
     } else {
       const captures = board.place(AI_PLAYER, move[0], move[1]);
@@ -1004,10 +1027,14 @@ function buildVariantRow() {
   }
   const colorRowEl = document.getElementById('colorRow');
   colorRowEl.innerHTML = '';
+  // Gold is per-theme: 10 wins in the CURRENT theme unlock it there, like
+  // the iOS rare-finish loop. Locked shows the swatch dimmed with a padlock.
+  const goldLocked = !progression.isGoldUnlocked(theme);
   for (const s of COLOR_SCHEMES) {
+    const locked = s.rare && goldLocked;
     const btn = document.createElement('button');
-    btn.className = `swatch${colorScheme === s.key ? ' selected' : ''}`;
-    btn.title = s.name;
+    btn.className = `swatch${colorScheme === s.key ? ' selected' : ''}${locked ? ' locked' : ''}`;
+    btn.title = locked ? `${s.name} (locked)` : s.name;
     if (s.one) {
       btn.style.background = s.one;
       const dot = document.createElement('span');
@@ -1017,7 +1044,14 @@ function buildVariantRow() {
     } else {
       btn.classList.add('swatch-original');
     }
+    if (locked) {
+      const lock = document.createElement('span');
+      lock.className = 'swatch-lock';
+      lock.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+      btn.appendChild(lock);
+    }
     btn.addEventListener('click', () => {
+      if (locked) return;
       colorScheme = s.key;
       try { localStorage.setItem(COLOR_KEY, colorScheme); } catch { /* ignore */ }
       buildPicker();
@@ -1025,6 +1059,13 @@ function buildVariantRow() {
       updateHud();
     });
     colorRowEl.appendChild(btn);
+  }
+  if (goldLocked) {
+    const toGo = progression.winsUntilGold(theme);
+    const note = document.createElement('div');
+    note.className = 'gold-note';
+    note.textContent = `GOLD: win ${toGo} more ${themeDef().name} game${toGo === 1 ? '' : 's'}`;
+    colorRowEl.appendChild(note);
   }
 }
 
@@ -1102,6 +1143,19 @@ function openSetup() {
   document.getElementById('setupMode').value = mode;
   document.getElementById('setupDiff').value = difficultyEl.value;
   document.getElementById('setupDiffRow').style.display = mode === 'ai' ? '' : 'none';
+  // The record line appears once there is a record: vs-AI games only, so a
+  // fresh player (or a pass-and-play-only device) sees no zeros clutter.
+  const recordEl = document.getElementById('setupRecord');
+  if (recordEl) {
+    const games = progression.gamesCompleted();
+    recordEl.style.display = games > 0 ? '' : 'none';
+    if (games > 0) {
+      const w = progression.wins();
+      const l = progression.losses();
+      recordEl.textContent =
+        `Your record vs AI: ${w} win${w === 1 ? '' : 's'} · ${l} loss${l === 1 ? '' : 'es'} · ${games} game${games === 1 ? '' : 's'} played`;
+    }
+  }
   // Continue only makes sense when there is a live game behind the overlay
   const hasLiveGame = !gameOver && board.grid.some((row) => row.some((v) => v !== 0));
   const cancelEl = document.getElementById('setupCancel');

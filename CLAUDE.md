@@ -128,11 +128,23 @@ UI conventions (Rick 2026-07-31): selects are chevron-free and compact
 emoji; the install button shows /icon-192.png; Board and Piece type are
 also top-level dropdowns in the controls row, kept in sync with pickers.
 
+## Progression shipped 2026-07-31 (third pass)
+play/engine/progression.js ports ProgressionManager.swift: games/wins/
+losses + winsByTheme in localStorage key tewgo.web.progress (injectable
+storage, tests/progression.test.js, suite now 28). Rules mirrored from
+iOS: only finished vs-AI games record (pass-and-play never counts, the
+anti-grind rule), draws complete a game but record no win/loss, Gold
+(12th color pair, #FCC224/#DBE3ED, `rare` flag in COLOR_SCHEMES)
+unlocks per theme at 10 wins in THAT theme. UI: locked gold swatch has
+a padlock overlay + "GOLD: win N more <Theme> game(s)" caption in the
+👥 picker, vs-AI record line on the setup screen (#setupRecord, hidden
+until games > 0), victory overlay announces the unlock the moment the
+10th win lands. A persisted gold selection stays applied in themes
+where it is still locked (iOS parity).
+
 ## Not yet built (candidates, in rough order)
 Themes are DONE (2026-07-31, all eight worlds at parity). What's left,
 in the order updates.html promises it:
-- Win-based progression (games played / wins counter in localStorage),
-  which unblocks the Gold color scheme (12th pair, play-earned on iOS)
 - Online multiplayer (would need a backend; Supabase is available)
 - Service worker for offline play (skipped deliberately: cache
   invalidation risk vs benefit; revisit after family playtests)

@@ -535,8 +535,8 @@ export function figureHeight(kind) {
 
 // ----- Color schemes (PieceColorScheme.swift) -----
 // Recolor whichever piece a side plays: primary per side, stroke lightened
-// 45%, glow = primary, themed accent preserved. Gold is play-earned on iOS
-// and omitted here until the web has progression.
+// 45%, glow = primary, themed accent preserved. Gold is rare: earned at
+// 10 wins per theme (engine/progression.js), locked in the picker until then.
 
 export const COLOR_SCHEMES = [
   { key: 'original', name: 'Original' },
@@ -551,6 +551,7 @@ export const COLOR_SCHEMES = [
   { key: 'noir', name: 'Noir', one: '#0F0F12', two: '#FAFAF7' },
   { key: 'midnight', name: 'Midnight', one: '#212B61', two: '#7A1F29' },
   { key: 'forest', name: 'Forest', one: '#1A5733', two: '#734D21' },
+  { key: 'gold', name: 'Gold', one: '#FCC224', two: '#DBE3ED', rare: true },
 ];
 
 function hexChannels(hex) {

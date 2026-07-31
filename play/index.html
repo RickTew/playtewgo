@@ -110,6 +110,15 @@
   .swatch-original {
     background: conic-gradient(#ffd60a, #4fa3ff, #2eb866, #db3838, #ffd60a);
   }
+  .swatch.locked { cursor: default; }
+  .swatch-lock {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .swatch-lock svg { width: 12px; height: 12px; }
+  .gold-note { flex-basis: 100%; color: var(--gold); font-size: 12px; }
   .overlay {
     position: absolute; inset: 0; display: none;
     align-items: flex-start; justify-content: center; text-align: center;
@@ -258,6 +267,7 @@
           </select>
         </label>
       </div>
+      <p id="setupRecord" style="color:var(--gold); font-size:14px; margin-bottom:6px; display:none"></p>
       <p style="color:var(--muted); font-size:14px; margin-bottom:18px">
         Pieces, board, background and sound can be changed any time below the board.
       </p>
