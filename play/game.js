@@ -66,6 +66,17 @@ let variant = 'tall';
 const BOARD_KEY = 'tewgo.web.board';
 let boardKey = 'none';
 
+// Grid style (iOS BoardStyle): dots (iOS default) / grid lines / boxes /
+// none. Boxes shifts the lines half a cell so pieces sit inside cells.
+const GRID_KEY = 'tewgo.web.boardStyle';
+const GRID_STYLES = [
+  { key: 'dots', name: 'Dots' },
+  { key: 'grid', name: 'Lines' },
+  { key: 'boxes', name: 'Boxes' },
+  { key: 'none', name: 'None' },
+];
+let gridStyle = 'dots';
+
 // Piece FINISH (iOS tewgo.pieceFinish): classic | dimensional faux-3D.
 const FINISH_KEY = 'tewgo.web.pieceFinish';
 let finish = 'classic';
@@ -467,32 +478,36 @@ function draw() {
       m.size - 2 * (m.margin - pad), m.size - 2 * (m.margin - pad));
   }
 
-  // Grid lines: dark overlay whenever the surface under them is light
-  // (a light board wins over the scene, like iOS isLightSurface)
+  // Grid per the iOS BoardStyle: dark overlay whenever the surface under
+  // it is light (a light board wins over the scene, like isLightSurface)
   const lightSurface = boardKey !== 'none'
     ? !!boardByKey(boardKey)?.light
     : sceneByKey(sceneKey)?.light;
-  ctx.strokeStyle = lightSurface ? 'rgba(20,20,30,0.14)' : 'rgba(255,255,255,0.08)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  for (let i = 0; i < SIZE; i += 1) {
-    const [x0, y0] = pointFor(i, 0, m);
-    const [x1] = pointFor(i, SIZE - 1, m);
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y0);
-    ctx.moveTo(y0, x0);
-    ctx.lineTo(y0, x1);
-  }
-  ctx.stroke();
-
-  // Intersection dots
-  ctx.fillStyle = lightSurface ? 'rgba(20,20,30,0.38)' : 'rgba(255,255,255,0.30)';
-  for (let r = 0; r < SIZE; r += 1) {
-    for (let c = 0; c < SIZE; c += 1) {
-      const [x, y] = pointFor(r, c, m);
-      ctx.beginPath();
-      ctx.arc(x, y, Math.max(1, m.cell * 0.07), 0, Math.PI * 2);
-      ctx.fill();
+  if (gridStyle === 'grid' || gridStyle === 'boxes') {
+    const count = gridStyle === 'boxes' ? SIZE + 1 : SIZE;
+    const offset = gridStyle === 'boxes' ? -0.5 : 0;
+    const lo = m.margin + offset * m.cell;
+    const hi = m.margin + (count - 1 + offset) * m.cell;
+    ctx.strokeStyle = lightSurface ? 'rgba(20,20,30,0.20)' : 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i < count; i += 1) {
+      const p = m.margin + (i + offset) * m.cell;
+      ctx.moveTo(lo, p);
+      ctx.lineTo(hi, p);
+      ctx.moveTo(p, lo);
+      ctx.lineTo(p, hi);
+    }
+    ctx.stroke();
+  } else if (gridStyle === 'dots') {
+    ctx.fillStyle = lightSurface ? 'rgba(20,20,30,0.38)' : 'rgba(255,255,255,0.30)';
+    for (let r = 0; r < SIZE; r += 1) {
+      for (let c = 0; c < SIZE; c += 1) {
+        const [x, y] = pointFor(r, c, m);
+        ctx.beginPath();
+        ctx.arc(x, y, Math.max(1, m.cell * 0.07), 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
@@ -822,10 +837,16 @@ function selectScene(key) {
   buildScenePicker();
 }
 
+// Deploy-cache reality: for up to ~10 minutes after a push, a visitor can
+// hold a NEW index.html with an OLD game.js or vice versa (GitHub Pages
+// max-age=600). New controls are therefore guarded so a mixed pair
+// degrades to "control missing/dead" instead of a dead page.
 const boardSelEl = document.getElementById('boardSel');
 const variantSelEl = document.getElementById('variantSel');
+const gridSelEl = document.getElementById('gridSel');
 
 function rebuildBoardSelect() {
+  if (!boardSelEl) return;
   boardSelEl.innerHTML = '';
   for (const b of boardsForTheme(theme)) {
     const opt = document.createElement('option');
@@ -839,13 +860,18 @@ function rebuildBoardSelect() {
 function selectBoard(key) {
   boardKey = key;
   try { localStorage.setItem(BOARD_KEY, key); } catch { /* ignore */ }
-  boardSelEl.value = key;
+  if (boardSelEl) boardSelEl.value = key;
   draw();
   buildScenePicker();
 }
 
-boardSelEl.addEventListener('change', () => selectBoard(boardSelEl.value));
-variantSelEl.addEventListener('change', () => setVariant(variantSelEl.value));
+boardSelEl?.addEventListener('change', () => selectBoard(boardSelEl.value));
+variantSelEl?.addEventListener('change', () => setVariant(variantSelEl.value));
+gridSelEl?.addEventListener('change', () => {
+  gridStyle = GRID_STYLES.some((g) => g.key === gridSelEl.value) ? gridSelEl.value : 'dots';
+  try { localStorage.setItem(GRID_KEY, gridStyle); } catch { /* ignore */ }
+  draw();
+});
 
 function sceneOptionButton(name, selected, onPick, paintThumb) {
   const btn = document.createElement('button');
@@ -922,7 +948,7 @@ function selectPiece(side, kind) {
 function setVariant(v) {
   variant = v;
   try { localStorage.setItem(VARIANT_KEY, variant); } catch { /* ignore */ }
-  variantSelEl.value = variant;
+  if (variantSelEl) variantSelEl.value = variant;
   buildVariantRow();
   draw();
 }
@@ -1081,15 +1107,28 @@ try {
   if (savedFinish === 'classic' || savedFinish === 'dimensional') finish = savedFinish;
   const savedColor = localStorage.getItem(COLOR_KEY);
   if (savedColor && COLOR_SCHEMES.some((s) => s.key === savedColor)) colorScheme = savedColor;
+  const savedGrid = localStorage.getItem(GRID_KEY);
+  if (savedGrid && GRID_STYLES.some((g) => g.key === savedGrid)) gridStyle = savedGrid;
 } catch { /* ignore */ }
 loadThemePrefs();
-for (const v of VARIANTS) {
-  const opt = document.createElement('option');
-  opt.value = v.key;
-  opt.textContent = v.name;
-  variantSelEl.appendChild(opt);
+if (variantSelEl) {
+  for (const v of VARIANTS) {
+    const opt = document.createElement('option');
+    opt.value = v.key;
+    opt.textContent = v.name;
+    variantSelEl.appendChild(opt);
+  }
+  variantSelEl.value = variant;
 }
-variantSelEl.value = variant;
+if (gridSelEl) {
+  for (const g of GRID_STYLES) {
+    const opt = document.createElement('option');
+    opt.value = g.key;
+    opt.textContent = g.name;
+    gridSelEl.appendChild(opt);
+  }
+  gridSelEl.value = gridStyle;
+}
 rebuildBoardSelect();
 applyModeUI();
 applyScene();

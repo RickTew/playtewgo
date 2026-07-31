@@ -54,6 +54,17 @@ export function starfield(c, w, h, rand, { density = 6500, aMin = 0.3, aMax = 1.
 
 function ringedPlanet(c, x, y, r) {
   glow(c, x, y, r * 3.2, '90, 160, 255', 0.5, 3);
+  // Far side of the ring passes BEHIND the planet, so it is drawn first
+  // and the body occludes it (planets are not made of gas... usually).
+  c.save();
+  c.translate(x, y);
+  c.rotate(-0.35);
+  c.strokeStyle = 'rgba(180, 210, 255, 0.25)';
+  c.lineWidth = r * 0.16;
+  c.beginPath();
+  c.ellipse(0, 0, r * 1.75, r * 0.5, 0, Math.PI + 0.15, Math.PI * 2 - 0.15);
+  c.stroke();
+  c.restore();
   const body = c.createRadialGradient(x - r * 0.4, y - r * 0.4, r * 0.1, x, y, r);
   body.addColorStop(0, '#9fd4ff');
   body.addColorStop(0.5, '#3f7fd4');
@@ -69,10 +80,6 @@ function ringedPlanet(c, x, y, r) {
   c.lineWidth = r * 0.16;
   c.beginPath();
   c.ellipse(0, 0, r * 1.75, r * 0.5, 0, 0.15, Math.PI - 0.15);
-  c.stroke();
-  c.strokeStyle = 'rgba(180, 210, 255, 0.25)';
-  c.beginPath();
-  c.ellipse(0, 0, r * 1.75, r * 0.5, 0, Math.PI + 0.15, Math.PI * 2 - 0.15);
   c.stroke();
   c.restore();
 }
@@ -206,6 +213,18 @@ function paintRingedPlanet(c, w, h, m) {
   const py = h * 0.38;
   const pr = m * 0.24;
   glow(c, px, py, pr * 2.2, '90, 160, 255', 0.45, 3);
+  // Far side of the rings first, so the planet body occludes it
+  c.save();
+  c.translate(px, py);
+  c.rotate(-0.3);
+  for (const [rr, a] of [[1.5, 0.5], [1.75, 0.35], [1.95, 0.2]]) {
+    c.strokeStyle = `rgba(190, 215, 255, ${a * 0.45})`;
+    c.lineWidth = pr * 0.1;
+    c.beginPath();
+    c.ellipse(0, 0, pr * rr, pr * rr * 0.28, 0, Math.PI + 0.1, Math.PI * 2 - 0.1);
+    c.stroke();
+  }
+  c.restore();
   const body = c.createRadialGradient(px - pr * 0.4, py - pr * 0.4, pr * 0.1, px, py, pr);
   body.addColorStop(0, '#a8d8ff');
   body.addColorStop(0.55, '#3f7fd4');
@@ -226,7 +245,7 @@ function paintRingedPlanet(c, w, h, m) {
     c.fill();
   }
   c.restore();
-  // Rings
+  // Rings: near side only - the far side is hidden behind the planet
   c.save();
   c.translate(px, py);
   c.rotate(-0.3);
@@ -235,10 +254,6 @@ function paintRingedPlanet(c, w, h, m) {
     c.lineWidth = pr * 0.1;
     c.beginPath();
     c.ellipse(0, 0, pr * rr, pr * rr * 0.28, 0, 0.1, Math.PI - 0.1);
-    c.stroke();
-    c.strokeStyle = `rgba(190, 215, 255, ${a * 0.45})`;
-    c.beginPath();
-    c.ellipse(0, 0, pr * rr, pr * rr * 0.28, 0, Math.PI + 0.1, Math.PI * 2 - 0.1);
     c.stroke();
   }
   c.restore();

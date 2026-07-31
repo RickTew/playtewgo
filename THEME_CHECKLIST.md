@@ -52,7 +52,8 @@ Space and Ocean are the worked examples of every step.
       render with the new figures.
 - [ ] 🖼️ picker: all scenes with thumbnails + 4 themed boards + 7
       universal + 4 neutrals; light scenes/boards flip the page/grid.
-- [ ] Board + Piece type dropdowns list the right options.
+- [ ] Board, Grid (Dots/Lines/Boxes/None) + Piece type dropdowns list the
+      right options.
 - [ ] Intro shows theme name + figures; share card shows theme name +
       winner figures; capture counters tint to the roster colors.
 - [ ] Place a stone, hear place sfx + theme music (human click needed -
