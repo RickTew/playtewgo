@@ -51,6 +51,12 @@ export const THEME_BOARDS = {
     { key: 'leather', name: 'Tooled Leather' },
     { key: 'wantedPoster', name: 'Wanted Poster', light: true },
   ],
+  desert: [
+    { key: 'templeGranite', name: 'Temple Granite' },
+    { key: 'reedMat', name: 'Reed Mat', light: true },
+    { key: 'cartouche', name: 'Cartouche' },
+    { key: 'lapis', name: 'Lapis Lazuli' },
+  ],
 };
 
 export function boardsForTheme(theme) {
@@ -293,6 +299,32 @@ export function paintBoardRect(c, key, x, y, w, h) {
       slab(c, x, y, w, h, '#D1BD8A', '#735C33');
       tonePatches(c, x, y, w, h, rand, '166, 140, 87', 5, 0.14);
       cornerDots(c, x, y, w, h, Math.min(9, w * 0.07), Math.min(2.5, w * 0.02), '#383838');
+      break;
+    case 'templeGranite':
+      slab(c, x, y, w, h, '#332B26', '#D9AD47');
+      tonePatches(c, x, y, w, h, rand, '0, 0, 0', 5, 0.18);
+      break;
+    case 'reedMat':
+      slab(c, x, y, w, h, '#BD995C', '#7A5729');
+      tonePatches(c, x, y, w, h, rand, '158, 122, 66', 6, 0.30);
+      break;
+    case 'cartouche':
+      slab(c, x, y, w, h, '#9E7D45', '#6B4D1A');
+      tonePatches(c, x, y, w, h, rand, '117, 89, 41', 5, 0.16);
+      c.strokeStyle = 'rgba(217, 168, 61, 0.75)';
+      c.lineWidth = 2;
+      c.beginPath();
+      c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
+      c.stroke();
+      break;
+    case 'lapis':
+      slab(c, x, y, w, h, '#1F306B', '#CC9E38');
+      tonePatches(c, x, y, w, h, rand, '18, 31, 77', 5, 0.30);
+      c.strokeStyle = 'rgba(217, 173, 71, 0.50)';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
+      c.stroke();
       break;
     case 'starMap': {
       slab(c, x, y, w, h, '#0f1730', '#2a3a66');

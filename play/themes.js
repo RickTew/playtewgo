@@ -8,6 +8,7 @@ import { FEUDALJAPAN_SCENES } from './feudaljapan.js';
 import { DUNGEON_SCENES } from './dungeon.js';
 import { UNDEAD_SCENES } from './undead.js';
 import { WESTERN_SCENES } from './western.js';
+import { DESERT_SCENES } from './desert.js';
 
 export const NEUTRALS = [
   { key: 'sepia', name: 'Sepia', neutral: true, light: true, color: '#F2E0BD' },
@@ -59,9 +60,16 @@ export const THEMES = {
     defaults: ['cowboy', 'outlaw'],
     defaultScene: 'sunset',
   },
+  desert: {
+    name: 'Desert',
+    scenes: DESERT_SCENES,
+    figures: ['pharaoh', 'anubis', 'snake', 'mummy', 'scarab', 'turtle'],
+    defaults: ['pharaoh', 'mummy'],
+    defaultScene: 'pyramids',
+  },
 };
 
-const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...FEUDALJAPAN_SCENES, ...DUNGEON_SCENES, ...UNDEAD_SCENES, ...WESTERN_SCENES, ...NEUTRALS];
+const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...FEUDALJAPAN_SCENES, ...DUNGEON_SCENES, ...UNDEAD_SCENES, ...WESTERN_SCENES, ...DESERT_SCENES, ...NEUTRALS];
 
 /** Returns undefined for unknown keys; callers fall back to the theme default. */
 export function sceneByKey(key) {

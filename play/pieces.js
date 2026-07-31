@@ -365,6 +365,90 @@ export const FIGURES = {
       [-0.50, 1.10], [-0.55, 0.50], [-0.55, 0.00],
     ],
   },
+  // ----- Desert roster (ThemeRegistry.desert palettes) -----
+  pharaoh: {
+    name: 'Pharaoh',
+    primary: '#F2C733',
+    stroke: '#332666',
+    glowRgb: '255, 217, 77',
+    accent: '#1A1A66',
+    points: [
+      [0.55, 0.00], [0.55, 0.50], [0.50, 1.10], [0.95, 1.30], [0.85, 1.65],
+      [0.55, 1.90], [0.55, 2.20], [0.85, 2.40], [1.05, 2.65], [0.90, 2.95],
+      [0.55, 3.10], [0.20, 3.18], [0.00, 3.20], [-0.20, 3.18], [-0.55, 3.10],
+      [-0.90, 2.95], [-1.05, 2.65], [-0.85, 2.40], [-0.55, 2.20], [-0.55, 1.90],
+      [-0.85, 1.65], [-0.95, 1.30], [-0.50, 1.10], [-0.55, 0.50], [-0.55, 0.00],
+    ],
+  },
+  anubis: {
+    name: 'Anubis',
+    primary: '#1A141F',
+    stroke: '#F2C733',
+    glowRgb: '255, 217, 77',
+    accent: '#FFD94D',
+    points: [
+      [0.55, 0.00], [0.55, 0.50], [0.50, 1.10], [0.95, 1.30], [0.85, 1.65],
+      [0.55, 1.85], [0.45, 2.10], [0.55, 2.30], [0.65, 2.55], [0.45, 2.75],
+      [0.55, 2.95], [0.40, 3.20], [0.10, 2.95], [0.00, 3.10], [-0.10, 2.95],
+      [-0.40, 3.20], [-0.55, 2.95], [-0.45, 2.75], [-0.65, 2.55], [-0.55, 2.30],
+      [-0.45, 2.10], [-0.55, 1.85], [-0.85, 1.65], [-0.95, 1.30], [-0.50, 1.10],
+      [-0.55, 0.50], [-0.55, 0.00],
+    ],
+  },
+  snake: {
+    name: 'Snake',
+    primary: '#8CA640',
+    stroke: '#4D611A',
+    glowRgb: '204, 230, 102',
+    accent: '#F24D33',
+    points: [
+      [0.50, 0.00], [0.85, 0.30], [0.55, 0.60], [0.70, 0.95], [0.40, 1.25],
+      [0.55, 1.60], [0.35, 1.95], [0.40, 2.20], [0.95, 2.55], [0.65, 2.95],
+      [0.30, 3.10], [0.00, 3.20], [-0.30, 3.10], [-0.65, 2.95], [-0.95, 2.55],
+      [-0.40, 2.20], [-0.35, 1.95], [-0.55, 1.60], [-0.40, 1.25], [-0.70, 0.95],
+      [-0.55, 0.60], [-0.85, 0.30], [-0.50, 0.00],
+    ],
+  },
+  mummy: {
+    name: 'Mummy',
+    primary: '#D9C7A6',
+    stroke: '#735933',
+    glowRgb: '217, 166, 115',
+    accent: '#D93333',
+    points: [
+      [0.55, 0.00], [0.55, 0.50], [0.50, 1.10], [0.75, 1.30], [0.55, 1.75],
+      [0.50, 2.05], [0.55, 2.25], [0.55, 2.85], [0.40, 3.10], [0.00, 3.18],
+      [-0.40, 3.10], [-0.55, 2.85], [-0.55, 2.25], [-0.50, 2.05], [-0.55, 1.75],
+      [-0.75, 1.30], [-0.50, 1.10], [-0.55, 0.50], [-0.55, 0.00],
+    ],
+  },
+  scarab: {
+    name: 'Scarab',
+    primary: '#33668C',
+    stroke: '#4DA673',
+    glowRgb: '102, 242, 217',
+    accent: '#F2C733',
+    points: [
+      [0.95, 0.10], [0.65, 0.30], [1.10, 0.55], [0.95, 0.85], [1.20, 1.20],
+      [1.10, 1.65], [1.20, 1.95], [0.85, 2.15], [0.65, 2.40], [0.45, 2.70],
+      [0.20, 2.95], [0.10, 3.10], [0.00, 3.00], [-0.10, 3.10], [-0.20, 2.95],
+      [-0.45, 2.70], [-0.65, 2.40], [-0.85, 2.15], [-1.20, 1.95], [-1.10, 1.65],
+      [-1.20, 1.20], [-0.95, 0.85], [-1.10, 0.55], [-0.65, 0.30], [-0.95, 0.10],
+    ],
+  },
+  turtle: {
+    name: 'Turtle',
+    primary: '#739966',
+    stroke: '#8C6638',
+    glowRgb: '179, 230, 140',
+    accent: '#1A1F1A',
+    points: [
+      [0.95, 0.00], [0.95, 0.40], [0.85, 1.10], [0.65, 1.80], [0.40, 2.20],
+      [0.35, 2.40], [0.45, 2.65], [0.30, 2.95], [0.00, 3.05], [-0.30, 2.95],
+      [-0.45, 2.65], [-0.35, 2.40], [-0.40, 2.20], [-0.65, 1.80], [-0.85, 1.10],
+      [-0.95, 0.40], [-0.95, 0.00],
+    ],
+  },
 };
 
 export const FIGURE_KINDS = Object.keys(FIGURES);
@@ -696,6 +780,61 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
     for (const dx of [-0.13, 0.13]) {
       ctx.beginPath();
       ctx.arc(cx + dx * r, at(kind === 'bandit' ? 2.60 : 2.55), r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'pharaoh') {
+    // Two eye dots beneath the nemes
+    ctx.fillStyle = accent;
+    for (const dx of [-0.14, 0.14]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.45), r * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'anubis') {
+    // Glowing eyes + black nose at muzzle tip
+    ctx.fillStyle = accent;
+    for (const dx of [-0.15, 0.15]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.50), r * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#0d0d0d';
+    ctx.beginPath();
+    ctx.arc(cx, at(2.05), r * 0.06, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (kind === 'snake') {
+    // Vertical slit pupils
+    ctx.fillStyle = accent;
+    for (const dx of [-0.18, 0.18]) {
+      roundedRect(ctx, cx + dx * r, at(2.55), r * 0.05, r * 0.18, r * 0.02);
+      ctx.fill();
+    }
+  } else if (kind === 'mummy') {
+    // Bandage gap revealing glowing eyes
+    ctx.fillStyle = 'rgba(13, 13, 13, 0.85)';
+    roundedRect(ctx, cx, at(2.55), r * 0.65, r * 0.16, r * 0.05);
+    ctx.fill();
+    ctx.fillStyle = accent;
+    for (const dx of [-0.14, 0.14]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'scarab') {
+    // Center carapace seam + two black dot eyes near the top
+    ctx.fillStyle = 'rgba(13, 13, 13, 0.85)';
+    ctx.fillRect(cx - r * 0.03, at(2.50), r * 0.06, r * 2.0);
+    for (const dx of [-0.45, 0.45]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.07, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'turtle') {
+    // Small dot eyes high on the small head
+    ctx.fillStyle = accent;
+    for (const dx of [-0.10, 0.10]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.05, 0, Math.PI * 2);
       ctx.fill();
     }
   }
