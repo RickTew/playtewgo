@@ -28,6 +28,9 @@ const newGameEl = document.getElementById('newGame');
 const playAgainEl = document.getElementById('playAgain');
 const soundToggleEl = document.getElementById('soundToggle');
 const musicToggleEl = document.getElementById('musicToggle');
+const introEl = document.getElementById('intro');
+const introAiNameEl = document.getElementById('introAiName');
+const shareBtnEl = document.getElementById('shareBtn');
 
 let board = new GameBoard();
 let current = HUMAN;
@@ -88,6 +91,140 @@ function updateToggles() {
   soundToggleEl.textContent = soundOn ? '🔊' : '🔇';
   soundToggleEl.classList.toggle('off', !soundOn);
   musicToggleEl.classList.toggle('off', !musicOn);
+}
+
+// ----- Match intro -----
+// Mirrors the iOS MatchIntroView: contenders slide in around a VS mark,
+// auto-dismisses after 2.2s, any tap skips it.
+
+let introTimer = null;
+
+function difficultyLabel() {
+  const v = difficultyEl.value;
+  return v.charAt(0).toUpperCase() + v.slice(1);
+}
+
+function showIntro() {
+  introAiNameEl.textContent = `AI · ${difficultyLabel()}`;
+  introEl.classList.remove('appear', 'leaving');
+  introEl.classList.add('show');
+  // setTimeout, not requestAnimationFrame: rAF never fires in hidden tabs,
+  // which would leave the intro stuck in its pre-animation state.
+  setTimeout(() => introEl.classList.add('appear'), 30);
+  introTimer = setTimeout(dismissIntro, 2200);
+}
+
+function dismissIntro() {
+  if (introTimer) {
+    clearTimeout(introTimer);
+    introTimer = null;
+  }
+  if (!introEl.classList.contains('show') || introEl.classList.contains('leaving')) return;
+  introEl.classList.add('leaving');
+  setTimeout(() => introEl.classList.remove('show', 'appear', 'leaving'), 320);
+}
+
+// ----- Victory share card -----
+// Mirrors the iOS VictoryShareCard 900x900 layout, plus the site URL since
+// on the web the card doubles as the invite link.
+
+function renderShareCard() {
+  const size = 900;
+  const scale = 2;
+  const card = document.createElement('canvas');
+  card.width = size * scale;
+  card.height = size * scale;
+  const c = card.getContext('2d');
+  c.scale(scale, scale);
+
+  c.fillStyle = '#0d0d1f';
+  c.fillRect(0, 0, size, size);
+
+  c.textAlign = 'center';
+  const setSpacing = (px) => { try { c.letterSpacing = `${px}px`; } catch { /* older browser */ } };
+
+  c.fillStyle = '#ffd60a';
+  c.font = '900 64px system-ui, -apple-system, sans-serif';
+  setSpacing(0);
+  c.fillText('YOU WIN!', size / 2, 300);
+
+  c.fillStyle = 'rgba(255,255,255,0.85)';
+  c.font = '600 26px system-ui, -apple-system, sans-serif';
+  setSpacing(3);
+  const reason = board.winReason(HUMAN) === 'fiveCaptures' ? 'CAPTURED FIVE PAIRS' : 'FIVE IN A ROW';
+  c.fillText(reason, size / 2, 370);
+
+  // Row of five winner stones with the opponent-color accent dot
+  const stoneR = 48;
+  const gap = 18;
+  const rowWidth = 5 * stoneR * 2 + 4 * gap;
+  let x = (size - rowWidth) / 2 + stoneR;
+  for (let i = 0; i < 5; i += 1) {
+    c.fillStyle = '#ffd60a';
+    c.beginPath();
+    c.arc(x, 490, stoneR, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = '#b39500';
+    c.lineWidth = 4;
+    c.stroke();
+    c.fillStyle = '#1d5eb0';
+    c.beginPath();
+    c.arc(x, 490, 12, 0, Math.PI * 2);
+    c.fill();
+    x += stoneR * 2 + gap;
+  }
+
+  c.fillStyle = 'rgba(255,255,255,0.65)';
+  c.font = '700 18px system-ui, -apple-system, sans-serif';
+  setSpacing(4);
+  c.fillText('SPACE', size / 2, 690);
+
+  c.font = '900 48px system-ui, -apple-system, sans-serif';
+  setSpacing(0);
+  const tewWidth = c.measureText('TEW').width;
+  const goWidth = c.measureText('GO').width;
+  const logoLeft = size / 2 - (tewWidth + goWidth) / 2;
+  c.textAlign = 'left';
+  c.fillStyle = '#ffffff';
+  c.fillText('TEW', logoLeft, 760);
+  c.fillStyle = '#ffd60a';
+  c.fillText('GO', logoLeft + tewWidth, 760);
+  c.textAlign = 'center';
+
+  c.fillStyle = '#8e8e93';
+  c.font = '14px system-ui, -apple-system, sans-serif';
+  setSpacing(2);
+  c.fillText('five in a row  ·  two to capture', size / 2, 800);
+
+  c.fillStyle = '#ffd60a';
+  c.font = '600 20px system-ui, -apple-system, sans-serif';
+  setSpacing(1);
+  c.fillText('play free at playtewgo.com', size / 2, 850);
+
+  return card;
+}
+
+async function shareCard() {
+  const card = renderShareCard();
+  const blob = await new Promise((res) => card.toBlob(res, 'image/png'));
+  if (!blob) return;
+  const file = new File([blob], 'tewgo-victory.png', { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: 'TEWGO',
+        text: 'I won at TEWGO! Play free: https://playtewgo.com/play/',
+      });
+      return;
+    } catch { /* user cancelled the share sheet: fall through to nothing */ return; }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'tewgo-victory.png';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
 // ----- Persistence -----
@@ -300,6 +437,7 @@ function showOverlay() {
     overlayReasonEl.textContent = board.winReason(AI_PLAYER) === 'fiveCaptures'
       ? 'The AI captured five pairs.' : 'The AI made five in a row.';
   }
+  shareBtnEl.style.display = winner === HUMAN ? '' : 'none';
   overlayEl.classList.add('show');
 }
 
@@ -390,6 +528,7 @@ function newGame() {
   save();
   draw();
   updateHud();
+  showIntro();
 }
 
 // ----- Wiring -----
@@ -435,6 +574,11 @@ canvas.addEventListener('pointerleave', () => {
 
 newGameEl.addEventListener('click', newGame);
 playAgainEl.addEventListener('click', newGame);
+shareBtnEl.addEventListener('click', shareCard);
+introEl.addEventListener('pointerdown', () => {
+  ensureMusic();
+  dismissIntro();
+});
 difficultyEl.addEventListener('change', () => {
   try { localStorage.setItem(DIFFICULTY_KEY, difficultyEl.value); } catch { /* ignore */ }
 });
@@ -447,7 +591,16 @@ try {
   }
 } catch { /* ignore */ }
 
-if (restore() && current === AI_PLAYER) scheduleAiMove();
+const resumed = restore();
+if (resumed && current === AI_PLAYER) scheduleAiMove();
+if (!resumed) showIntro();
 updateToggles();
 draw();
 updateHud();
+
+// Dev hook: /play/?sharecard previews the victory card without winning
+if (location.search.includes('sharecard')) {
+  const preview = renderShareCard();
+  preview.style.cssText = 'position:fixed;inset:0;margin:auto;width:min(90vw,90vh);height:min(90vw,90vh);z-index:20;border-radius:16px;';
+  document.body.appendChild(preview);
+}

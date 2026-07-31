@@ -113,6 +113,43 @@
     background: var(--gold); color: #000; font-weight: 700; border: none;
     padding: 12px 26px; border-radius: 14px;
   }
+  .btn-ghost {
+    background: transparent; border: 1px solid #ffffff40; color: var(--text);
+    font-weight: 700; padding: 12px 26px; border-radius: 14px;
+  }
+  .overlay-buttons { display: flex; gap: 12px; justify-content: center; }
+
+  /* Match intro: contenders slide in around a VS mark, auto-dismisses */
+  .intro {
+    position: fixed; inset: 0; z-index: 10; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.78);
+  }
+  .intro.show { display: flex; }
+  .intro-inner { text-align: center; transition: opacity 0.3s ease, transform 0.3s ease; }
+  .intro.leaving .intro-inner { opacity: 0; transform: scale(1.06); }
+  .intro-caption { font-size: 13px; font-weight: 700; letter-spacing: 3px; color: rgba(255,255,255,0.55); }
+  .intro-row { display: flex; gap: 20px; align-items: center; justify-content: center; margin-top: 26px; }
+  .contender {
+    transition: transform 0.55s cubic-bezier(0.2, 1.25, 0.35, 1);
+  }
+  .contender.left { transform: translateX(-260px); }
+  .contender.right { transform: translateX(260px); }
+  .intro.appear .contender { transform: translateX(0); }
+  .contender-card {
+    padding: 16px; border-radius: 18px;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
+  }
+  .stone-disc { width: 92px; height: 92px; border-radius: 50%; }
+  .stone-gold { background: radial-gradient(circle at 35% 35%, #fff3b0, #ffd60a 55%, #b39500); }
+  .stone-blue { background: radial-gradient(circle at 35% 35%, #cfe6ff, #4fa3ff 55%, #1d5eb0); }
+  .contender-name { margin-top: 10px; font-weight: 700; font-size: 15px; }
+  .vs {
+    font-size: 34px; font-weight: 900; color: var(--gold);
+    transform: scale(0.2); opacity: 0;
+    transition: transform 0.55s cubic-bezier(0.2, 1.25, 0.35, 1), opacity 0.4s ease;
+  }
+  .intro.appear .vs { transform: scale(1); opacity: 1; }
   footer { margin-top: 18px; font-size: 13px; color: var(--muted); text-align: center; }
   footer a { color: var(--text); }
 </style>
@@ -136,7 +173,10 @@
     <div>
       <h2 id="overlayTitle"></h2>
       <p id="overlayReason"></p>
-      <button class="btn-gold" id="playAgain">Play again</button>
+      <div class="overlay-buttons">
+        <button class="btn-gold" id="playAgain">Play again</button>
+        <button class="btn-ghost" id="shareBtn">Share</button>
+      </div>
     </div>
   </div>
 </div>
@@ -161,6 +201,23 @@
   <p>Five in a row wins. Capturing five pairs also wins. Flank two enemy pieces to capture them.</p>
   <p style="margin-top:6px">Prefer the full experience? <a href="/">Get TEWGO on the App Store</a></p>
 </footer>
+
+<div class="intro" id="intro">
+  <div class="intro-inner">
+    <div class="intro-caption">SPACE</div>
+    <div class="intro-row">
+      <div class="contender left">
+        <div class="contender-card"><div class="stone-disc stone-gold"></div></div>
+        <div class="contender-name">You</div>
+      </div>
+      <div class="vs">VS</div>
+      <div class="contender right">
+        <div class="contender-card"><div class="stone-disc stone-blue"></div></div>
+        <div class="contender-name" id="introAiName">AI</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script type="module" src="game.js"></script>
 </body>
