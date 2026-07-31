@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Play TEWGO</title>
+<meta name="description" content="Play TEWGO free in your browser. Five in a row wins, and so does capturing five pairs.">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#05051a">
+<style>
+  :root {
+    --bg: #0a0a14;
+    --gold: #ffd60a;
+    --blue: #4fa3ff;
+    --text: #f2f2f7;
+    --muted: #9a9ab0;
+    --card: rgba(255,255,255,0.05);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100dvh;
+    padding: 12px 12px 24px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .stars {
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(1px 1px at 20% 30%, #fff8, transparent 40%),
+      radial-gradient(1px 1px at 70% 15%, #fff6, transparent 40%),
+      radial-gradient(1.5px 1.5px at 40% 70%, #fff7, transparent 40%),
+      radial-gradient(1px 1px at 85% 55%, #fff5, transparent 40%),
+      radial-gradient(1px 1px at 10% 85%, #fff6, transparent 40%),
+      radial-gradient(1.5px 1.5px at 55% 40%, #fff4, transparent 40%),
+      radial-gradient(ellipse 80% 50% at 50% -10%, #1c1c4a 0%, transparent 60%),
+      var(--bg);
+  }
+  header { text-align: center; padding: 4px 0 10px; }
+  .logo {
+    font-size: 28px; font-weight: 900; letter-spacing: 2px;
+    color: var(--text); text-decoration: none; display: inline-block;
+    text-shadow: 0 0 24px rgba(255,214,10,0.25);
+  }
+  .logo .go { color: var(--gold); }
+  .beta {
+    vertical-align: super; font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    color: var(--gold); background: #ffd60a1a; border-radius: 999px; padding: 2px 8px; margin-left: 6px;
+  }
+  .hud {
+    width: min(94vw, 560px);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-bottom: 8px; font-size: 14px;
+  }
+  .pill {
+    background: var(--card); border: 1px solid #ffffff14; border-radius: 999px;
+    padding: 6px 14px; white-space: nowrap;
+  }
+  .pill b { font-variant-numeric: tabular-nums; }
+  .you b { color: var(--gold); }
+  .ai b { color: var(--blue); }
+  #status { color: var(--muted); text-align: center; flex: 1; min-width: 0; }
+  .board-wrap {
+    position: relative;
+    width: min(94vw, 560px);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid #ffffff14; border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  canvas { display: block; width: 100%; height: auto; }
+  .controls {
+    width: min(94vw, 560px);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-top: 12px;
+  }
+  select, button {
+    font: inherit; color: var(--text);
+    background: var(--card); border: 1px solid #ffffff2a; border-radius: 12px;
+    padding: 10px 16px; cursor: pointer;
+  }
+  select:focus, button:focus { outline: 1px solid var(--gold); }
+  #newGame { font-weight: 700; }
+  .overlay {
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center; text-align: center;
+    background: rgba(5,5,26,0.82); backdrop-filter: blur(2px);
+    border-radius: 16px; padding: 24px;
+  }
+  .overlay.show { display: flex; }
+  .overlay h2 { font-size: 32px; margin-bottom: 6px; }
+  .overlay p { color: var(--muted); margin-bottom: 20px; }
+  .btn-gold {
+    background: var(--gold); color: #000; font-weight: 700; border: none;
+    padding: 12px 26px; border-radius: 14px;
+  }
+  footer { margin-top: 18px; font-size: 13px; color: var(--muted); text-align: center; }
+  footer a { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<header>
+  <a class="logo" href="/">TEW<span class="go">GO</span><span class="beta">Beta</span></a>
+</header>
+
+<div class="hud">
+  <span class="pill you">You <b id="youPairs">0</b>/5</span>
+  <span id="status">Your move</span>
+  <span class="pill ai">AI <b id="aiPairs">0</b>/5</span>
+</div>
+
+<div class="board-wrap">
+  <canvas id="board"></canvas>
+  <div class="overlay" id="overlay">
+    <div>
+      <h2 id="overlayTitle"></h2>
+      <p id="overlayReason"></p>
+      <button class="btn-gold" id="playAgain">Play again</button>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <label>
+    AI level
+    <select id="difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+  </label>
+  <button id="newGame">New game</button>
+</div>
+
+<footer>
+  <p>Five in a row wins. Capturing five pairs also wins. Flank two enemy pieces to capture them.</p>
+  <p style="margin-top:6px">Prefer the full experience? <a href="/">Get TEWGO on the App Store</a></p>
+</footer>
+
+<script type="module" src="game.js"></script>
+</body>
+</html>
