@@ -26,6 +26,8 @@ const overlayReasonEl = document.getElementById('overlayReason');
 const difficultyEl = document.getElementById('difficulty');
 const newGameEl = document.getElementById('newGame');
 const playAgainEl = document.getElementById('playAgain');
+const soundToggleEl = document.getElementById('soundToggle');
+const musicToggleEl = document.getElementById('musicToggle');
 
 let board = new GameBoard();
 let current = HUMAN;
@@ -36,6 +38,57 @@ let aiTimer = null;
 let hover = null; // [row, col] ghost-stone preview, mouse only
 let anims = []; // {type:'pop'|'fade', row, col, player, start}
 let rafId = null;
+
+// ----- Audio -----
+// Mirrors the iOS AudioManager behavior: place on every stone, capture
+// layered on top when a capture fires, looping in-game music, and on game
+// over the music stops and the victory sting plays. Space theme tracks.
+// Browsers block audio until the first user gesture, so music starts on
+// the first interaction rather than on page load.
+
+const SOUND_KEY = 'tewgo.web.sound';
+const MUSIC_KEY = 'tewgo.web.music';
+
+function readPref(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : v === '1';
+  } catch { return fallback; }
+}
+
+function writePref(key, value) {
+  try { localStorage.setItem(key, value ? '1' : '0'); } catch { /* ignore */ }
+}
+
+let soundOn = readPref(SOUND_KEY, true);
+let musicOn = readPref(MUSIC_KEY, true);
+let music = null;
+
+function playSfx(name) {
+  if (!soundOn) return;
+  const a = new Audio(`audio/${name}.m4a`);
+  a.play().catch(() => { /* pre-gesture or unsupported: stay silent */ });
+}
+
+function ensureMusic() {
+  if (!musicOn || gameOver) return;
+  if (!music) {
+    music = new Audio('audio/ingame.m4a');
+    music.loop = true;
+    music.volume = 0.45;
+  }
+  music.play().catch(() => { /* pre-gesture: retried on next interaction */ });
+}
+
+function stopMusic() {
+  if (music) music.pause();
+}
+
+function updateToggles() {
+  soundToggleEl.textContent = soundOn ? '🔊' : '🔇';
+  soundToggleEl.classList.toggle('off', !soundOn);
+  musicToggleEl.classList.toggle('off', !musicOn);
+}
 
 // ----- Persistence -----
 
@@ -265,7 +318,11 @@ function endIfOver(player) {
     gameOver = true;
     winner = null;
   }
-  if (gameOver) showOverlay();
+  if (gameOver) {
+    stopMusic();
+    if (winner !== null) playSfx('victory');
+    showOverlay();
+  }
   return gameOver;
 }
 
@@ -283,6 +340,8 @@ function scheduleAiMove() {
       lastMove = move;
       pushPop(move[0], move[1]);
       pushFades(captures, HUMAN);
+      playSfx('place');
+      if (captures.length > 0) playSfx('capture');
       if (!endIfOver(AI_PLAYER)) current = HUMAN;
     }
     save();
@@ -301,6 +360,8 @@ function handleTap(clientX, clientY) {
   hover = null;
   pushPop(cell[0], cell[1]);
   pushFades(captures, AI_PLAYER);
+  playSfx('place');
+  if (captures.length > 0) playSfx('capture');
   if (!endIfOver(HUMAN)) {
     current = AI_PLAYER;
     scheduleAiMove();
@@ -325,6 +386,7 @@ function newGame() {
   anims = [];
   overlayEl.classList.remove('show');
   try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
+  ensureMusic();
   save();
   draw();
   updateHud();
@@ -334,7 +396,22 @@ function newGame() {
 
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
+  ensureMusic();
   handleTap(e.clientX, e.clientY);
+});
+
+soundToggleEl.addEventListener('click', () => {
+  soundOn = !soundOn;
+  writePref(SOUND_KEY, soundOn);
+  updateToggles();
+});
+
+musicToggleEl.addEventListener('click', () => {
+  musicOn = !musicOn;
+  writePref(MUSIC_KEY, musicOn);
+  if (musicOn) ensureMusic();
+  else stopMusic();
+  updateToggles();
 });
 
 canvas.addEventListener('pointermove', (e) => {
@@ -371,5 +448,6 @@ try {
 } catch { /* ignore */ }
 
 if (restore() && current === AI_PLAYER) scheduleAiMove();
+updateToggles();
 draw();
 updateHud();

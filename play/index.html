@@ -98,6 +98,8 @@
   }
   select:focus, button:focus { outline: 1px solid var(--gold); }
   #newGame { font-weight: 700; }
+  .toggle { font-size: 18px; padding: 8px 12px; }
+  .toggle.off { opacity: 0.35; }
   .overlay {
     position: absolute; inset: 0; display: none;
     align-items: center; justify-content: center; text-align: center;
@@ -148,6 +150,10 @@
       <option value="hard">Hard</option>
     </select>
   </label>
+  <span>
+    <button class="toggle" id="soundToggle" title="Sound effects">🔊</button>
+    <button class="toggle" id="musicToggle" title="Music">🎵</button>
+  </span>
   <button id="newGame">New game</button>
 </div>
 
