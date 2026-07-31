@@ -129,9 +129,22 @@
     padding: 16px; border-radius: 18px;
     background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18);
   }
-  .stone-disc { width: 92px; height: 92px; border-radius: 50%; }
-  .stone-gold { background: radial-gradient(circle at 35% 35%, #fff3b0, #ffd60a 55%, #b39500); }
-  .stone-blue { background: radial-gradient(circle at 35% 35%, #cfe6ff, #4fa3ff 55%, #1d5eb0); }
+  .intro-piece { width: 92px; height: 92px; display: block; }
+
+  /* Piece picker */
+  .picker-cols { display: flex; gap: 28px; justify-content: center; margin: 14px 0 20px; }
+  .picker-title {
+    font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+  }
+  .piece-option {
+    display: flex; align-items: center; gap: 10px; width: 150px;
+    padding: 6px 10px; margin-top: 8px; border-radius: 12px;
+    border: 1px solid #ffffff20; background: var(--card);
+    color: var(--text); font: inherit; cursor: pointer;
+  }
+  .piece-option.selected { border-color: var(--gold); color: var(--gold); font-weight: 700; }
+  .piece-option canvas { width: 34px; height: 44px; }
   .contender-name { margin-top: 10px; font-weight: 700; font-size: 15px; }
   .vs {
     font-size: 34px; font-weight: 900; color: var(--gold);
@@ -168,6 +181,16 @@
       </div>
     </div>
   </div>
+  <div class="overlay" id="piecePicker">
+    <div>
+      <h2 style="font-size:24px">Pieces</h2>
+      <div class="picker-cols">
+        <div><h3 class="picker-title" id="pickerTitle1"></h3><div id="pickerCol1"></div></div>
+        <div><h3 class="picker-title" id="pickerTitle2"></h3><div id="pickerCol2"></div></div>
+      </div>
+      <button class="btn-gold" id="pickerDone">Done</button>
+    </div>
+  </div>
 </div>
 
 <div class="controls">
@@ -187,6 +210,7 @@
     </select>
   </label>
   <span>
+    <button class="toggle" id="pieceBtn" title="Pieces">👥</button>
     <button class="toggle" id="soundToggle" title="Sound effects">🔊</button>
     <button class="toggle" id="musicToggle" title="Music">🎵</button>
   </span>
@@ -203,12 +227,12 @@
     <div class="intro-caption">SPACE</div>
     <div class="intro-row">
       <div class="contender left">
-        <div class="contender-card"><div class="stone-disc stone-gold"></div></div>
+        <div class="contender-card"><canvas class="intro-piece" id="introP1Piece" width="184" height="184"></canvas></div>
         <div class="contender-name" id="introP1Name">You</div>
       </div>
       <div class="vs">VS</div>
       <div class="contender right">
-        <div class="contender-card"><div class="stone-disc stone-blue"></div></div>
+        <div class="contender-card"><canvas class="intro-piece" id="introP2Piece" width="184" height="184"></canvas></div>
         <div class="contender-name" id="introAiName">AI</div>
       </div>
     </div>

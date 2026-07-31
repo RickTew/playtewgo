@@ -54,15 +54,18 @@ root, then open /play/).
 
 ## Built so far (2026-07-31)
 - Engine + AI + 22 tests; canvas board with hover ghost, pop/capture
-  animations, Space nebula backdrop; Space audio (SFX + music, toggles);
-  match intro (VS face-off); victory share card (Web Share / PNG download,
-  dev preview at /play/?sharecard); vs AI and 2-players modes (Mode select,
-  Gold vs Blue pass-and-play).
+  animations; painted Space scene (play/space.js: nebula/starfield/planet);
+  Space audio (SFX + music, toggles); match intro (VS face-off); victory
+  share card (Web Share / PNG download, dev preview at /play/?sharecard);
+  vs AI and 2-players modes; Space figure pieces (play/pieces.js: Robot/
+  Astronaut/Alien/UFO ported from PieceRenderer.swift with exact palettes,
+  👥 picker popup, per-side persistence, sides kept distinct via swap).
 
 ## Not yet built (candidates, in rough order)
 - Phone pass: pinch/zoom or magnifier for small screens (22x22 targets are
   tight), then PWA install prompt
-- More theme visuals beyond Space (figure pieces, more scenes)
+- More themes beyond Space (each = figures + scene + palette, ported from
+  the iOS theme's PieceRenderer paths and BackgroundRenderer scenes)
 - Online multiplayer (would need a backend; Supabase is available)
 
 ## User context

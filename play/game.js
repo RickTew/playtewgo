@@ -7,6 +7,7 @@ import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
 import { paintSpaceScene } from './space.js';
+import { FIGURES, FIGURE_KINDS, figureHeight, drawFigure } from './pieces.js';
 
 const HUMAN = ONE;
 const AI_PLAYER = TWO;
@@ -45,13 +46,17 @@ let gameOver = false;
 let winner = null;
 let mode = 'ai'; // 'ai' | '2p' (pass and play on one device)
 
+// Figure piece per side (Space roster). iOS defaults: Robot vs Alien.
+const PIECE_KEYS = { [ONE]: 'tewgo.web.piece.one', [TWO]: 'tewgo.web.piece.two' };
+const pieceKind = { [ONE]: 'robot', [TWO]: 'alien' };
+
 function isAiGame() {
   return mode === 'ai';
 }
 
 function nameOf(player) {
   if (isAiGame()) return player === HUMAN ? 'You' : 'AI';
-  return player === ONE ? 'Gold' : 'Blue';
+  return FIGURES[pieceKind[player]].name;
 }
 let lastMove = null;
 let aiTimer = null;
@@ -121,9 +126,20 @@ function difficultyLabel() {
   return v.charAt(0).toUpperCase() + v.slice(1);
 }
 
+function drawIntroPiece(canvasEl, kind) {
+  const c = canvasEl.getContext('2d');
+  c.setTransform(2, 0, 0, 2, 0, 0); // canvas is 184px backing for 92px CSS
+  c.clearRect(0, 0, 92, 92);
+  const r = 25;
+  const feetY = (92 + figureHeight(kind) * r) / 2;
+  drawFigure(c, kind, 46, feetY, r);
+}
+
 function showIntro() {
-  introP1NameEl.textContent = nameOf(ONE);
+  introP1NameEl.textContent = isAiGame() ? `You · ${FIGURES[pieceKind[ONE]].name}` : nameOf(ONE);
   introAiNameEl.textContent = isAiGame() ? `AI · ${difficultyLabel()}` : nameOf(TWO);
+  drawIntroPiece(document.getElementById('introP1Piece'), pieceKind[ONE]);
+  drawIntroPiece(document.getElementById('introP2Piece'), pieceKind[TWO]);
   introEl.classList.remove('appear', 'leaving');
   introEl.classList.add('show');
   // setTimeout, not requestAnimationFrame: rAF never fires in hidden tabs,
@@ -161,10 +177,7 @@ function renderShareCard() {
   c.textAlign = 'center';
   const setSpacing = (px) => { try { c.letterSpacing = `${px}px`; } catch { /* older browser */ } };
 
-  const w = winner ?? ONE; // dev preview hook renders the gold card
-  const gold = { fill: '#ffd60a', stroke: '#b39500', accent: '#1d5eb0' };
-  const blue = { fill: '#4fa3ff', stroke: '#1d5eb0', accent: '#b39500' };
-  const stone = w === ONE ? gold : blue;
+  const w = winner ?? ONE; // dev preview hook renders player one's card
   const title = isAiGame() ? 'YOU WIN!' : `${nameOf(w).toUpperCase()} WINS!`;
 
   c.fillStyle = '#ffd60a';
@@ -178,24 +191,12 @@ function renderShareCard() {
   const reason = board.winReason(w) === 'fiveCaptures' ? 'CAPTURED FIVE PAIRS' : 'FIVE IN A ROW';
   c.fillText(reason, size / 2, 370);
 
-  // Row of five winner stones with the opponent-color accent dot
-  const stoneR = 48;
-  const gap = 18;
-  const rowWidth = 5 * stoneR * 2 + 4 * gap;
-  let x = (size - rowWidth) / 2 + stoneR;
+  // Row of five winner figures
+  const kind = pieceKind[w];
+  const rf = 40;
+  const feetY = 490 + (figureHeight(kind) * rf) / 2;
   for (let i = 0; i < 5; i += 1) {
-    c.fillStyle = stone.fill;
-    c.beginPath();
-    c.arc(x, 490, stoneR, 0, Math.PI * 2);
-    c.fill();
-    c.strokeStyle = stone.stroke;
-    c.lineWidth = 4;
-    c.stroke();
-    c.fillStyle = stone.accent;
-    c.beginPath();
-    c.arc(x, 490, 12, 0, Math.PI * 2);
-    c.fill();
-    x += stoneR * 2 + gap;
+    drawFigure(c, kind, size / 2 + (i - 2) * 130, feetY, rf);
   }
 
   c.fillStyle = 'rgba(255,255,255,0.65)';
@@ -323,38 +324,11 @@ function kickAnims() {
 
 // ----- Rendering -----
 
-function stoneGradient(x, y, radius, player) {
-  const grad = ctx.createRadialGradient(x - radius * 0.35, y - radius * 0.35, radius * 0.15, x, y, radius);
-  if (player === HUMAN) {
-    grad.addColorStop(0, '#fff3b0');
-    grad.addColorStop(0.5, '#ffd60a');
-    grad.addColorStop(1, '#b39500');
-  } else {
-    grad.addColorStop(0, '#cfe6ff');
-    grad.addColorStop(0.5, '#4fa3ff');
-    grad.addColorStop(1, '#1d5eb0');
-  }
-  return grad;
-}
-
+// A "stone" is now a figure standing on the intersection. `radius` is the
+// stone footprint from the board metrics; the figure is scaled so a tall
+// figure (~3.2 units) fills the cell without crowding neighbours.
 function drawStone(x, y, radius, player, alpha = 1) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  // Soft halo so stones sit "in space" rather than flat on the panel
-  const halo = ctx.createRadialGradient(x, y, radius * 0.6, x, y, radius * 1.6);
-  const tint = player === HUMAN ? '255, 214, 10' : '79, 163, 255';
-  halo.addColorStop(0, `rgba(${tint}, 0.25)`);
-  halo.addColorStop(1, `rgba(${tint}, 0)`);
-  ctx.fillStyle = halo;
-  ctx.beginPath();
-  ctx.arc(x, y, radius * 1.6, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = stoneGradient(x, y, radius, player);
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  drawFigure(ctx, pieceKind[player], x, y + radius * 0.98, radius * 0.68, alpha);
 }
 
 function draw() {
@@ -441,6 +415,8 @@ function updateHud() {
   aiLabelEl.textContent = nameOf(TWO);
   youPairsEl.textContent = board.captureCount[ONE];
   aiPairsEl.textContent = board.captureCount[TWO];
+  youPairsEl.style.color = FIGURES[pieceKind[ONE]].stroke;
+  aiPairsEl.style.color = FIGURES[pieceKind[TWO]].stroke;
   if (gameOver) {
     statusEl.textContent = 'Game over';
   } else if (isAiGame()) {
@@ -619,6 +595,64 @@ function applyModeUI() {
   difficultyLabelEl.style.display = isAiGame() ? '' : 'none';
 }
 
+// ----- Piece picker -----
+
+const piecePickerEl = document.getElementById('piecePicker');
+const pickerCols = [
+  [document.getElementById('pickerCol1'), document.getElementById('pickerTitle1'), ONE],
+  [document.getElementById('pickerCol2'), document.getElementById('pickerTitle2'), TWO],
+];
+
+function savePieces() {
+  try {
+    localStorage.setItem(PIECE_KEYS[ONE], pieceKind[ONE]);
+    localStorage.setItem(PIECE_KEYS[TWO], pieceKind[TWO]);
+  } catch { /* ignore */ }
+}
+
+function selectPiece(side, kind) {
+  const other = side === ONE ? TWO : ONE;
+  // Keep the sides distinct, like the iOS picker: stealing the other
+  // side's figure hands them your old one.
+  if (pieceKind[other] === kind) pieceKind[other] = pieceKind[side];
+  pieceKind[side] = kind;
+  savePieces();
+  buildPicker();
+  draw();
+  updateHud();
+}
+
+function buildPicker() {
+  for (const [colEl, titleEl, side] of pickerCols) {
+    titleEl.textContent = isAiGame() ? (side === ONE ? 'You' : 'AI') : `Player ${side}`;
+    colEl.innerHTML = '';
+    for (const kind of FIGURE_KINDS) {
+      const btn = document.createElement('button');
+      btn.className = `piece-option${pieceKind[side] === kind ? ' selected' : ''}`;
+      const cv = document.createElement('canvas');
+      cv.width = 68;
+      cv.height = 88;
+      const cc = cv.getContext('2d');
+      cc.scale(2, 2);
+      const r = 11;
+      drawFigure(cc, kind, 17, (44 + figureHeight(kind) * r) / 2, r);
+      const label = document.createElement('span');
+      label.textContent = FIGURES[kind].name;
+      btn.append(cv, label);
+      btn.addEventListener('click', () => selectPiece(side, kind));
+      colEl.appendChild(btn);
+    }
+  }
+}
+
+document.getElementById('pieceBtn').addEventListener('click', () => {
+  buildPicker();
+  piecePickerEl.classList.add('show');
+});
+document.getElementById('pickerDone').addEventListener('click', () => {
+  piecePickerEl.classList.remove('show');
+});
+
 modeEl.addEventListener('change', () => {
   mode = modeEl.value === '2p' ? '2p' : 'ai';
   try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ }
@@ -642,6 +676,11 @@ try {
     mode = savedMode;
     modeEl.value = savedMode;
   }
+  for (const side of [ONE, TWO]) {
+    const savedPiece = localStorage.getItem(PIECE_KEYS[side]);
+    if (savedPiece && FIGURE_KINDS.includes(savedPiece)) pieceKind[side] = savedPiece;
+  }
+  if (pieceKind[ONE] === pieceKind[TWO]) pieceKind[TWO] = pieceKind[ONE] === 'alien' ? 'robot' : 'alien';
 } catch { /* ignore */ }
 applyModeUI();
 
