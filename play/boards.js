@@ -21,7 +21,12 @@ export const THEME_BOARDS = {
     { key: 'holoPanel', name: 'Holo Panel' },
     { key: 'starMap', name: 'Star Map' },
   ],
-  ocean: [],
+  ocean: [
+    { key: 'deckHatch', name: 'Deck Hatch' },
+    { key: 'seabedSand', name: 'Seabed Sand', light: true },
+    { key: 'seaChart', name: 'Sea Chart', light: true },
+    { key: 'driftwood', name: 'Driftwood' },
+  ],
 };
 
 export function boardsForTheme(theme) {
@@ -43,6 +48,23 @@ function tonePatches(c, x, y, w, h, rand, rgb, count = 5, alpha = 0.08) {
     g.addColorStop(1, `rgba(${rgb}, 0)`);
     c.fillStyle = g;
     c.fillRect(x, y, w, h);
+  }
+}
+
+// Corner hardware (deck brackets, chart clips, nails) - corners only,
+// interiors stay clean
+function cornerDots(c, x, y, w, h, inset, radius, fill, stroke) {
+  for (const [px, py] of [[x + inset, y + inset], [x + w - inset, y + inset],
+    [x + inset, y + h - inset], [x + w - inset, y + h - inset]]) {
+    c.fillStyle = fill;
+    c.beginPath();
+    c.arc(px, py, radius, 0, Math.PI * 2);
+    c.fill();
+    if (stroke) {
+      c.strokeStyle = stroke;
+      c.lineWidth = 1;
+      c.stroke();
+    }
   }
 }
 
@@ -116,6 +138,26 @@ export function paintBoardRect(c, key, x, y, w, h) {
       c.fillRect(x, y, w, h);
       break;
     }
+    case 'deckHatch':
+      slab(c, x, y, w, h, '#856645', '#C7A86B');
+      tonePatches(c, x, y, w, h, rand, '0, 0, 0', 5, 0.12);
+      cornerDots(c, x, y, w, h, Math.min(12, w * 0.08), Math.min(4, w * 0.03), '#4D525C');
+      break;
+    case 'seabedSand':
+      slab(c, x, y, w, h, '#BDAD80', '#7A7052');
+      tonePatches(c, x, y, w, h, rand, '158, 143, 97', 5, 0.25);
+      break;
+    case 'seaChart':
+      slab(c, x, y, w, h, '#E0D9B8', '#736647');
+      tonePatches(c, x, y, w, h, rand, '179, 158, 107', 4, 0.12);
+      tonePatches(c, x, y, w, h, rand, '64, 102, 140', 4, 0.08);
+      cornerDots(c, x, y, w, h, Math.min(9, w * 0.07), Math.min(4.5, w * 0.035), '#BF9E4D', '#73591F');
+      break;
+    case 'driftwood':
+      slab(c, x, y, w, h, '#8C8273', '#4D473D');
+      tonePatches(c, x, y, w, h, rand, '107, 99, 87', 5, 0.22);
+      cornerDots(c, x, y, w, h, Math.min(10, w * 0.07), Math.min(3, w * 0.025), '#664D38', '#38291A');
+      break;
     case 'starMap': {
       slab(c, x, y, w, h, '#0f1730', '#2a3a66');
       tonePatches(c, x, y, w, h, rand, '60, 90, 180', 4, 0.10);
