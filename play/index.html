@@ -31,6 +31,8 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
+  /* Space theme: starfield over layered nebula glows (soft edges only,
+     matching the iOS background rule: layered glows, never hard discs). */
   .stars {
     position: fixed; inset: 0; z-index: -1;
     background:
@@ -40,6 +42,11 @@
       radial-gradient(1px 1px at 85% 55%, #fff5, transparent 40%),
       radial-gradient(1px 1px at 10% 85%, #fff6, transparent 40%),
       radial-gradient(1.5px 1.5px at 55% 40%, #fff4, transparent 40%),
+      radial-gradient(1px 1px at 30% 10%, #fff5, transparent 40%),
+      radial-gradient(1px 1px at 92% 88%, #fff7, transparent 40%),
+      radial-gradient(ellipse 55% 38% at 75% 18%, rgba(124, 77, 255, 0.20) 0%, rgba(124, 77, 255, 0.08) 45%, transparent 70%),
+      radial-gradient(ellipse 45% 32% at 18% 72%, rgba(64, 156, 255, 0.16) 0%, rgba(64, 156, 255, 0.06) 45%, transparent 70%),
+      radial-gradient(ellipse 38% 26% at 60% 85%, rgba(255, 110, 199, 0.10) 0%, transparent 65%),
       radial-gradient(ellipse 80% 50% at 50% -10%, #1c1c4a 0%, transparent 60%),
       var(--bg);
   }
@@ -54,8 +61,9 @@
     vertical-align: super; font-size: 10px; font-weight: 700; letter-spacing: 1px;
     color: var(--gold); background: #ffd60a1a; border-radius: 999px; padding: 2px 8px; margin-left: 6px;
   }
+  :root { --board-size: min(94vw, 72dvh, 640px); }
   .hud {
-    width: min(94vw, 560px);
+    width: var(--board-size);
     display: flex; align-items: center; justify-content: space-between;
     gap: 8px; margin-bottom: 8px; font-size: 14px;
   }
@@ -69,15 +77,17 @@
   #status { color: var(--muted); text-align: center; flex: 1; min-width: 0; }
   .board-wrap {
     position: relative;
-    width: min(94vw, 560px);
-    background: rgba(255,255,255,0.03);
+    width: var(--board-size);
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 0%, rgba(79, 163, 255, 0.06), transparent 70%),
+      rgba(14, 16, 34, 0.55);
     border: 1px solid #ffffff14; border-radius: 16px;
-    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(28, 28, 74, 0.45);
     overflow: hidden;
   }
   canvas { display: block; width: 100%; height: auto; }
   .controls {
-    width: min(94vw, 560px);
+    width: var(--board-size);
     display: flex; align-items: center; justify-content: space-between;
     gap: 12px; margin-top: 12px;
   }
