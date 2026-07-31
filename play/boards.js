@@ -45,6 +45,12 @@ export const THEME_BOARDS = {
     { key: 'ritualStone', name: 'Ritual Stone' },
     { key: 'coffinLid', name: 'Coffin Lid' },
   ],
+  western: [
+    { key: 'crateLid', name: 'Crate Lid' },
+    { key: 'campBlanket', name: 'Camp Blanket' },
+    { key: 'leather', name: 'Tooled Leather' },
+    { key: 'wantedPoster', name: 'Wanted Poster', light: true },
+  ],
 };
 
 export function boardsForTheme(theme) {
@@ -258,6 +264,36 @@ export function paintBoardRect(c, key, x, y, w, h) {
       }
       break;
     }
+    case 'crateLid':
+      slab(c, x, y, w, h, '#946B3D', '#57381F');
+      tonePatches(c, x, y, w, h, rand, '115, 77, 41', 5, 0.25);
+      cornerDots(c, x, y, w, h, Math.min(10, w * 0.08), Math.min(2.5, w * 0.02), '#404040');
+      break;
+    case 'campBlanket':
+      slab(c, x, y, w, h, '#7A2424', '#CC9E57');
+      tonePatches(c, x, y, w, h, rand, '92, 26, 26', 6, 0.40);
+      c.strokeStyle = 'rgba(204, 158, 87, 0.55)';
+      c.lineWidth = 4;
+      c.beginPath();
+      c.roundRect(x + 14, y + 14, w - 28, h - 28, 8);
+      c.stroke();
+      break;
+    case 'leather':
+      slab(c, x, y, w, h, '#704521', '#381F0D');
+      tonePatches(c, x, y, w, h, rand, '82, 48, 20', 5, 0.25);
+      c.strokeStyle = 'rgba(204, 166, 102, 0.55)';
+      c.lineWidth = 1;
+      c.setLineDash([4, 3]);
+      c.beginPath();
+      c.roundRect(x + 5, y + 5, w - 10, h - 10, 9);
+      c.stroke();
+      c.setLineDash([]);
+      break;
+    case 'wantedPoster':
+      slab(c, x, y, w, h, '#D1BD8A', '#735C33');
+      tonePatches(c, x, y, w, h, rand, '166, 140, 87', 5, 0.14);
+      cornerDots(c, x, y, w, h, Math.min(9, w * 0.07), Math.min(2.5, w * 0.02), '#383838');
+      break;
     case 'starMap': {
       slab(c, x, y, w, h, '#0f1730', '#2a3a66');
       tonePatches(c, x, y, w, h, rand, '60, 90, 180', 4, 0.10);

@@ -308,6 +308,63 @@ export const FIGURES = {
       [-0.55, 0.00],
     ],
   },
+  // ----- Western roster (ThemeRegistry.western palettes) -----
+  cowboy: {
+    name: 'Cowboy',
+    primary: '#D9B373',
+    stroke: '#8C6633',
+    glowRgb: '242, 204, 102',
+    accent: '#331A0D',
+    points: [
+      [0.55, 0.00], [0.55, 0.50], [0.50, 1.10], [0.85, 1.30], [0.55, 1.75],
+      [0.50, 2.05], [0.55, 2.20], [0.55, 2.55], [1.05, 2.78], [0.55, 2.85],
+      [0.45, 3.10], [0.00, 3.15], [-0.45, 3.10], [-0.55, 2.85], [-1.05, 2.78],
+      [-0.55, 2.55], [-0.55, 2.20], [-0.50, 2.05], [-0.55, 1.75], [-0.85, 1.30],
+      [-0.50, 1.10], [-0.55, 0.50], [-0.55, 0.00],
+    ],
+  },
+  sheriff: {
+    name: 'Sheriff',
+    primary: '#4D668C',
+    stroke: '#F2D14D',
+    glowRgb: '217, 235, 255',
+    accent: '#FFD94D',
+    points: [
+      [0.65, 0.00], [0.65, 0.50], [0.55, 1.15], [0.85, 1.35], [0.55, 1.75],
+      [0.50, 2.05], [0.55, 2.20], [0.55, 2.55], [1.10, 2.78], [0.55, 2.85],
+      [0.40, 3.05], [0.15, 3.05], [0.00, 3.20], [-0.15, 3.05], [-0.40, 3.05],
+      [-0.55, 2.85], [-1.10, 2.78], [-0.55, 2.55], [-0.55, 2.20], [-0.50, 2.05],
+      [-0.55, 1.75], [-0.85, 1.35], [-0.55, 1.15], [-0.65, 0.50], [-0.65, 0.00],
+    ],
+  },
+  outlaw: {
+    name: 'Outlaw',
+    primary: '#4D2E26',
+    stroke: '#A63333',
+    glowRgb: '217, 77, 51',
+    accent: '#D93333',
+    points: [
+      [0.55, 0.00], [0.55, 0.50], [0.50, 1.10], [0.85, 1.30], [0.55, 1.75],
+      [0.50, 2.05], [0.55, 2.20], [0.55, 2.55], [0.95, 2.65], [0.55, 2.95],
+      [0.30, 3.18], [0.00, 3.10], [-0.30, 3.18], [-0.55, 2.95], [-0.95, 2.65],
+      [-0.55, 2.55], [-0.55, 2.20], [-0.50, 2.05], [-0.55, 1.75], [-0.85, 1.30],
+      [-0.50, 1.10], [-0.55, 0.50], [-0.55, 0.00],
+    ],
+  },
+  bandit: {
+    name: 'Bandit',
+    primary: '#734D33',
+    stroke: '#D94D33',
+    glowRgb: '242, 140, 51',
+    accent: '#D94D33',
+    points: [
+      [0.55, 0.00], [0.55, 0.50], [0.50, 1.10], [0.80, 1.30], [0.55, 1.75],
+      [0.50, 2.05], [0.55, 2.20], [0.55, 2.55], [1.00, 2.65], [0.55, 2.85],
+      [0.30, 3.05], [0.00, 3.10], [-0.30, 3.05], [-0.55, 2.85], [-1.00, 2.65],
+      [-0.55, 2.55], [-0.55, 2.20], [-0.50, 2.05], [-0.55, 1.75], [-0.80, 1.30],
+      [-0.50, 1.10], [-0.55, 0.50], [-0.55, 0.00],
+    ],
+  },
 };
 
 export const FIGURE_KINDS = Object.keys(FIGURES);
@@ -609,6 +666,38 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
     }
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(cx - r * 0.03, at(2.25), r * 0.06, r * 0.10);
+  } else if (kind === 'cowboy') {
+    // Two visible eyes under the hat brim
+    ctx.fillStyle = accent;
+    for (const dx of [-0.13, 0.13]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.45), r * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'sheriff') {
+    // Squinted eyes + gold star badge on the duster
+    ctx.fillStyle = accent;
+    for (const dx of [-0.13, 0.13]) {
+      roundedRect(ctx, cx + dx * r, at(2.45), r * 0.12, r * 0.04, r * 0.01);
+      ctx.fill();
+    }
+    ctx.strokeStyle = '#0d0d0d';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.25, at(1.55), r * 0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  } else if (kind === 'outlaw' || kind === 'bandit') {
+    // Bandana over the lower face + dark eyes above it
+    ctx.fillStyle = accent;
+    roundedRect(ctx, cx, at(2.20), r * 0.85, r * (kind === 'bandit' ? 0.32 : 0.30), r * 0.06);
+    ctx.fill();
+    ctx.fillStyle = '#0d0d0d';
+    for (const dx of [-0.13, 0.13]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(kind === 'bandit' ? 2.60 : 2.55), r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 }
 

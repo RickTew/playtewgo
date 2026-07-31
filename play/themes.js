@@ -7,6 +7,7 @@ import { OCEAN_SCENES } from './ocean.js';
 import { FEUDALJAPAN_SCENES } from './feudaljapan.js';
 import { DUNGEON_SCENES } from './dungeon.js';
 import { UNDEAD_SCENES } from './undead.js';
+import { WESTERN_SCENES } from './western.js';
 
 export const NEUTRALS = [
   { key: 'sepia', name: 'Sepia', neutral: true, light: true, color: '#F2E0BD' },
@@ -51,9 +52,16 @@ export const THEMES = {
     defaults: ['zombie', 'ghost'],
     defaultScene: 'graveyard',
   },
+  western: {
+    name: 'Western',
+    scenes: WESTERN_SCENES,
+    figures: ['cowboy', 'sheriff', 'outlaw', 'bandit'],
+    defaults: ['cowboy', 'outlaw'],
+    defaultScene: 'sunset',
+  },
 };
 
-const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...FEUDALJAPAN_SCENES, ...DUNGEON_SCENES, ...UNDEAD_SCENES, ...NEUTRALS];
+const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...FEUDALJAPAN_SCENES, ...DUNGEON_SCENES, ...UNDEAD_SCENES, ...WESTERN_SCENES, ...NEUTRALS];
 
 /** Returns undefined for unknown keys; callers fall back to the theme default. */
 export function sceneByKey(key) {
