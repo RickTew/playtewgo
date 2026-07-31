@@ -253,6 +253,61 @@ export const FIGURES = {
       [-0.55, 0.00],
     ],
   },
+  // ----- Undead roster (ThemeRegistry.undead palettes) -----
+  zombie: {
+    name: 'Zombie',
+    primary: '#738C6B',
+    stroke: '#B3C7A6',
+    glowRgb: '140, 179, 128',
+    accent: '#D93333',
+    points: [
+      [0.55, 0.00], [0.50, 0.50], [0.55, 1.15], [0.85, 1.40], [0.65, 1.75],
+      [0.85, 1.95], [0.55, 2.10], [0.55, 2.55], [0.45, 2.85], [0.35, 3.10],
+      [0.10, 2.95], [-0.05, 3.05], [-0.20, 2.95], [-0.35, 3.10], [-0.45, 2.85],
+      [-0.55, 2.55], [-0.55, 2.10], [-0.85, 1.95], [-0.65, 1.75], [-0.85, 1.40],
+      [-0.55, 1.15], [-0.50, 0.50], [-0.55, 0.00],
+    ],
+  },
+  skeleton: {
+    name: 'Skeleton',
+    primary: '#EBE6D1',
+    stroke: '#66594D',
+    glowRgb: '191, 217, 166',
+    accent: '#66FF80',
+    points: [
+      [0.45, 0.00], [0.42, 0.50], [0.40, 1.05], [0.65, 1.30], [0.70, 1.65],
+      [0.45, 1.95], [0.30, 2.20], [0.42, 2.45], [0.55, 2.75], [0.45, 3.10],
+      [0.00, 3.20], [-0.45, 3.10], [-0.55, 2.75], [-0.42, 2.45], [-0.30, 2.20],
+      [-0.45, 1.95], [-0.70, 1.65], [-0.65, 1.30], [-0.40, 1.05], [-0.42, 0.50],
+      [-0.45, 0.00],
+    ],
+  },
+  ghost: {
+    name: 'Ghost',
+    primary: '#EBEBF5',
+    stroke: '#FFFFFF',
+    glowRgb: '217, 230, 255',
+    accent: '#8C33D9',
+    points: [
+      [0.85, 0.00], [0.55, 0.10], [0.85, 0.20], [0.85, 1.80], [0.75, 2.40],
+      [0.55, 2.95], [0.30, 3.15], [0.00, 3.20], [-0.30, 3.15], [-0.55, 2.95],
+      [-0.75, 2.40], [-0.85, 1.80], [-0.85, 0.20], [-0.55, 0.10], [-0.85, 0.00],
+    ],
+  },
+  vampire: {
+    name: 'Vampire',
+    primary: '#1A0F1F',
+    stroke: '#C71A2E',
+    glowRgb: '217, 51, 77',
+    accent: '#FF3333',
+    points: [
+      [0.55, 0.00], [0.55, 0.50], [0.50, 1.10], [1.05, 1.40], [0.85, 1.85],
+      [1.10, 2.20], [0.55, 2.30], [0.50, 2.55], [0.45, 2.85], [0.10, 3.05],
+      [0.00, 3.20], [-0.10, 3.05], [-0.45, 2.85], [-0.50, 2.55], [-0.55, 2.30],
+      [-1.10, 2.20], [-0.85, 1.85], [-1.05, 1.40], [-0.50, 1.10], [-0.55, 0.50],
+      [-0.55, 0.00],
+    ],
+  },
 };
 
 export const FIGURE_KINDS = Object.keys(FIGURES);
@@ -511,6 +566,49 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
     ctx.fillStyle = '#0d0d0d';
     roundedRect(ctx, cx, at(2.20), r * 0.30, r * 0.05, r * 0.01);
     ctx.fill();
+  } else if (kind === 'zombie') {
+    // Two hollow dark eye sockets
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    for (const dx of [-0.15, 0.15]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.40), r * 0.10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'skeleton') {
+    // Hollow eye sockets + nasal hole + grin
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+    for (const dx of [-0.18, 0.18]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(cx, at(2.30), r * 0.05, 0, Math.PI * 2);
+    ctx.fill();
+    roundedRect(ctx, cx, at(2.05), r * 0.40, r * 0.05, r * 0.01);
+    ctx.fill();
+  } else if (kind === 'ghost') {
+    // Two glowing dot eyes
+    for (const dx of [-0.18, 0.18]) {
+      ctx.fillStyle = 'rgba(140, 51, 217, 0.35)';
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.07, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'vampire') {
+    // Sharp red eyes + tiny fang glint
+    ctx.fillStyle = accent;
+    for (const dx of [-0.14, 0.14]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cx - r * 0.03, at(2.25), r * 0.06, r * 0.10);
   }
 }
 

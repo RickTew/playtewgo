@@ -39,6 +39,12 @@ export const THEME_BOARDS = {
     { key: 'warMap', name: 'War Map', light: true },
     { key: 'obsidian', name: 'Obsidian' },
   ],
+  undead: [
+    { key: 'tombSlab', name: 'Tomb Slab' },
+    { key: 'graveEarth', name: 'Grave Earth' },
+    { key: 'ritualStone', name: 'Ritual Stone' },
+    { key: 'coffinLid', name: 'Coffin Lid' },
+  ],
 };
 
 export function boardsForTheme(theme) {
@@ -218,6 +224,40 @@ export function paintBoardRect(c, key, x, y, w, h) {
       c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
       c.stroke();
       break;
+    case 'tombSlab':
+      slab(c, x, y, w, h, '#454A42', '#737A6B');
+      tonePatches(c, x, y, w, h, rand, '0, 0, 0', 5, 0.16);
+      break;
+    case 'graveEarth':
+      slab(c, x, y, w, h, '#2B211C', 'rgba(128, 128, 117, 0.9)');
+      tonePatches(c, x, y, w, h, rand, '26, 20, 18', 6, 0.40);
+      break;
+    case 'ritualStone':
+      slab(c, x, y, w, h, '#211C29', '#0D0A12');
+      tonePatches(c, x, y, w, h, rand, '0, 0, 0', 5, 0.25);
+      c.strokeStyle = 'rgba(224, 219, 235, 0.50)';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
+      c.stroke();
+      break;
+    case 'coffinLid': {
+      slab(c, x, y, w, h, '#38211A', '#1A0F0A');
+      tonePatches(c, x, y, w, h, rand, '33, 18, 13', 5, 0.30);
+      // Silver corner fittings
+      const fit = Math.min(16, w * 0.1);
+      c.strokeStyle = '#B8C2CC';
+      c.lineWidth = 2.5;
+      c.lineCap = 'round';
+      for (const [cxr, cyr, sx, sy] of [[x + 5, y + 5, 1, 1], [x + w - 5, y + 5, -1, 1], [x + 5, y + h - 5, 1, -1], [x + w - 5, y + h - 5, -1, -1]]) {
+        c.beginPath();
+        c.moveTo(cxr + sx * fit, cyr);
+        c.lineTo(cxr, cyr);
+        c.lineTo(cxr, cyr + sy * fit);
+        c.stroke();
+      }
+      break;
+    }
     case 'starMap': {
       slab(c, x, y, w, h, '#0f1730', '#2a3a66');
       tonePatches(c, x, y, w, h, rand, '60, 90, 180', 4, 0.10);
