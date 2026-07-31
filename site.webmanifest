@@ -2,7 +2,7 @@
   "name": "TEWGO",
   "short_name": "TEWGO",
   "description": "Five in a row. Two to capture. A fast, elegant strategy board game for iPhone and iPad.",
-  "start_url": "/",
+  "start_url": "/play/",
   "display": "standalone",
   "background_color": "#05051a",
   "theme_color": "#05051a",

@@ -62,11 +62,15 @@ root, then open /play/).
   👥 picker popup, per-side persistence, sides kept distinct via swap).
 
 ## Not yet built (candidates, in rough order)
-- Phone pass: pinch/zoom or magnifier for small screens (22x22 targets are
-  tight), then PWA install prompt
 - More themes beyond Space (each = figures + scene + palette, ported from
   the iOS theme's PieceRenderer paths and BackgroundRenderer scenes)
 - Online multiplayer (would need a backend; Supabase is available)
+- Service worker for offline play (skipped deliberately: cache
+  invalidation risk vs benefit; revisit after family playtests)
+
+Phone pass shipped 2026-07-31: touch drag-to-aim (down = ghost + crosshair
+guides, drag to adjust, release places, off-board cancels; mouse unchanged),
+manifest start_url=/play/, install button on beforeinstallprompt.
 
 ## User context
 Same user as the iOS project: not a web expert, explain clearly, no long

@@ -399,6 +399,28 @@ function draw() {
     drawStone(x, y, radius, current, 0.35);
   }
 
+  // Touch aim: crosshair guides across the board plus ghost and ring, so
+  // the target row/column stay readable outside the finger
+  if (touchAim && canPlay() && board.isValid(touchAim[0], touchAim[1])) {
+    const [x, y] = pointFor(touchAim[0], touchAim[1], m);
+    const [x0] = pointFor(0, 0, m);
+    const [x1] = pointFor(0, SIZE - 1, m);
+    ctx.strokeStyle = `rgba(${FIGURES[pieceKind[current]].glowRgb}, 0.45)`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x1, y);
+    ctx.moveTo(x, x0);
+    ctx.lineTo(x, x1);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 1.3, 0, Math.PI * 2);
+    ctx.stroke();
+    drawStone(x, y, radius, current, 0.55);
+  }
+
   // Last-move ring
   if (lastMove) {
     const [x, y] = pointFor(lastMove[0], lastMove[1], m);
@@ -496,15 +518,13 @@ function scheduleAiMove() {
   }, AI_DELAY_MS);
 }
 
-function handleTap(clientX, clientY) {
-  if (!canPlay()) return;
-  const cell = cellAt(clientX, clientY);
-  if (!cell || !board.isValid(cell[0], cell[1])) return;
+function placeAt(row, col) {
+  if (!canPlay() || !board.isValid(row, col)) return;
   const mover = current;
-  const captures = board.place(mover, cell[0], cell[1]);
-  lastMove = cell;
+  const captures = board.place(mover, row, col);
+  lastMove = [row, col];
   hover = null;
-  pushPop(cell[0], cell[1]);
+  pushPop(row, col);
   pushFades(captures, opponentOf(mover));
   playSfx('place');
   if (captures.length > 0) playSfx('capture');
@@ -516,6 +536,12 @@ function handleTap(clientX, clientY) {
   draw();
   updateHud();
   kickAnims();
+}
+
+function handleTap(clientX, clientY) {
+  if (!canPlay()) return;
+  const cell = cellAt(clientX, clientY);
+  if (cell) placeAt(cell[0], cell[1]);
 }
 
 function newGame() {
@@ -541,10 +567,40 @@ function newGame() {
 
 // ----- Wiring -----
 
+// Touch input aims first: finger down shows the ghost with crosshair
+// guides, dragging fine-tunes, lifting places, dragging off the board
+// cancels. Mouse input stays click-to-place with a hover ghost. This is
+// the phone answer to 22x22 tap targets.
+let touchAim = null;
+
+function aimFromEvent(e) {
+  if (!canPlay()) return null;
+  const cell = cellAt(e.clientX, e.clientY);
+  return cell && board.isValid(cell[0], cell[1]) ? cell : null;
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   ensureMusic();
-  handleTap(e.clientX, e.clientY);
+  if (e.pointerType === 'mouse') {
+    handleTap(e.clientX, e.clientY);
+    return;
+  }
+  try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic event */ }
+  touchAim = aimFromEvent(e);
+  draw();
+});
+
+canvas.addEventListener('pointerup', (e) => {
+  if (e.pointerType === 'mouse') return;
+  if (touchAim) placeAt(touchAim[0], touchAim[1]);
+  touchAim = null;
+  draw();
+});
+
+canvas.addEventListener('pointercancel', () => {
+  touchAim = null;
+  draw();
 });
 
 soundToggleEl.addEventListener('click', () => {
@@ -562,9 +618,18 @@ musicToggleEl.addEventListener('click', () => {
 });
 
 canvas.addEventListener('pointermove', (e) => {
-  if (e.pointerType !== 'mouse') return;
-  const cell = canPlay() ? cellAt(e.clientX, e.clientY) : null;
-  const next = cell && board.isValid(cell[0], cell[1]) ? cell : null;
+  if (e.pointerType !== 'mouse') {
+    if (e.buttons === 0) return;
+    const next = aimFromEvent(e);
+    const changed = (touchAim === null) !== (next === null)
+      || (touchAim && next && (touchAim[0] !== next[0] || touchAim[1] !== next[1]));
+    if (changed) {
+      touchAim = next;
+      draw();
+    }
+    return;
+  }
+  const next = aimFromEvent(e);
   const changed = (hover === null) !== (next === null)
     || (hover && next && (hover[0] !== next[0] || hover[1] !== next[1]));
   if (changed) {
@@ -659,6 +724,27 @@ modeEl.addEventListener('change', () => {
   applyModeUI();
   newGame();
 });
+// Install-as-app: the button appears only when the browser offers a
+// native install prompt (Chrome/Edge on Android and desktop; iOS Safari
+// has no such event and keeps its App Store link instead).
+let installPrompt = null;
+const installBtnEl = document.getElementById('installBtn');
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  installBtnEl.style.display = '';
+});
+installBtnEl.addEventListener('click', async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice.catch(() => {});
+  installPrompt = null;
+  installBtnEl.style.display = 'none';
+});
+window.addEventListener('appinstalled', () => {
+  installBtnEl.style.display = 'none';
+});
+
 const sceneEl = document.getElementById('scene');
 paintSpaceScene(sceneEl);
 window.addEventListener('resize', () => {

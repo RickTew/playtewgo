@@ -75,6 +75,7 @@
     overflow: hidden;
   }
   canvas { display: block; width: 100%; height: auto; }
+  #board { touch-action: none; }
   .controls {
     width: var(--board-size);
     display: flex; align-items: center; justify-content: space-between;
@@ -219,6 +220,7 @@
 
 <footer>
   <p>Five in a row wins. Capturing five pairs also wins. Flank two enemy pieces to capture them.</p>
+  <p style="margin-top:10px"><button class="btn-ghost" id="installBtn" style="display:none; font-size:14px; padding:8px 18px;">📲 Install as app</button></p>
   <p style="margin-top:6px">Prefer the full experience? <a href="/">Get TEWGO on the App Store</a></p>
 </footer>
 
