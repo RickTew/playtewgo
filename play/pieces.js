@@ -151,6 +151,61 @@ export function figureHeight(kind) {
   return Math.max(...FIGURES[kind].points.map((p) => p[1]));
 }
 
+// ----- Color schemes (PieceColorScheme.swift) -----
+// Recolor whichever piece a side plays: primary per side, stroke lightened
+// 45%, glow = primary, themed accent preserved. Gold is play-earned on iOS
+// and omitted here until the web has progression.
+
+export const COLOR_SCHEMES = [
+  { key: 'original', name: 'Original' },
+  { key: 'emerald', name: 'Emerald', one: '#2EB866', two: '#387AF5' },
+  { key: 'crimson', name: 'Crimson', one: '#DB3838', two: '#F2BD33' },
+  { key: 'violet', name: 'Violet', one: '#9452DB', two: '#1FB8B3' },
+  { key: 'magma', name: 'Magma', one: '#F27529', two: '#4DCCF2' },
+  { key: 'rose', name: 'Rose', one: '#F575A8', two: '#75DBA8' },
+  { key: 'onyx', name: 'Onyx', one: '#383D4D', two: '#EBE6D6' },
+  { key: 'ivory', name: 'Ivory', one: '#EBE6D6', two: '#383D4D' },
+  { key: 'slate', name: 'Slate', one: '#6B7585', two: '#CCCFD6' },
+  { key: 'noir', name: 'Noir', one: '#0F0F12', two: '#FAFAF7' },
+  { key: 'midnight', name: 'Midnight', one: '#212B61', two: '#7A1F29' },
+  { key: 'forest', name: 'Forest', one: '#1A5733', two: '#734D21' },
+];
+
+function hexChannels(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [n >> 16, (n >> 8) & 0xff, n & 0xff];
+}
+
+/** Lighten (f > 0, toward white) or darken (f < 0, toward black) a hex color. */
+export function shadeHex(hex, f) {
+  const ch = hexChannels(hex).map((v) => {
+    const nv = f >= 0 ? v + (255 - v) * f : v * (1 + f);
+    return Math.round(Math.min(255, Math.max(0, nv)));
+  });
+  return `#${ch.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+export function hexToRgbStr(hex) {
+  return hexChannels(hex).join(', ');
+}
+
+/**
+ * Effective palette for a side: the figure's roster colors under 'original',
+ * otherwise the scheme pair color per side with derived stroke/glow.
+ */
+export function paletteFor(kind, sideIndex, schemeKey) {
+  const f = FIGURES[kind];
+  const scheme = COLOR_SCHEMES.find((s) => s.key === schemeKey);
+  if (!scheme || !scheme.one) return f;
+  const primary = sideIndex === 0 ? scheme.one : scheme.two;
+  return {
+    primary,
+    stroke: shadeHex(primary, 0.45),
+    glowRgb: hexToRgbStr(primary),
+    accent: f.accent,
+  };
+}
+
 function tracePath(ctx, points, cx, feetY, r) {
   ctx.beginPath();
   points.forEach(([x, y], i) => {
@@ -271,28 +326,67 @@ export function traceFigure(ctx, kind, cx, feetY, r) {
 
 /**
  * Draws a figure standing with its feet at (cx, feetY), scaled by figure
- * radius r (a figure is ~3.2r tall). Mirrors the iOS classic finish:
- * soft glow silhouette behind, solid body with stroke, then the eye band.
+ * radius r (a figure is ~3.2r tall). opts.palette overrides the roster
+ * colors (color schemes); opts.finish = 'dimensional' renders the faux-3D
+ * extrusion + gloss from the iOS 3D Lab winner instead of the classic
+ * glow-silhouette finish.
  */
-export function drawFigure(ctx, kind, cx, feetY, r, alpha = 1) {
+export function drawFigure(ctx, kind, cx, feetY, r, alpha = 1, opts = {}) {
   const f = FIGURES[kind];
   if (!f) return;
+  const pal = opts.palette ?? f;
   ctx.save();
   ctx.globalAlpha = alpha;
 
-  // Glow silhouette (iOS: glowColor at 20%, scaled 1.10 from the feet)
-  ctx.fillStyle = `rgba(${f.glowRgb}, 0.25)`;
-  tracePath(ctx, f.points, cx, feetY, r * 1.1);
-  ctx.fill();
+  if (opts.finish === 'dimensional') {
+    // Stacked side-wall slices behind a gradient-shaded body with a
+    // specular streak (PieceRenderer dimensional finish).
+    for (let i = 5; i >= 1; i -= 1) {
+      const t = i / 5;
+      ctx.fillStyle = shadeHex(pal.primary, -0.55);
+      ctx.strokeStyle = shadeHex(pal.stroke, -0.50);
+      ctx.lineWidth = 0.8;
+      ctx.lineJoin = 'round';
+      tracePath(ctx, f.points, cx + r * 0.14 * t, feetY + r * 0.10 * t, r);
+      ctx.fill();
+      ctx.stroke();
+    }
+    const hU = figureHeight(kind);
+    const grad = ctx.createLinearGradient(0, feetY - hU * r, 0, feetY);
+    grad.addColorStop(0, shadeHex(pal.primary, 0.45));
+    grad.addColorStop(1, shadeHex(pal.primary, -0.35));
+    ctx.fillStyle = grad;
+    ctx.strokeStyle = pal.stroke;
+    ctx.lineWidth = Math.max(1, r * 0.08);
+    ctx.lineJoin = 'round';
+    tracePath(ctx, f.points, cx, feetY, r);
+    ctx.fill();
+    ctx.stroke();
+    // Specular streak clipped to the silhouette
+    ctx.save();
+    tracePath(ctx, f.points, cx, feetY, r);
+    ctx.clip();
+    ctx.translate(cx - r * 0.45, feetY - r * 1.3);
+    ctx.rotate(-0.18);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.30)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.25, r * 1.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    // Classic: glow silhouette behind a solid body
+    ctx.fillStyle = `rgba(${pal.glowRgb}, 0.25)`;
+    tracePath(ctx, f.points, cx, feetY, r * 1.1);
+    ctx.fill();
 
-  // Body
-  ctx.fillStyle = f.primary;
-  ctx.strokeStyle = f.stroke;
-  ctx.lineWidth = Math.max(1, r * 0.08);
-  ctx.lineJoin = 'round';
-  tracePath(ctx, f.points, cx, feetY, r);
-  ctx.fill();
-  ctx.stroke();
+    ctx.fillStyle = pal.primary;
+    ctx.strokeStyle = pal.stroke;
+    ctx.lineWidth = Math.max(1, r * 0.08);
+    ctx.lineJoin = 'round';
+    tracePath(ctx, f.points, cx, feetY, r);
+    ctx.fill();
+    ctx.stroke();
+  }
 
   drawEyeBand(ctx, kind, cx, feetY, r, f.accent);
   ctx.restore();

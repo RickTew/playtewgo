@@ -76,22 +76,22 @@ board surfaces (boards.js: 7 universal + 4 themed per theme, Board column
 in the 🖼️ popup, light boards flip the grid), Ocean theme (6 figures,
 5 scenes, 4 themed boards, audio).
 
-## Options audit vs iOS (2026-07-31, post-Ocean-boards)
-Complete on web for BOTH themes: full figure rosters + exact palettes,
-defaults, 4 piece types, 7 universal + 4 themed boards with correct
-isLightSurface flags, 4 neutrals, place/capture/victory/ingame audio.
-Known deltas vs iOS (both themes):
-- Scenes: web has the atmospheric core only - Space 6 of 13 (missing
-  Ringed Planet, Holo Table, Station, Star Chart, Fleet Flyby, Bridge,
-  Planet Surface), Ocean 5 of 12 (missing Abyss, Chart Table, Cabin,
-  Treasure Map, Kraken, Ship Deck, Seabed). These are mostly interior/
-  object/board-environment scenes, the heaviest to port.
-- Piece FINISH row (Classic/Dimensional faux-3D) not ported.
-- PieceColorScheme recolors (Midnight/Forest etc.) not ported.
+## Options audit vs iOS (2026-07-31, final pass - deltas CLOSED)
+Space and Ocean are at full iOS option parity: all scenes (Space 13,
+Ocean 12, iOS names/order/light flags), full rosters + palettes, 4 piece
+types, Finish (Classic/3D dimensional), Color schemes (11 pairs; Gold
+omitted until web has progression), 7+4 boards each, 4 neutrals, audio.
+Porting a new theme: follow THEME_CHECKLIST.md, every box.
+
+UI conventions (Rick 2026-07-31): selects are chevron-free and compact
+(appearance:none); the 4 control buttons use inline stroke SVGs, not
+emoji; the install button shows /icon-192.png; Board and Piece type are
+also top-level dropdowns in the controls row, kept in sync with pickers.
 
 ## Not yet built (candidates, in rough order)
-- Close the scene deltas above OR accept the atmospheric core per theme
-  (Rick to decide), then remaining 6 themes one at a time
+- Remaining 6 themes one at a time via THEME_CHECKLIST.md (FeudalJapan
+  next by iOS unlock order)
+- Gold color scheme once the web has win-based progression
 - Online multiplayer (would need a backend; Supabase is available)
 - Service worker for offline play (skipped deliberately: cache
   invalidation risk vs benefit; revisit after family playtests)

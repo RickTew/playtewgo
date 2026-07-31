@@ -7,7 +7,7 @@ import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
 import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
-import { FIGURES, figureHeight, drawFigure, traceFigure } from './pieces.js';
+import { FIGURES, figureHeight, drawFigure, traceFigure, COLOR_SCHEMES, paletteFor } from './pieces.js';
 import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
 
 const HUMAN = ONE;
@@ -65,6 +65,19 @@ let variant = 'tall';
 // Board surface (iOS BoardPanelStyle). Global, like tewgo.boardPanelStyle.
 const BOARD_KEY = 'tewgo.web.board';
 let boardKey = 'none';
+
+// Piece FINISH (iOS tewgo.pieceFinish): classic | dimensional faux-3D.
+const FINISH_KEY = 'tewgo.web.pieceFinish';
+let finish = 'classic';
+
+// Color scheme (iOS tewgo.pieceColor): recolors both sides as a pair.
+const COLOR_KEY = 'tewgo.web.pieceColor';
+let colorScheme = 'original';
+
+// Effective palette for a side under the current color scheme.
+function styleFor(side) {
+  return paletteFor(pieceKind[side], side === ONE ? 0 : 1, colorScheme);
+}
 
 function themeDef() {
   return THEMES[theme];
@@ -162,7 +175,6 @@ function stopMusic() {
 }
 
 function updateToggles() {
-  soundToggleEl.textContent = soundOn ? '🔊' : '🔇';
   soundToggleEl.classList.toggle('off', !soundOn);
   musicToggleEl.classList.toggle('off', !musicOn);
 }
@@ -178,21 +190,22 @@ function difficultyLabel() {
   return v.charAt(0).toUpperCase() + v.slice(1);
 }
 
-function drawIntroPiece(canvasEl, kind) {
+function drawIntroPiece(canvasEl, side) {
+  const kind = pieceKind[side];
   const c = canvasEl.getContext('2d');
   c.setTransform(2, 0, 0, 2, 0, 0); // canvas is 184px backing for 92px CSS
   c.clearRect(0, 0, 92, 92);
   const r = 25;
   const feetY = (92 + figureHeight(kind) * r) / 2;
-  drawFigure(c, kind, 46, feetY, r);
+  drawFigure(c, kind, 46, feetY, r, 1, { palette: styleFor(side), finish });
 }
 
 function showIntro() {
   document.getElementById('introCaption').textContent = themeDef().name.toUpperCase();
   introP1NameEl.textContent = isAiGame() ? `You · ${FIGURES[pieceKind[ONE]].name}` : nameOf(ONE);
   introAiNameEl.textContent = isAiGame() ? `AI · ${difficultyLabel()}` : nameOf(TWO);
-  drawIntroPiece(document.getElementById('introP1Piece'), pieceKind[ONE]);
-  drawIntroPiece(document.getElementById('introP2Piece'), pieceKind[TWO]);
+  drawIntroPiece(document.getElementById('introP1Piece'), ONE);
+  drawIntroPiece(document.getElementById('introP2Piece'), TWO);
   introEl.classList.remove('appear', 'leaving');
   introEl.classList.add('show');
   // setTimeout, not requestAnimationFrame: rAF never fires in hidden tabs,
@@ -249,7 +262,7 @@ function renderShareCard() {
   const rf = 40;
   const feetY = 490 + (figureHeight(kind) * rf) / 2;
   for (let i = 0; i < 5; i += 1) {
-    drawFigure(c, kind, size / 2 + (i - 2) * 130, feetY, rf);
+    drawFigure(c, kind, size / 2 + (i - 2) * 130, feetY, rf, 1, { palette: styleFor(w), finish });
   }
 
   c.fillStyle = 'rgba(255,255,255,0.65)';
@@ -384,10 +397,10 @@ function kickAnims() {
 // so nearer pieces overlap ones behind).
 function drawStone(x, y, radius, player, alpha = 1) {
   const kind = pieceKind[player];
-  const f = FIGURES[kind];
+  const f = styleFor(player);
   if (variant === 'half' || variant === 'tall') {
     const rf = variant === 'tall' ? radius : radius * 0.68;
-    drawFigure(ctx, kind, x, y + radius * 0.98, rf, alpha);
+    drawFigure(ctx, kind, x, y + radius * 0.98, rf, alpha, { palette: f, finish });
     return;
   }
   ctx.save();
@@ -519,7 +532,7 @@ function draw() {
     const [x, y] = pointFor(touchAim[0], touchAim[1], m);
     const [x0] = pointFor(0, 0, m);
     const [x1] = pointFor(0, SIZE - 1, m);
-    ctx.strokeStyle = `rgba(${FIGURES[pieceKind[current]].glowRgb}, 0.45)`;
+    ctx.strokeStyle = `rgba(${styleFor(current).glowRgb}, 0.45)`;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(x0, y);
@@ -553,8 +566,8 @@ function luminance(hex) {
 
 // Counter tint: the darker of the piece's two colors on light scenes,
 // the lighter on dark scenes, so it stays readable either way.
-function counterColor(kind) {
-  const f = FIGURES[kind];
+function counterColor(side) {
+  const f = styleFor(side);
   const sorted = [f.primary, f.stroke].sort((a, b) => luminance(a) - luminance(b));
   return sceneByKey(sceneKey)?.light ? sorted[0] : sorted[1];
 }
@@ -564,8 +577,8 @@ function updateHud() {
   aiLabelEl.textContent = nameOf(TWO);
   youPairsEl.textContent = board.captureCount[ONE];
   aiPairsEl.textContent = board.captureCount[TWO];
-  youPairsEl.style.color = counterColor(pieceKind[ONE]);
-  aiPairsEl.style.color = counterColor(pieceKind[TWO]);
+  youPairsEl.style.color = counterColor(ONE);
+  aiPairsEl.style.color = counterColor(TWO);
   if (gameOver) {
     statusEl.textContent = 'Game over';
   } else if (isAiGame()) {
@@ -809,12 +822,30 @@ function selectScene(key) {
   buildScenePicker();
 }
 
+const boardSelEl = document.getElementById('boardSel');
+const variantSelEl = document.getElementById('variantSel');
+
+function rebuildBoardSelect() {
+  boardSelEl.innerHTML = '';
+  for (const b of boardsForTheme(theme)) {
+    const opt = document.createElement('option');
+    opt.value = b.key;
+    opt.textContent = b.name;
+    boardSelEl.appendChild(opt);
+  }
+  boardSelEl.value = boardKey;
+}
+
 function selectBoard(key) {
   boardKey = key;
   try { localStorage.setItem(BOARD_KEY, key); } catch { /* ignore */ }
+  boardSelEl.value = key;
   draw();
   buildScenePicker();
 }
+
+boardSelEl.addEventListener('change', () => selectBoard(boardSelEl.value));
+variantSelEl.addEventListener('change', () => setVariant(variantSelEl.value));
 
 function sceneOptionButton(name, selected, onPick, paintThumb) {
   const btn = document.createElement('button');
@@ -888,6 +919,14 @@ function selectPiece(side, kind) {
   updateHud();
 }
 
+function setVariant(v) {
+  variant = v;
+  try { localStorage.setItem(VARIANT_KEY, variant); } catch { /* ignore */ }
+  variantSelEl.value = variant;
+  buildVariantRow();
+  draw();
+}
+
 function buildVariantRow() {
   const rowEl = document.getElementById('variantRow');
   rowEl.innerHTML = '';
@@ -895,13 +934,46 @@ function buildVariantRow() {
     const btn = document.createElement('button');
     btn.className = `piece-option variant-btn${variant === v.key ? ' selected' : ''}`;
     btn.textContent = v.name;
+    btn.addEventListener('click', () => setVariant(v.key));
+    rowEl.appendChild(btn);
+  }
+  const finishRowEl = document.getElementById('finishRow');
+  finishRowEl.innerHTML = '';
+  for (const f of [['classic', 'Classic'], ['dimensional', '3D']]) {
+    const btn = document.createElement('button');
+    btn.className = `piece-option variant-btn${finish === f[0] ? ' selected' : ''}`;
+    btn.textContent = f[1];
     btn.addEventListener('click', () => {
-      variant = v.key;
-      try { localStorage.setItem(VARIANT_KEY, variant); } catch { /* ignore */ }
-      buildVariantRow();
+      finish = f[0];
+      try { localStorage.setItem(FINISH_KEY, finish); } catch { /* ignore */ }
+      buildPicker();
       draw();
     });
-    rowEl.appendChild(btn);
+    finishRowEl.appendChild(btn);
+  }
+  const colorRowEl = document.getElementById('colorRow');
+  colorRowEl.innerHTML = '';
+  for (const s of COLOR_SCHEMES) {
+    const btn = document.createElement('button');
+    btn.className = `swatch${colorScheme === s.key ? ' selected' : ''}`;
+    btn.title = s.name;
+    if (s.one) {
+      btn.style.background = s.one;
+      const dot = document.createElement('span');
+      dot.className = 'swatch-dot';
+      dot.style.background = s.two;
+      btn.appendChild(dot);
+    } else {
+      btn.classList.add('swatch-original');
+    }
+    btn.addEventListener('click', () => {
+      colorScheme = s.key;
+      try { localStorage.setItem(COLOR_KEY, colorScheme); } catch { /* ignore */ }
+      buildPicker();
+      draw();
+      updateHud();
+    });
+    colorRowEl.appendChild(btn);
   }
 }
 
@@ -919,7 +991,8 @@ function buildPicker() {
       const cc = cv.getContext('2d');
       cc.scale(2, 2);
       const r = 11;
-      drawFigure(cc, kind, 17, (44 + figureHeight(kind) * r) / 2, r);
+      drawFigure(cc, kind, 17, (44 + figureHeight(kind) * r) / 2, r, 1,
+        { palette: paletteFor(kind, side === ONE ? 0 : 1, colorScheme), finish });
       const label = document.createElement('span');
       label.textContent = FIGURES[kind].name;
       btn.append(cv, label);
@@ -954,6 +1027,7 @@ themeEl.addEventListener('change', () => {
   resetMusicForTheme();
   loadThemePrefs();
   if (!boardsForTheme(theme).some((b) => b.key === boardKey)) boardKey = 'none';
+  rebuildBoardSelect();
   applyScene();
   ensureMusic();
 });
@@ -1003,8 +1077,20 @@ try {
   if (savedVariant && VARIANTS.some((v) => v.key === savedVariant)) variant = savedVariant;
   const savedBoard = localStorage.getItem(BOARD_KEY);
   if (savedBoard && boardsForTheme(theme).some((b) => b.key === savedBoard)) boardKey = savedBoard;
+  const savedFinish = localStorage.getItem(FINISH_KEY);
+  if (savedFinish === 'classic' || savedFinish === 'dimensional') finish = savedFinish;
+  const savedColor = localStorage.getItem(COLOR_KEY);
+  if (savedColor && COLOR_SCHEMES.some((s) => s.key === savedColor)) colorScheme = savedColor;
 } catch { /* ignore */ }
 loadThemePrefs();
+for (const v of VARIANTS) {
+  const opt = document.createElement('option');
+  opt.value = v.key;
+  opt.textContent = v.name;
+  variantSelEl.appendChild(opt);
+}
+variantSelEl.value = variant;
+rebuildBoardSelect();
 applyModeUI();
 applyScene();
 
