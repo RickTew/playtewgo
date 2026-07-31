@@ -159,6 +159,10 @@ function writePref(key, value) {
 let soundOn = readPref(SOUND_KEY, true);
 let musicOn = readPref(MUSIC_KEY, true);
 let music = null;
+// The victory track can be a full song (Ocean's fanfare), so it needs a
+// handle: starting the next game's music must replace it, like the iOS
+// single music channel - otherwise it plays OVER the new game's music.
+let victoryAudio = null;
 
 function playSfx(name) {
   if (!soundOn) return;
@@ -166,8 +170,23 @@ function playSfx(name) {
   a.play().catch(() => { /* pre-gesture or unsupported: stay silent */ });
 }
 
+function playVictory() {
+  if (!soundOn) return;
+  victoryAudio = new Audio(`audio/${theme}/victory.m4a`);
+  victoryAudio.play().catch(() => { /* pre-gesture: stay silent */ });
+}
+
+function stopVictory() {
+  if (victoryAudio) {
+    victoryAudio.pause();
+    victoryAudio = null;
+  }
+}
+
 function ensureMusic() {
-  if (!musicOn || gameOver) return;
+  if (gameOver) return;
+  stopVictory();
+  if (!musicOn) return;
   if (!music) {
     music = new Audio(`audio/${theme}/ingame.m4a`);
     music.loop = true;
@@ -178,6 +197,7 @@ function ensureMusic() {
 
 function resetMusicForTheme() {
   stopMusic();
+  stopVictory();
   music = null;
 }
 
@@ -645,7 +665,7 @@ function endIfOver(player) {
   }
   if (gameOver) {
     stopMusic();
-    if (winner !== null) playSfx('victory');
+    if (winner !== null) playVictory();
     showOverlay();
   }
   return gameOver;
