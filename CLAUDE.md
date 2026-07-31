@@ -72,14 +72,26 @@ when its 🖼️ and 👥 pickers match what iOS offers for that theme.
 Shipped 2026-07-31 (second pass): theme system (themes.js, Theme select,
 per-theme scene/piece persistence, per-theme audio folders), piece TYPE
 variants (Flat/Chip/Half/Tall in the 👥 popup, drawStone in game.js),
-board surfaces (boards.js: 7 universal + Space's 4 themed, Board column
+board surfaces (boards.js: 7 universal + 4 themed per theme, Board column
 in the 🖼️ popup, light boards flip the grid), Ocean theme (6 figures,
-5 scenes, audio) - Ocean still needs its 4 themed boards (Deck Hatch/
-Seabed Sand/Sea Chart/Driftwood) to be "done" by the rule above.
+5 scenes, 4 themed boards, audio).
+
+## Options audit vs iOS (2026-07-31, post-Ocean-boards)
+Complete on web for BOTH themes: full figure rosters + exact palettes,
+defaults, 4 piece types, 7 universal + 4 themed boards with correct
+isLightSurface flags, 4 neutrals, place/capture/victory/ingame audio.
+Known deltas vs iOS (both themes):
+- Scenes: web has the atmospheric core only - Space 6 of 13 (missing
+  Ringed Planet, Holo Table, Station, Star Chart, Fleet Flyby, Bridge,
+  Planet Surface), Ocean 5 of 12 (missing Abyss, Chart Table, Cabin,
+  Treasure Map, Kraken, Ship Deck, Seabed). These are mostly interior/
+  object/board-environment scenes, the heaviest to port.
+- Piece FINISH row (Classic/Dimensional faux-3D) not ported.
+- PieceColorScheme recolors (Midnight/Forest etc.) not ported.
 
 ## Not yet built (candidates, in rough order)
-- Ocean themed boards (see rule above), then remaining 6 themes one at a
-  time (each = figures + scenes + boards + palette from the iOS theme)
+- Close the scene deltas above OR accept the atmospheric core per theme
+  (Rick to decide), then remaining 6 themes one at a time
 - Online multiplayer (would need a backend; Supabase is available)
 - Service worker for offline play (skipped deliberately: cache
   invalidation risk vs benefit; revisit after family playtests)
