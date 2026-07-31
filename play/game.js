@@ -342,6 +342,9 @@ function restore() {
   try { text = localStorage.getItem(SAVE_KEY); } catch { return false; }
   const state = text && decodeState(text);
   if (!state || state.isGameOver) return false;
+  // An untouched board is not a game in progress: those visitors should
+  // land on the setup screen, not resume onto an empty board.
+  if (!state.cells.some((row) => row.some((v) => v !== 0))) return false;
   board = GameBoard.fromState(state);
   current = state.currentPlayerRaw;
   gameOver = false;
@@ -800,7 +803,9 @@ canvas.addEventListener('pointerleave', () => {
   }
 });
 
-newGameEl.addEventListener('click', newGame);
+// New game goes through the setup screen (theme/mode/level first);
+// Play again is an instant rematch with the same settings.
+newGameEl.addEventListener('click', () => openSetup());
 playAgainEl.addEventListener('click', newGame);
 shareBtnEl.addEventListener('click', shareCard);
 introEl.addEventListener('pointerdown', () => {
@@ -1077,8 +1082,16 @@ function openSetup() {
   document.getElementById('setupMode').value = mode;
   document.getElementById('setupDiff').value = difficultyEl.value;
   document.getElementById('setupDiffRow').style.display = mode === 'ai' ? '' : 'none';
+  // Back only makes sense when there is a live game behind the overlay
+  const hasLiveGame = !gameOver && board.grid.some((row) => row.some((v) => v !== 0));
+  const cancelEl = document.getElementById('setupCancel');
+  if (cancelEl) cancelEl.style.display = hasLiveGame ? '' : 'none';
   setupEl.classList.add('show');
 }
+
+document.getElementById('setupCancel')?.addEventListener('click', () => {
+  setupEl.classList.remove('show');
+});
 
 document.getElementById('setupMode')?.addEventListener('change', () => {
   document.getElementById('setupDiffRow').style.display =
