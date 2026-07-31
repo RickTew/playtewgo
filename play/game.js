@@ -6,6 +6,7 @@
 import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
+import { paintSpaceScene } from './space.js';
 
 const HUMAN = ONE;
 const AI_PLAYER = TWO;
@@ -624,7 +625,12 @@ modeEl.addEventListener('change', () => {
   applyModeUI();
   newGame();
 });
-window.addEventListener('resize', draw);
+const sceneEl = document.getElementById('scene');
+paintSpaceScene(sceneEl);
+window.addEventListener('resize', () => {
+  paintSpaceScene(sceneEl);
+  draw();
+});
 
 try {
   const savedDifficulty = localStorage.getItem(DIFFICULTY_KEY);

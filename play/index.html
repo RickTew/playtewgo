@@ -31,24 +31,12 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
-  /* Space theme: starfield over layered nebula glows (soft edges only,
-     matching the iOS background rule: layered glows, never hard discs). */
-  .stars {
+  /* Space scene: painted by play/space.js on a full-viewport canvas
+     (layered nebula glows, starfield, ringed planet - the iOS Nebula look) */
+  #scene {
     position: fixed; inset: 0; z-index: -1;
-    background:
-      radial-gradient(1px 1px at 20% 30%, #fff8, transparent 40%),
-      radial-gradient(1px 1px at 70% 15%, #fff6, transparent 40%),
-      radial-gradient(1.5px 1.5px at 40% 70%, #fff7, transparent 40%),
-      radial-gradient(1px 1px at 85% 55%, #fff5, transparent 40%),
-      radial-gradient(1px 1px at 10% 85%, #fff6, transparent 40%),
-      radial-gradient(1.5px 1.5px at 55% 40%, #fff4, transparent 40%),
-      radial-gradient(1px 1px at 30% 10%, #fff5, transparent 40%),
-      radial-gradient(1px 1px at 92% 88%, #fff7, transparent 40%),
-      radial-gradient(ellipse 55% 38% at 75% 18%, rgba(124, 77, 255, 0.20) 0%, rgba(124, 77, 255, 0.08) 45%, transparent 70%),
-      radial-gradient(ellipse 45% 32% at 18% 72%, rgba(64, 156, 255, 0.16) 0%, rgba(64, 156, 255, 0.06) 45%, transparent 70%),
-      radial-gradient(ellipse 38% 26% at 60% 85%, rgba(255, 110, 199, 0.10) 0%, transparent 65%),
-      radial-gradient(ellipse 80% 50% at 50% -10%, #1c1c4a 0%, transparent 60%),
-      var(--bg);
+    width: 100%; height: 100%;
+    background: var(--bg);
   }
   header { text-align: center; padding: 4px 0 10px; }
   .logo {
@@ -79,10 +67,11 @@
     position: relative;
     width: var(--board-size);
     background:
-      radial-gradient(ellipse 90% 70% at 50% 0%, rgba(79, 163, 255, 0.06), transparent 70%),
-      rgba(14, 16, 34, 0.55);
-    border: 1px solid #ffffff14; border-radius: 16px;
+      radial-gradient(ellipse 90% 70% at 50% 0%, rgba(79, 163, 255, 0.07), transparent 70%),
+      rgba(8, 9, 24, 0.62);
+    border: 1px solid #ffffff1f; border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(28, 28, 74, 0.45);
+    backdrop-filter: blur(2px);
     overflow: hidden;
   }
   canvas { display: block; width: 100%; height: auto; }
@@ -155,7 +144,7 @@
 </style>
 </head>
 <body>
-<div class="stars"></div>
+<canvas id="scene"></canvas>
 
 <header>
   <a class="logo" href="/">TEW<span class="go">GO</span><span class="beta">Beta</span></a>
