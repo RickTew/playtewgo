@@ -197,6 +197,62 @@ export const FIGURES = {
       [-0.70, 1.05], [-0.85, 0.50], [-0.75, 0.00],
     ],
   },
+  // ----- Dungeon roster (ThemeRegistry.dungeon palettes) -----
+  dragon: {
+    name: 'Dragon',
+    primary: '#9E140F',
+    stroke: '#FF6114',
+    glowRgb: '255, 56, 0',
+    accent: '#FFD933',
+    points: [
+      [0.55, 0.00], [0.60, 0.50], [0.65, 1.10], [1.00, 1.35], [0.95, 1.70],
+      [0.55, 1.90], [0.60, 2.30], [0.85, 2.55], [1.10, 2.95], [0.55, 2.80],
+      [0.30, 2.95], [0.00, 3.05], [-0.30, 2.95], [-0.55, 2.80], [-1.10, 2.95],
+      [-0.85, 2.55], [-0.60, 2.30], [-0.55, 1.90], [-0.95, 1.70], [-1.00, 1.35],
+      [-0.65, 1.10], [-0.60, 0.50], [-0.55, 0.00],
+    ],
+  },
+  wizard: {
+    name: 'Wizard',
+    primary: '#33268C',
+    stroke: '#FFD133',
+    glowRgb: '166, 115, 255',
+    accent: '#FFD94D',
+    points: [
+      [0.85, 0.00], [0.55, 0.55], [0.50, 1.10], [0.75, 1.40], [0.55, 1.75],
+      [0.50, 2.10], [0.45, 2.40], [0.40, 2.55], [0.55, 2.65], [0.30, 2.85],
+      [0.00, 3.20], [-0.30, 2.85], [-0.55, 2.65], [-0.40, 2.55], [-0.45, 2.40],
+      [-0.50, 2.10], [-0.55, 1.75], [-0.75, 1.40], [-0.50, 1.10], [-0.55, 0.55],
+      [-0.85, 0.00],
+    ],
+  },
+  knight: {
+    name: 'Knight',
+    primary: '#8599AD',
+    stroke: '#D9EBFF',
+    glowRgb: '140, 184, 255',
+    accent: '#E6F5FF',
+    points: [
+      [0.65, 0.00], [0.70, 0.55], [0.55, 1.05], [1.00, 1.30], [0.85, 1.65],
+      [0.55, 1.90], [0.55, 2.25], [0.65, 2.65], [0.50, 3.00], [0.00, 3.18],
+      [-0.50, 3.00], [-0.65, 2.65], [-0.55, 2.25], [-0.55, 1.90], [-0.85, 1.65],
+      [-1.00, 1.30], [-0.55, 1.05], [-0.70, 0.55], [-0.65, 0.00],
+    ],
+  },
+  goblin: {
+    name: 'Goblin',
+    primary: '#4D8C33',
+    stroke: '#8C4D1A',
+    glowRgb: '140, 217, 77',
+    accent: '#FFD933',
+    points: [
+      [0.55, 0.00], [0.55, 0.40], [0.60, 0.90], [0.95, 1.10], [0.70, 1.45],
+      [0.45, 1.65], [0.55, 1.85], [0.55, 2.20], [0.95, 2.55], [0.40, 2.45],
+      [0.00, 2.55], [-0.40, 2.45], [-0.95, 2.55], [-0.55, 2.20], [-0.55, 1.85],
+      [-0.45, 1.65], [-0.70, 1.45], [-0.95, 1.10], [-0.60, 0.90], [-0.55, 0.40],
+      [-0.55, 0.00],
+    ],
+  },
 };
 
 export const FIGURE_KINDS = Object.keys(FIGURES);
@@ -411,6 +467,50 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
       roundedRect(ctx, cx + dx * r, at(2.15), r * 0.13, r * 0.05, r * 0.02);
       ctx.fill();
     }
+  } else if (kind === 'dragon') {
+    // Twin glowing eyes under the brow ridge
+    for (const dx of [-0.22, 0.22]) {
+      ctx.fillStyle = 'rgba(255, 217, 51, 0.30)';
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'knight') {
+    // Horizontal helmet visor slit
+    ctx.fillStyle = '#0d0d0d';
+    roundedRect(ctx, cx, at(2.55), r * 0.55, r * 0.10, r * 0.04);
+    ctx.fill();
+  } else if (kind === 'wizard') {
+    // Eyes peeking under hat brim + long beard tuft
+    ctx.fillStyle = accent;
+    for (const dx of [-0.12, 0.12]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.45), r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(240, 240, 240, 0.95)';
+    ctx.beginPath();
+    ctx.ellipse(cx, at(2.05), r * 0.30, r * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (kind === 'goblin') {
+    // Wide staring eyes with bright pupils + thin grin
+    for (const dx of [-0.18, 0.18]) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.50), r * 0.10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.50), r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#0d0d0d';
+    roundedRect(ctx, cx, at(2.20), r * 0.30, r * 0.05, r * 0.01);
+    ctx.fill();
   }
 }
 

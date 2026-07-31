@@ -33,6 +33,11 @@ repo is read-only reference from here; never edit it from this project.
 - `play/index.html` + `play/game.js` - game page and UI/rendering
 - `play/engine/` - rules engine, state codec, AI (keep UI out of here)
 - `tests/` - engine tests
+- `updates.html` - player-facing Features and Updates page. It MIRRORS
+  `~/Dev/TEWGO/FEATURES.md` (the canonical list in the iOS repo). When a
+  release ships or a feature lands in either project, update FEATURES.md
+  first, then this page in the same sitting. Statuses must stay honest
+  (Live / Coming soon / In development).
 
 ## Deploy
 Push to main = live on playtewgo.com within a minute or two (GitHub Pages).
