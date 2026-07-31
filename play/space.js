@@ -1,8 +1,25 @@
-// Space scene background, echoing the iOS Nebula look from
-// BackgroundRenderer.swift: layered soft glows (never hard-edged discs),
-// a starfield with varied sizes, and a ringed planet. Drawn once per
-// resize on a full-viewport canvas. Seeded so the sky is stable between
-// visits instead of re-rolling every load.
+// Space scene backgrounds + the universal neutral options, echoing the iOS
+// catalog (BackgroundRenderer.swift space scenes, NeutralBackground colors).
+// Painted scenes follow the iOS glow rule: layered soft radial glows, never
+// hard-edged discs. Seeded so each scene is stable between visits.
+
+export const SCENES = [
+  { key: 'nebula', name: 'Nebula' },
+  { key: 'void', name: 'Void' },
+  { key: 'aurora', name: 'Aurora' },
+  { key: 'crimson', name: 'Crimson' },
+  { key: 'galaxy', name: 'Galaxy' },
+  { key: 'asteroids', name: 'Asteroid Field' },
+  // NeutralBackground constants from BackgroundStyle.swift
+  { key: 'sepia', name: 'Sepia', neutral: true, light: true, color: '#F2E0BD' },
+  { key: 'cleanLight', name: 'Clean Light', neutral: true, light: true, color: '#F5F5F5' },
+  { key: 'cleanDark', name: 'Clean Dark', neutral: true, color: '#141419' },
+  { key: 'slate', name: 'Slate', neutral: true, color: '#3D4250' },
+];
+
+export function sceneByKey(key) {
+  return SCENES.find((s) => s.key === key) ?? SCENES[0];
+}
 
 function mulberry32(seed) {
   let a = seed;
@@ -29,93 +46,206 @@ function glow(c, x, y, r, rgb, alpha, layers = 3) {
   }
 }
 
-export function paintSpaceScene(canvas) {
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
-  if (w === 0 || h === 0) return;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.round(w * dpr);
-  canvas.height = Math.round(h * dpr);
-  const c = canvas.getContext('2d');
-  c.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  // Deep-space vertical gradient
-  const sky = c.createLinearGradient(0, 0, 0, h);
-  sky.addColorStop(0, '#0b0b2a');
-  sky.addColorStop(0.45, '#0a0a1e');
-  sky.addColorStop(1, '#060614');
-  c.fillStyle = sky;
+function sky(c, w, h, top, mid, bottom) {
+  const g = c.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, top);
+  g.addColorStop(0.45, mid);
+  g.addColorStop(1, bottom);
+  c.fillStyle = g;
   c.fillRect(0, 0, w, h);
+}
 
-  const m = Math.min(w, h);
+function starfield(c, w, h, rand, { density = 6500, aMin = 0.3, aMax = 1.0, glint = 0.06 } = {}) {
+  const count = Math.round((w * h) / density);
+  for (let i = 0; i < count; i += 1) {
+    const x = rand() * w;
+    const y = rand() * h;
+    const r = 0.4 + rand() * 1.4;
+    const a = aMin + rand() * (aMax - aMin);
+    c.fillStyle = `rgba(255, 255, 255, ${a})`;
+    c.beginPath();
+    c.arc(x, y, r, 0, Math.PI * 2);
+    c.fill();
+    if (rand() < glint) glow(c, x, y, r * 7, '200, 220, 255', 0.8, 2);
+  }
+}
 
-  // Nebula clouds: layered purple, blue and magenta glows
+function ringedPlanet(c, x, y, r) {
+  glow(c, x, y, r * 3.2, '90, 160, 255', 0.5, 3);
+  const body = c.createRadialGradient(x - r * 0.4, y - r * 0.4, r * 0.1, x, y, r);
+  body.addColorStop(0, '#9fd4ff');
+  body.addColorStop(0.5, '#3f7fd4');
+  body.addColorStop(1, '#122a52');
+  c.fillStyle = body;
+  c.beginPath();
+  c.arc(x, y, r, 0, Math.PI * 2);
+  c.fill();
+  c.save();
+  c.translate(x, y);
+  c.rotate(-0.35);
+  c.strokeStyle = 'rgba(180, 210, 255, 0.55)';
+  c.lineWidth = r * 0.16;
+  c.beginPath();
+  c.ellipse(0, 0, r * 1.75, r * 0.5, 0, 0.15, Math.PI - 0.15);
+  c.stroke();
+  c.strokeStyle = 'rgba(180, 210, 255, 0.25)';
+  c.beginPath();
+  c.ellipse(0, 0, r * 1.75, r * 0.5, 0, Math.PI + 0.15, Math.PI * 2 - 0.15);
+  c.stroke();
+  c.restore();
+}
+
+function moon(c, x, y, r) {
+  glow(c, x, y, r * 3, '220, 230, 255', 0.4, 2);
+  const g = c.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+  g.addColorStop(0, '#f0f4ff');
+  g.addColorStop(1, '#5a6a8a');
+  c.fillStyle = g;
+  c.beginPath();
+  c.arc(x, y, r, 0, Math.PI * 2);
+  c.fill();
+}
+
+// ----- Painted scenes -----
+
+function paintNebula(c, w, h, m) {
+  sky(c, w, h, '#0b0b2a', '#0a0a1e', '#060614');
   glow(c, w * 0.80, h * 0.16, m * 0.55, '124, 77, 255', 0.55, 4);
   glow(c, w * 0.70, h * 0.28, m * 0.35, '64, 156, 255', 0.40, 3);
   glow(c, w * 0.12, h * 0.78, m * 0.50, '30, 110, 220', 0.45, 4);
   glow(c, w * 0.22, h * 0.62, m * 0.30, '124, 77, 255', 0.30, 3);
   glow(c, w * 0.55, h * 0.95, m * 0.40, '255, 110, 199', 0.22, 3);
   glow(c, w * 0.05, h * 0.10, m * 0.35, '80, 200, 255', 0.25, 3);
+  starfield(c, w, h, mulberry32(20260731));
+  ringedPlanet(c, w * 0.86, h * 0.13, m * 0.075);
+  moon(c, w * 0.07, h * 0.30, m * 0.022);
+}
 
-  // Starfield
-  const rand = mulberry32(20260731);
-  const starCount = Math.round((w * h) / 6500);
-  for (let i = 0; i < starCount; i += 1) {
-    const x = rand() * w;
-    const y = rand() * h;
-    const r = 0.4 + rand() * 1.4;
-    const a = 0.3 + rand() * 0.7;
-    c.fillStyle = `rgba(255, 255, 255, ${a})`;
-    c.beginPath();
-    c.arc(x, y, r, 0, Math.PI * 2);
-    c.fill();
-    if (rand() < 0.06) {
-      // Occasional bright star with a soft glint
-      glow(c, x, y, r * 7, '200, 220, 255', 0.8, 2);
-    }
+function paintVoid(c, w, h, m) {
+  sky(c, w, h, '#05050f', '#030309', '#020205');
+  glow(c, w * 0.75, h * 0.85, m * 0.45, '60, 80, 160', 0.14, 3);
+  starfield(c, w, h, mulberry32(11), { density: 11000, aMin: 0.15, aMax: 0.6, glint: 0.02 });
+}
+
+function paintAurora(c, w, h, m) {
+  sky(c, w, h, '#04121c', '#051020', '#030812');
+  // Curtain: overlapping green/teal glows sweeping across the upper sky
+  const rand = mulberry32(22);
+  for (let i = 0; i < 7; i += 1) {
+    const x = w * (0.08 + 0.14 * i);
+    const y = h * (0.16 + 0.10 * Math.sin(i * 1.3));
+    const rgb = i % 2 === 0 ? '61, 255, 160' : '80, 220, 255';
+    glow(c, x, y, m * (0.22 + rand() * 0.12), rgb, 0.4, 3);
   }
+  glow(c, w * 0.5, h * 0.08, m * 0.6, '61, 255, 160', 0.22, 3);
+  glow(c, w * 0.2, h * 0.9, m * 0.35, '30, 110, 220', 0.18, 3);
+  starfield(c, w, h, mulberry32(23), { density: 8000, aMax: 0.8 });
+}
 
-  // Ringed planet, upper right
-  const px = w * 0.86;
-  const py = h * 0.13;
-  const pr = m * 0.075;
-  glow(c, px, py, pr * 3.2, '90, 160, 255', 0.5, 3);
+function paintCrimson(c, w, h, m) {
+  sky(c, w, h, '#1c060a', '#120408', '#080204');
+  glow(c, w * 0.78, h * 0.20, m * 0.5, '255, 70, 60', 0.5, 4);
+  glow(c, w * 0.60, h * 0.35, m * 0.32, '255, 140, 60', 0.35, 3);
+  glow(c, w * 0.15, h * 0.75, m * 0.45, '200, 40, 80', 0.4, 4);
+  glow(c, w * 0.35, h * 0.92, m * 0.35, '255, 90, 40', 0.25, 3);
+  glow(c, w * 0.05, h * 0.12, m * 0.3, '255, 60, 120', 0.25, 3);
+  starfield(c, w, h, mulberry32(33), { density: 8500, aMax: 0.85 });
+}
 
-  const body = c.createRadialGradient(px - pr * 0.4, py - pr * 0.4, pr * 0.1, px, py, pr);
-  body.addColorStop(0, '#9fd4ff');
-  body.addColorStop(0.5, '#3f7fd4');
-  body.addColorStop(1, '#122a52');
-  c.fillStyle = body;
+function paintGalaxy(c, w, h, m) {
+  sky(c, w, h, '#070718', '#050512', '#03030a');
+  const cx = w * 0.68;
+  const cy = h * 0.30;
+  // Spiral arms: glows placed along a logarithmic spiral around the core
+  const rand = mulberry32(44);
+  for (let t = 0; t < 26; t += 1) {
+    const angle = t * 0.42;
+    const dist = m * 0.028 * Math.exp(0.115 * t);
+    if (dist > m * 0.5) break;
+    const x = cx + Math.cos(angle) * dist * 1.25;
+    const y = cy + Math.sin(angle) * dist * 0.6;
+    const rgb = t % 3 === 0 ? '190, 170, 255' : t % 3 === 1 ? '120, 160, 255' : '230, 235, 255';
+    glow(c, x, y, m * (0.05 + rand() * 0.05), rgb, 0.35, 2);
+  }
+  glow(c, cx, cy, m * 0.16, '255, 240, 210', 0.9, 4); // core
+  glow(c, cx, cy, m * 0.05, '255, 255, 240', 0.9, 2);
+  glow(c, w * 0.12, h * 0.80, m * 0.4, '90, 70, 180', 0.25, 3);
+  starfield(c, w, h, mulberry32(45), { density: 7000 });
+}
+
+function paintAsteroids(c, w, h, m) {
+  sky(c, w, h, '#0a0d16', '#080a12', '#04050a');
+  glow(c, w * 0.75, h * 0.75, m * 0.5, '80, 200, 255', 0.16, 3); // ion haze
+  glow(c, w * 0.2, h * 0.2, m * 0.4, '120, 140, 200', 0.18, 3);
+  starfield(c, w, h, mulberry32(55), { density: 9000, aMax: 0.85 });
+  // Comet: bright head with a tapered tail
+  const hx = w * 0.30;
+  const hy = h * 0.18;
+  const tail = c.createLinearGradient(hx, hy, hx + m * 0.30, hy - m * 0.12);
+  tail.addColorStop(0, 'rgba(200, 230, 255, 0.7)');
+  tail.addColorStop(1, 'rgba(200, 230, 255, 0)');
+  c.strokeStyle = tail;
+  c.lineWidth = 2.5;
   c.beginPath();
-  c.arc(px, py, pr, 0, Math.PI * 2);
-  c.fill();
-
-  // Ring: ellipse tilted around the planet, split so the far side sits
-  // behind the sphere
-  c.save();
-  c.translate(px, py);
-  c.rotate(-0.35);
-  c.strokeStyle = 'rgba(180, 210, 255, 0.55)';
-  c.lineWidth = pr * 0.16;
-  c.beginPath();
-  c.ellipse(0, 0, pr * 1.75, pr * 0.5, 0, 0.15, Math.PI - 0.15);
+  c.moveTo(hx, hy);
+  c.lineTo(hx + m * 0.30, hy - m * 0.12);
   c.stroke();
-  c.strokeStyle = 'rgba(180, 210, 255, 0.25)';
-  c.beginPath();
-  c.ellipse(0, 0, pr * 1.75, pr * 0.5, 0, Math.PI + 0.15, Math.PI * 2 - 0.15);
-  c.stroke();
-  c.restore();
+  glow(c, hx, hy, m * 0.02, '220, 240, 255', 1.0, 2);
+  // Drifting rocks: shaded ellipses with a crater or two
+  const rand = mulberry32(56);
+  for (let i = 0; i < 13; i += 1) {
+    const x = rand() * w;
+    const y = h * (0.25 + rand() * 0.7);
+    const r = m * (0.012 + rand() * 0.035);
+    const rot = rand() * Math.PI;
+    c.save();
+    c.translate(x, y);
+    c.rotate(rot);
+    const g = c.createRadialGradient(-r * 0.4, -r * 0.4, r * 0.1, 0, 0, r);
+    g.addColorStop(0, '#9aa3b2');
+    g.addColorStop(0.7, '#565e6c');
+    g.addColorStop(1, '#2c313c');
+    c.fillStyle = g;
+    c.beginPath();
+    c.ellipse(0, 0, r, r * (0.65 + rand() * 0.3), 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = 'rgba(20, 24, 32, 0.5)';
+    c.beginPath();
+    c.arc(r * 0.25, r * 0.1, r * 0.2, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+}
 
-  // Distant moon, lower left
-  const mx = w * 0.07;
-  const my = h * 0.30;
-  const mr = m * 0.022;
-  glow(c, mx, my, mr * 3, '220, 230, 255', 0.4, 2);
-  const moon = c.createRadialGradient(mx - mr * 0.3, my - mr * 0.3, mr * 0.1, mx, my, mr);
-  moon.addColorStop(0, '#f0f4ff');
-  moon.addColorStop(1, '#5a6a8a');
-  c.fillStyle = moon;
-  c.beginPath();
-  c.arc(mx, my, mr, 0, Math.PI * 2);
-  c.fill();
+const PAINTERS = {
+  nebula: paintNebula,
+  void: paintVoid,
+  aurora: paintAurora,
+  crimson: paintCrimson,
+  galaxy: paintGalaxy,
+  asteroids: paintAsteroids,
+};
+
+/**
+ * Paints a scene onto a canvas. With no explicit size the canvas's CSS size
+ * and devicePixelRatio are used (the full-page backdrop); pass w/h to render
+ * a fixed-size thumbnail.
+ */
+export function paintScene(canvas, key, w, h) {
+  const scene = sceneByKey(key);
+  const cssW = w ?? canvas.clientWidth;
+  const cssH = h ?? canvas.clientHeight;
+  if (cssW === 0 || cssH === 0) return;
+  const dpr = w ? 1 : Math.min(2, window.devicePixelRatio || 1);
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  const c = canvas.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (scene.neutral) {
+    c.fillStyle = scene.color;
+    c.fillRect(0, 0, cssW, cssH);
+    return;
+  }
+  PAINTERS[scene.key](c, cssW, cssH, Math.min(cssW, cssH));
 }

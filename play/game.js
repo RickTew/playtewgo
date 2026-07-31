@@ -6,7 +6,7 @@
 import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
-import { paintSpaceScene } from './space.js';
+import { SCENES, sceneByKey, paintScene } from './space.js';
 import { FIGURES, FIGURE_KINDS, figureHeight, drawFigure } from './pieces.js';
 
 const HUMAN = ONE;
@@ -14,6 +14,7 @@ const AI_PLAYER = TWO;
 const SAVE_KEY = 'tewgo.web.game';
 const DIFFICULTY_KEY = 'tewgo.web.difficulty';
 const MODE_KEY = 'tewgo.web.mode';
+const SCENE_KEY = 'tewgo.web.scene';
 const AI_DELAY_MS = 350;
 const POP_MS = 160;
 const FADE_MS = 320;
@@ -45,6 +46,7 @@ let current = HUMAN;
 let gameOver = false;
 let winner = null;
 let mode = 'ai'; // 'ai' | '2p' (pass and play on one device)
+let sceneKey = 'nebula';
 
 // Figure piece per side (Space roster). iOS defaults: Robot vs Alien.
 const PIECE_KEYS = { [ONE]: 'tewgo.web.piece.one', [TWO]: 'tewgo.web.piece.two' };
@@ -344,8 +346,9 @@ function draw() {
   const now = performance.now();
   const radius = m.cell * 0.42;
 
-  // Grid lines
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  // Grid lines (dark overlay on light neutral backgrounds, like iOS)
+  const lightSurface = sceneByKey(sceneKey).light;
+  ctx.strokeStyle = lightSurface ? 'rgba(20,20,30,0.14)' : 'rgba(255,255,255,0.08)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let i = 0; i < SIZE; i += 1) {
@@ -359,7 +362,7 @@ function draw() {
   ctx.stroke();
 
   // Intersection dots
-  ctx.fillStyle = 'rgba(255,255,255,0.30)';
+  ctx.fillStyle = lightSurface ? 'rgba(20,20,30,0.38)' : 'rgba(255,255,255,0.30)';
   for (let r = 0; r < SIZE; r += 1) {
     for (let c = 0; c < SIZE; c += 1) {
       const [x, y] = pointFor(r, c, m);
@@ -432,13 +435,26 @@ function draw() {
   }
 }
 
+function luminance(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 0xff) + 0.114 * (n & 0xff);
+}
+
+// Counter tint: the darker of the piece's two colors on light scenes,
+// the lighter on dark scenes, so it stays readable either way.
+function counterColor(kind) {
+  const f = FIGURES[kind];
+  const sorted = [f.primary, f.stroke].sort((a, b) => luminance(a) - luminance(b));
+  return sceneByKey(sceneKey).light ? sorted[0] : sorted[1];
+}
+
 function updateHud() {
   youLabelEl.textContent = nameOf(ONE);
   aiLabelEl.textContent = nameOf(TWO);
   youPairsEl.textContent = board.captureCount[ONE];
   aiPairsEl.textContent = board.captureCount[TWO];
-  youPairsEl.style.color = FIGURES[pieceKind[ONE]].stroke;
-  aiPairsEl.style.color = FIGURES[pieceKind[TWO]].stroke;
+  youPairsEl.style.color = counterColor(pieceKind[ONE]);
+  aiPairsEl.style.color = counterColor(pieceKind[TWO]);
   if (gameOver) {
     statusEl.textContent = 'Game over';
   } else if (isAiGame()) {
@@ -660,6 +676,50 @@ function applyModeUI() {
   difficultyLabelEl.style.display = isAiGame() ? '' : 'none';
 }
 
+// ----- Scene picker -----
+
+const scenePickerEl = document.getElementById('scenePicker');
+const sceneColEl = document.getElementById('sceneCol');
+const neutralColEl = document.getElementById('neutralCol');
+
+function applyScene() {
+  paintScene(sceneEl, sceneKey);
+  document.body.classList.toggle('light', !!sceneByKey(sceneKey).light);
+  draw();
+  updateHud();
+}
+
+function selectScene(key) {
+  sceneKey = key;
+  try { localStorage.setItem(SCENE_KEY, key); } catch { /* ignore */ }
+  applyScene();
+  buildScenePicker();
+}
+
+function buildScenePicker() {
+  sceneColEl.innerHTML = '';
+  neutralColEl.innerHTML = '';
+  for (const scene of SCENES) {
+    const btn = document.createElement('button');
+    btn.className = `piece-option scene-option${scene.key === sceneKey ? ' selected' : ''}`;
+    const cv = document.createElement('canvas');
+    paintScene(cv, scene.key, 112, 72);
+    const label = document.createElement('span');
+    label.textContent = scene.name;
+    btn.append(cv, label);
+    btn.addEventListener('click', () => selectScene(scene.key));
+    (scene.neutral ? neutralColEl : sceneColEl).appendChild(btn);
+  }
+}
+
+document.getElementById('sceneBtn').addEventListener('click', () => {
+  buildScenePicker();
+  scenePickerEl.classList.add('show');
+});
+document.getElementById('sceneDone').addEventListener('click', () => {
+  scenePickerEl.classList.remove('show');
+});
+
 // ----- Piece picker -----
 
 const piecePickerEl = document.getElementById('piecePicker');
@@ -746,9 +806,8 @@ window.addEventListener('appinstalled', () => {
 });
 
 const sceneEl = document.getElementById('scene');
-paintSpaceScene(sceneEl);
 window.addEventListener('resize', () => {
-  paintSpaceScene(sceneEl);
+  paintScene(sceneEl, sceneKey);
   draw();
 });
 
@@ -767,8 +826,11 @@ try {
     if (savedPiece && FIGURE_KINDS.includes(savedPiece)) pieceKind[side] = savedPiece;
   }
   if (pieceKind[ONE] === pieceKind[TWO]) pieceKind[TWO] = pieceKind[ONE] === 'alien' ? 'robot' : 'alien';
+  const savedScene = localStorage.getItem(SCENE_KEY);
+  if (savedScene && SCENES.some((s) => s.key === savedScene)) sceneKey = savedScene;
 } catch { /* ignore */ }
 applyModeUI();
+applyScene();
 
 const resumed = restore();
 if (resumed && isAiGame() && current === AI_PLAYER) scheduleAiMove();

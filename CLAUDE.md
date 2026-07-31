@@ -59,7 +59,10 @@ root, then open /play/).
   share card (Web Share / PNG download, dev preview at /play/?sharecard);
   vs AI and 2-players modes; Space figure pieces (play/pieces.js: Robot/
   Astronaut/Alien/UFO ported from PieceRenderer.swift with exact palettes,
-  👥 picker popup, per-side persistence, sides kept distinct via swap).
+  👥 picker popup, per-side persistence, sides kept distinct via swap);
+  🖼️ Background picker (play/space.js SCENES registry: 6 painted Space
+  scenes + the 4 iOS neutrals; light neutrals flip body.light + dark
+  grid/dots + darker counter tints, mirroring iOS isLightSurface).
 
 ## Not yet built (candidates, in rough order)
 - More themes beyond Space (each = figures + scene + palette, ported from
