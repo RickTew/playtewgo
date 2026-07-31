@@ -3,7 +3,7 @@
 // to localStorage through the same state codec the iOS app uses for
 // multiplayer payloads.
 
-import { GameBoard, SIZE, ONE, TWO } from './engine/board.js';
+import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
 
@@ -11,6 +11,7 @@ const HUMAN = ONE;
 const AI_PLAYER = TWO;
 const SAVE_KEY = 'tewgo.web.game';
 const DIFFICULTY_KEY = 'tewgo.web.difficulty';
+const MODE_KEY = 'tewgo.web.mode';
 const AI_DELAY_MS = 350;
 const POP_MS = 160;
 const FADE_MS = 320;
@@ -30,12 +31,27 @@ const soundToggleEl = document.getElementById('soundToggle');
 const musicToggleEl = document.getElementById('musicToggle');
 const introEl = document.getElementById('intro');
 const introAiNameEl = document.getElementById('introAiName');
+const introP1NameEl = document.getElementById('introP1Name');
 const shareBtnEl = document.getElementById('shareBtn');
+const modeEl = document.getElementById('mode');
+const difficultyLabelEl = document.getElementById('difficultyLabel');
+const youLabelEl = document.getElementById('youLabel');
+const aiLabelEl = document.getElementById('aiLabel');
 
 let board = new GameBoard();
 let current = HUMAN;
 let gameOver = false;
 let winner = null;
+let mode = 'ai'; // 'ai' | '2p' (pass and play on one device)
+
+function isAiGame() {
+  return mode === 'ai';
+}
+
+function nameOf(player) {
+  if (isAiGame()) return player === HUMAN ? 'You' : 'AI';
+  return player === ONE ? 'Gold' : 'Blue';
+}
 let lastMove = null;
 let aiTimer = null;
 let hover = null; // [row, col] ghost-stone preview, mouse only
@@ -105,7 +121,8 @@ function difficultyLabel() {
 }
 
 function showIntro() {
-  introAiNameEl.textContent = `AI · ${difficultyLabel()}`;
+  introP1NameEl.textContent = nameOf(ONE);
+  introAiNameEl.textContent = isAiGame() ? `AI · ${difficultyLabel()}` : nameOf(TWO);
   introEl.classList.remove('appear', 'leaving');
   introEl.classList.add('show');
   // setTimeout, not requestAnimationFrame: rAF never fires in hidden tabs,
@@ -143,15 +160,21 @@ function renderShareCard() {
   c.textAlign = 'center';
   const setSpacing = (px) => { try { c.letterSpacing = `${px}px`; } catch { /* older browser */ } };
 
+  const w = winner ?? ONE; // dev preview hook renders the gold card
+  const gold = { fill: '#ffd60a', stroke: '#b39500', accent: '#1d5eb0' };
+  const blue = { fill: '#4fa3ff', stroke: '#1d5eb0', accent: '#b39500' };
+  const stone = w === ONE ? gold : blue;
+  const title = isAiGame() ? 'YOU WIN!' : `${nameOf(w).toUpperCase()} WINS!`;
+
   c.fillStyle = '#ffd60a';
   c.font = '900 64px system-ui, -apple-system, sans-serif';
   setSpacing(0);
-  c.fillText('YOU WIN!', size / 2, 300);
+  c.fillText(title, size / 2, 300);
 
   c.fillStyle = 'rgba(255,255,255,0.85)';
   c.font = '600 26px system-ui, -apple-system, sans-serif';
   setSpacing(3);
-  const reason = board.winReason(HUMAN) === 'fiveCaptures' ? 'CAPTURED FIVE PAIRS' : 'FIVE IN A ROW';
+  const reason = board.winReason(w) === 'fiveCaptures' ? 'CAPTURED FIVE PAIRS' : 'FIVE IN A ROW';
   c.fillText(reason, size / 2, 370);
 
   // Row of five winner stones with the opponent-color accent dot
@@ -160,14 +183,14 @@ function renderShareCard() {
   const rowWidth = 5 * stoneR * 2 + 4 * gap;
   let x = (size - rowWidth) / 2 + stoneR;
   for (let i = 0; i < 5; i += 1) {
-    c.fillStyle = '#ffd60a';
+    c.fillStyle = stone.fill;
     c.beginPath();
     c.arc(x, 490, stoneR, 0, Math.PI * 2);
     c.fill();
-    c.strokeStyle = '#b39500';
+    c.strokeStyle = stone.stroke;
     c.lineWidth = 4;
     c.stroke();
-    c.fillStyle = '#1d5eb0';
+    c.fillStyle = stone.accent;
     c.beginPath();
     c.arc(x, 490, 12, 0, Math.PI * 2);
     c.fill();
@@ -214,7 +237,7 @@ async function shareCard() {
       await navigator.share({
         files: [file],
         title: 'TEWGO',
-        text: 'I won at TEWGO! Play free: https://playtewgo.com/play/',
+        text: `${isAiGame() ? 'I' : nameOf(winner ?? ONE)} won at TEWGO! Play free: https://playtewgo.com/play/`,
       });
       return;
     } catch { /* user cancelled the share sheet: fall through to nothing */ return; }
@@ -395,10 +418,10 @@ function draw() {
     drawStone(x, y, radius * (1 - 0.5 * t), a.player, 1 - t);
   }
 
-  // Ghost stone under the mouse
+  // Ghost stone under the mouse, in the color of whoever is to move
   if (hover && canPlay() && board.isValid(hover[0], hover[1])) {
     const [x, y] = pointFor(hover[0], hover[1], m);
-    drawStone(x, y, radius, HUMAN, 0.35);
+    drawStone(x, y, radius, current, 0.35);
   }
 
   // Last-move ring
@@ -413,14 +436,16 @@ function draw() {
 }
 
 function updateHud() {
-  youPairsEl.textContent = board.captureCount[HUMAN];
-  aiPairsEl.textContent = board.captureCount[AI_PLAYER];
+  youLabelEl.textContent = nameOf(ONE);
+  aiLabelEl.textContent = nameOf(TWO);
+  youPairsEl.textContent = board.captureCount[ONE];
+  aiPairsEl.textContent = board.captureCount[TWO];
   if (gameOver) {
     statusEl.textContent = 'Game over';
-  } else if (current === HUMAN) {
-    statusEl.textContent = 'Your move';
+  } else if (isAiGame()) {
+    statusEl.textContent = current === HUMAN ? 'Your move' : 'AI is thinking…';
   } else {
-    statusEl.textContent = 'AI is thinking…';
+    statusEl.textContent = `${nameOf(current)}'s move`;
   }
 }
 
@@ -428,23 +453,28 @@ function showOverlay() {
   if (winner === null) {
     overlayTitleEl.textContent = 'Draw';
     overlayReasonEl.textContent = 'The board is full.';
-  } else if (winner === HUMAN) {
-    overlayTitleEl.textContent = 'You win!';
-    overlayReasonEl.textContent = board.winReason(HUMAN) === 'fiveCaptures'
-      ? 'You captured five pairs.' : 'Five in a row.';
   } else {
-    overlayTitleEl.textContent = 'AI wins';
-    overlayReasonEl.textContent = board.winReason(AI_PLAYER) === 'fiveCaptures'
-      ? 'The AI captured five pairs.' : 'The AI made five in a row.';
+    const captured = board.winReason(winner) === 'fiveCaptures';
+    if (isAiGame() && winner === HUMAN) {
+      overlayTitleEl.textContent = 'You win!';
+      overlayReasonEl.textContent = captured ? 'You captured five pairs.' : 'Five in a row.';
+    } else if (isAiGame()) {
+      overlayTitleEl.textContent = 'AI wins';
+      overlayReasonEl.textContent = captured ? 'The AI captured five pairs.' : 'The AI made five in a row.';
+    } else {
+      overlayTitleEl.textContent = `${nameOf(winner)} wins!`;
+      overlayReasonEl.textContent = captured ? 'Captured five pairs.' : 'Five in a row.';
+    }
   }
-  shareBtnEl.style.display = winner === HUMAN ? '' : 'none';
+  shareBtnEl.style.display = winner !== null && (!isAiGame() || winner === HUMAN) ? '' : 'none';
   overlayEl.classList.add('show');
 }
 
 // ----- Game flow -----
 
 function canPlay() {
-  return !gameOver && current === HUMAN && aiTimer === null;
+  if (gameOver || aiTimer !== null) return false;
+  return isAiGame() ? current === HUMAN : true;
 }
 
 function endIfOver(player) {
@@ -493,16 +523,17 @@ function handleTap(clientX, clientY) {
   if (!canPlay()) return;
   const cell = cellAt(clientX, clientY);
   if (!cell || !board.isValid(cell[0], cell[1])) return;
-  const captures = board.place(HUMAN, cell[0], cell[1]);
+  const mover = current;
+  const captures = board.place(mover, cell[0], cell[1]);
   lastMove = cell;
   hover = null;
   pushPop(cell[0], cell[1]);
-  pushFades(captures, AI_PLAYER);
+  pushFades(captures, opponentOf(mover));
   playSfx('place');
   if (captures.length > 0) playSfx('capture');
-  if (!endIfOver(HUMAN)) {
-    current = AI_PLAYER;
-    scheduleAiMove();
+  if (!endIfOver(mover)) {
+    current = opponentOf(mover);
+    if (isAiGame()) scheduleAiMove();
   }
   save();
   draw();
@@ -582,6 +613,17 @@ introEl.addEventListener('pointerdown', () => {
 difficultyEl.addEventListener('change', () => {
   try { localStorage.setItem(DIFFICULTY_KEY, difficultyEl.value); } catch { /* ignore */ }
 });
+
+function applyModeUI() {
+  difficultyLabelEl.style.display = isAiGame() ? '' : 'none';
+}
+
+modeEl.addEventListener('change', () => {
+  mode = modeEl.value === '2p' ? '2p' : 'ai';
+  try { localStorage.setItem(MODE_KEY, mode); } catch { /* ignore */ }
+  applyModeUI();
+  newGame();
+});
 window.addEventListener('resize', draw);
 
 try {
@@ -589,10 +631,16 @@ try {
   if (savedDifficulty && ['easy', 'medium', 'hard'].includes(savedDifficulty)) {
     difficultyEl.value = savedDifficulty;
   }
+  const savedMode = localStorage.getItem(MODE_KEY);
+  if (savedMode === '2p' || savedMode === 'ai') {
+    mode = savedMode;
+    modeEl.value = savedMode;
+  }
 } catch { /* ignore */ }
+applyModeUI();
 
 const resumed = restore();
-if (resumed && current === AI_PLAYER) scheduleAiMove();
+if (resumed && isAiGame() && current === AI_PLAYER) scheduleAiMove();
 if (!resumed) showIntro();
 updateToggles();
 draw();

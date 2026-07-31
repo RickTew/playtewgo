@@ -89,7 +89,7 @@
   .controls {
     width: var(--board-size);
     display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; margin-top: 12px;
+    gap: 12px; margin-top: 12px; flex-wrap: wrap;
   }
   select, button {
     font: inherit; color: var(--text);
@@ -162,9 +162,9 @@
 </header>
 
 <div class="hud">
-  <span class="pill you">You <b id="youPairs">0</b>/5</span>
+  <span class="pill you"><span id="youLabel">You</span> <b id="youPairs">0</b>/5</span>
   <span id="status">Your move</span>
-  <span class="pill ai">AI <b id="aiPairs">0</b>/5</span>
+  <span class="pill ai"><span id="aiLabel">AI</span> <b id="aiPairs">0</b>/5</span>
 </div>
 
 <div class="board-wrap">
@@ -183,6 +183,13 @@
 
 <div class="controls">
   <label>
+    Mode
+    <select id="mode">
+      <option value="ai" selected>vs AI</option>
+      <option value="2p">2 players</option>
+    </select>
+  </label>
+  <label id="difficultyLabel">
     AI level
     <select id="difficulty">
       <option value="easy">Easy</option>
@@ -208,7 +215,7 @@
     <div class="intro-row">
       <div class="contender left">
         <div class="contender-card"><div class="stone-disc stone-gold"></div></div>
-        <div class="contender-name">You</div>
+        <div class="contender-name" id="introP1Name">You</div>
       </div>
       <div class="vs">VS</div>
       <div class="contender right">

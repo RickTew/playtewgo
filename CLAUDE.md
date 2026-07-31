@@ -52,11 +52,17 @@ root, then open /play/).
 - Synthetic PointerEvents via javascript_tool DO fire the game's handlers
   (placement works) but are untrusted: no activation, no audio.
 
+## Built so far (2026-07-31)
+- Engine + AI + 22 tests; canvas board with hover ghost, pop/capture
+  animations, Space nebula backdrop; Space audio (SFX + music, toggles);
+  match intro (VS face-off); victory share card (Web Share / PNG download,
+  dev preview at /play/?sharecard); vs AI and 2-players modes (Mode select,
+  Gold vs Blue pass-and-play).
+
 ## Not yet built (candidates, in rough order)
-- Space theme visuals (match the iOS Space look; iOS renders these in code)
-- Pinch/zoom or magnifier for small phone screens (22x22 targets are tight)
-- Sound (the Suno tracks from the iOS app, user has the WAVs)
-- Two players on one device
+- Phone pass: pinch/zoom or magnifier for small screens (22x22 targets are
+  tight), then PWA install prompt
+- More theme visuals beyond Space (figure pieces, more scenes)
 - Online multiplayer (would need a backend; Supabase is available)
 
 ## User context
