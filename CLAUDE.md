@@ -129,11 +129,15 @@ emoji; the install button shows /icon-192.png; Board and Piece type are
 also top-level dropdowns in the controls row, kept in sync with pickers.
 
 ## Not yet built (candidates, in rough order)
-- (Themes DONE 2026-07-31: all eight worlds shipped at parity)
-- Gold color scheme once the web has win-based progression
+Themes are DONE (2026-07-31, all eight worlds at parity). What's left,
+in the order updates.html promises it:
+- Win-based progression (games played / wins counter in localStorage),
+  which unblocks the Gold color scheme (12th pair, play-earned on iOS)
 - Online multiplayer (would need a backend; Supabase is available)
 - Service worker for offline play (skipped deliberately: cache
   invalidation risk vs benefit; revisit after family playtests)
+- Whatever family playtests surface (the site exists so family and
+  friends on Android can play; their feedback outranks this list)
 
 Phone pass shipped 2026-07-31: touch drag-to-aim (down = ghost + crosshair
 guides, drag to adjust, release places, off-board cancels; mouse unchanged),
