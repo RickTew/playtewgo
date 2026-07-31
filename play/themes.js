@@ -5,6 +5,7 @@
 import { SPACE_SCENES } from './space.js';
 import { OCEAN_SCENES } from './ocean.js';
 import { FEUDALJAPAN_SCENES } from './feudaljapan.js';
+import { DUNGEON_SCENES } from './dungeon.js';
 
 export const NEUTRALS = [
   { key: 'sepia', name: 'Sepia', neutral: true, light: true, color: '#F2E0BD' },
@@ -35,9 +36,16 @@ export const THEMES = {
     defaults: ['ninja', 'samurai'],
     defaultScene: 'blossomStorm',
   },
+  dungeon: {
+    name: 'Dungeon',
+    scenes: DUNGEON_SCENES,
+    figures: ['dragon', 'wizard', 'knight', 'goblin'],
+    defaults: ['dragon', 'knight'],
+    defaultScene: 'torchlit',
+  },
 };
 
-const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...FEUDALJAPAN_SCENES, ...NEUTRALS];
+const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...FEUDALJAPAN_SCENES, ...DUNGEON_SCENES, ...NEUTRALS];
 
 /** Returns undefined for unknown keys; callers fall back to the theme default. */
 export function sceneByKey(key) {

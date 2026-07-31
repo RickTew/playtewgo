@@ -82,11 +82,11 @@ in the 🖼️ popup, light boards flip the grid), Ocean theme (6 figures,
 5 scenes, 4 themed boards, audio).
 
 ## Options audit vs iOS (2026-07-31, final pass - deltas CLOSED)
-Space, Ocean, and Feudal Japan are at full iOS option parity: all
-scenes (Space 13, Ocean 12, FeudalJapan 12, iOS names/order/light
-flags), full rosters + palettes, 4 piece types, Finish (Classic/3D
-dimensional), Color schemes (11 pairs; Gold omitted until web has
-progression), 7+4 boards each, 4 neutrals, audio.
+Space, Ocean, Feudal Japan, and Dungeon are at full iOS option parity:
+all scenes (Space 13, Ocean 12, FeudalJapan 12, Dungeon 12, iOS names/
+order/light flags), full rosters + palettes, 4 piece types, Finish
+(Classic/3D dimensional), Color schemes (11 pairs; Gold omitted until
+web has progression), 7+4 boards each, 4 neutrals, audio.
 Porting a new theme: follow THEME_CHECKLIST.md, every box.
 
 Feudal Japan shipped 2026-07-31 (play/feudaljapan.js): Ninja/Geisha/
@@ -94,14 +94,18 @@ Samurai/Daimyo roster, 12 scenes (Sakura Dawn..Veranda), Kaya Goban/
 Garden Stone/Tatami Mat/Red Lacquer boards, audio, default scene
 Blossom Storm.
 
+Dungeon shipped 2026-07-31 (play/dungeon.js): Dragon/Wizard/Knight/
+Goblin roster, 12 scenes (Torchlit..Rampart), Vault Slab/Rampart
+Stone/War Map/Obsidian boards, audio, default scene Torchlit.
+
 UI conventions (Rick 2026-07-31): selects are chevron-free and compact
 (appearance:none); the 4 control buttons use inline stroke SVGs, not
 emoji; the install button shows /icon-192.png; Board and Piece type are
 also top-level dropdowns in the controls row, kept in sync with pickers.
 
 ## Not yet built (candidates, in rough order)
-- Remaining 5 themes one at a time via THEME_CHECKLIST.md (Dungeon
-  next by iOS unlock order: unlockAfterGames 3)
+- Remaining 4 themes one at a time via THEME_CHECKLIST.md (Undead
+  next by iOS unlock order: unlockAfterGames 12)
 - Gold color scheme once the web has win-based progression
 - Online multiplayer (would need a backend; Supabase is available)
 - Service worker for offline play (skipped deliberately: cache

@@ -33,6 +33,12 @@ export const THEME_BOARDS = {
     { key: 'tatamiMat', name: 'Tatami Mat', light: true },
     { key: 'redLacquer', name: 'Red Lacquer' },
   ],
+  dungeon: [
+    { key: 'vaultSlab', name: 'Vault Slab' },
+    { key: 'rampartStone', name: 'Rampart Stone' },
+    { key: 'warMap', name: 'War Map', light: true },
+    { key: 'obsidian', name: 'Obsidian' },
+  ],
 };
 
 export function boardsForTheme(theme) {
@@ -185,6 +191,28 @@ export function paintBoardRect(c, key, x, y, w, h) {
       slab(c, x, y, w, h, '#7A1414', '#1F0A0A');
       tonePatches(c, x, y, w, h, rand, '77, 13, 13', 5, 0.30);
       c.strokeStyle = 'rgba(217, 179, 77, 0.55)';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
+      c.stroke();
+      break;
+    case 'vaultSlab':
+      slab(c, x, y, w, h, '#302E36', '#615C6B');
+      tonePatches(c, x, y, w, h, rand, '0, 0, 0', 5, 0.14);
+      break;
+    case 'rampartStone':
+      slab(c, x, y, w, h, '#45424D', '#757085');
+      tonePatches(c, x, y, w, h, rand, '0, 0, 0', 5, 0.15);
+      break;
+    case 'warMap':
+      slab(c, x, y, w, h, '#D9C28C', '#806133');
+      tonePatches(c, x, y, w, h, rand, '166, 133, 77', 5, 0.14);
+      cornerDots(c, x, y, w, h, Math.min(9, w * 0.07), Math.min(3.5, w * 0.03), '#4D4D54', '#1a1a1a');
+      break;
+    case 'obsidian':
+      slab(c, x, y, w, h, '#17121F', '#524566');
+      tonePatches(c, x, y, w, h, rand, '0, 0, 0', 5, 0.30);
+      c.strokeStyle = 'rgba(148, 107, 204, 0.30)';
       c.lineWidth = 1.5;
       c.beginPath();
       c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
