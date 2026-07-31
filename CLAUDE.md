@@ -39,6 +39,19 @@ Push to main = live on playtewgo.com within a minute or two (GitHub Pages).
 There is no staging; verify locally first (`python3 -m http.server` from repo
 root, then open /play/).
 
+## Testing gotchas (learned 2026-07-31, do not rediscover)
+- `python3 -m http.server` is single-threaded and has no Range support:
+  audio `.play()` HANGS the page against it. Test audio on the live site
+  (GitHub Pages answers Range with 206) or use a threaded server.
+- Claude-in-Chrome automation clicks carry NO user activation, so
+  `audio.play()` rejects with NotAllowedError under automation. Audio can
+  only be heard by a real human click; verify the call path + network only.
+- The automation's FIRST click after a page load is sometimes swallowed
+  (focus quirk). Always click twice or wait 2s after navigate before the
+  first meaningful click.
+- Synthetic PointerEvents via javascript_tool DO fire the game's handlers
+  (placement works) but are untrusted: no activation, no audio.
+
 ## Not yet built (candidates, in rough order)
 - Space theme visuals (match the iOS Space look; iOS renders these in code)
 - Pinch/zoom or magnifier for small phone screens (22x22 targets are tight)
