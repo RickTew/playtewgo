@@ -4,6 +4,7 @@
 
 import { SPACE_SCENES } from './space.js';
 import { OCEAN_SCENES } from './ocean.js';
+import { FEUDALJAPAN_SCENES } from './feudaljapan.js';
 
 export const NEUTRALS = [
   { key: 'sepia', name: 'Sepia', neutral: true, light: true, color: '#F2E0BD' },
@@ -27,9 +28,16 @@ export const THEMES = {
     defaults: ['pirate', 'kraken'],
     defaultScene: 'deep',
   },
+  feudaljapan: {
+    name: 'Feudal Japan',
+    scenes: FEUDALJAPAN_SCENES,
+    figures: ['ninja', 'geisha', 'samurai', 'daimyo'],
+    defaults: ['ninja', 'samurai'],
+    defaultScene: 'blossomStorm',
+  },
 };
 
-const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...NEUTRALS];
+const ALL_SCENES = [...SPACE_SCENES, ...OCEAN_SCENES, ...FEUDALJAPAN_SCENES, ...NEUTRALS];
 
 /** Returns undefined for unknown keys; callers fall back to the theme default. */
 export function sceneByKey(key) {

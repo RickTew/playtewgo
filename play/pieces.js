@@ -142,6 +142,61 @@ export const FIGURES = {
       [-0.75, 1.35], [-0.50, 0.85], [-0.60, 0.40], [-0.85, 0.00],
     ],
   },
+  // ----- Feudal Japan roster (ThemeRegistry.feudalJapan palettes) -----
+  ninja: {
+    name: 'Ninja',
+    primary: '#0D0D14',
+    stroke: '#4D4D61',
+    glowRgb: '51, 102, 179',
+    accent: '#F23333',
+    points: [
+      [0.55, 0.00], [0.55, 0.50], [0.50, 1.20], [0.85, 1.45], [0.55, 1.75],
+      [0.50, 2.40], [0.25, 2.95], [0.00, 3.20], [-0.25, 2.95], [-0.50, 2.40],
+      [-0.55, 1.75], [-0.85, 1.45], [-0.50, 1.20], [-0.55, 0.50], [-0.55, 0.00],
+    ],
+  },
+  geisha: {
+    name: 'Geisha',
+    primary: '#F2EBE0',
+    stroke: '#C72E4D',
+    glowRgb: '255, 140, 166',
+    accent: '#C72E4D',
+    points: [
+      [0.85, 0.00], [0.65, 0.55], [0.50, 1.05], [0.65, 1.40], [0.45, 1.70],
+      [0.40, 2.00], [0.30, 2.18], [0.45, 2.35], [0.45, 2.65], [0.30, 2.78],
+      [0.18, 2.92], [0.00, 2.82], [-0.18, 2.92], [-0.30, 2.78], [-0.45, 2.65],
+      [-0.45, 2.35], [-0.30, 2.18], [-0.40, 2.00], [-0.45, 1.70], [-0.65, 1.40],
+      [-0.50, 1.05], [-0.65, 0.55], [-0.85, 0.00],
+    ],
+  },
+  samurai: {
+    name: 'Samurai',
+    primary: '#9E1A1A',
+    stroke: '#FFC74D',
+    glowRgb: '255, 166, 38',
+    accent: '#FFEB80',
+    points: [
+      [0.65, 0.00], [0.65, 0.55], [0.55, 1.05], [1.00, 1.30], [0.95, 1.65],
+      [0.55, 1.85], [0.50, 2.40], [0.95, 2.55], [1.20, 3.00], [0.70, 2.85],
+      [0.35, 2.95], [0.00, 3.05], [-0.35, 2.95], [-0.70, 2.85], [-1.20, 3.00],
+      [-0.95, 2.55], [-0.50, 2.40], [-0.55, 1.85], [-0.95, 1.65], [-1.00, 1.30],
+      [-0.55, 1.05], [-0.65, 0.55], [-0.65, 0.00],
+    ],
+  },
+  daimyo: {
+    name: 'Daimyo',
+    primary: '#2E1A33',
+    stroke: '#FFCC4D',
+    glowRgb: '255, 199, 77',
+    accent: '#FFD966',
+    points: [
+      [0.75, 0.00], [0.85, 0.50], [0.70, 1.05], [1.10, 1.30], [1.00, 1.65],
+      [0.55, 1.85], [0.50, 2.30], [0.95, 2.55], [1.20, 2.85], [0.55, 2.85],
+      [0.20, 3.20], [0.00, 3.05], [-0.20, 3.20], [-0.55, 2.85], [-1.20, 2.85],
+      [-0.95, 2.55], [-0.50, 2.30], [-0.55, 1.85], [-1.00, 1.65], [-1.10, 1.30],
+      [-0.70, 1.05], [-0.85, 0.50], [-0.75, 0.00],
+    ],
+  },
 };
 
 export const FIGURE_KINDS = Object.keys(FIGURES);
@@ -313,6 +368,47 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
       ctx.fillStyle = accent;
       ctx.beginPath();
       ctx.arc(cx + dx * r, at(2.55), r * 0.07, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'ninja') {
+    // Glowing eye slit through the hood wrap
+    ctx.fillStyle = 'rgba(242, 51, 51, 0.30)';
+    roundedRect(ctx, cx, at(2.30), r * 0.70, r * 0.22, r * 0.08);
+    ctx.fill();
+    ctx.fillStyle = accent;
+    roundedRect(ctx, cx, at(2.30), r * 0.55, r * 0.10, r * 0.04);
+    ctx.fill();
+  } else if (kind === 'samurai') {
+    // Dark menpo face guard with two bright eyes
+    ctx.fillStyle = '#1a1a1a';
+    roundedRect(ctx, cx, at(2.10), r * 0.55, r * 0.45, r * 0.10);
+    ctx.fill();
+    ctx.fillStyle = accent;
+    for (const dx of [-0.13, 0.13]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.15), r * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (kind === 'geisha') {
+    // Delicate eyes + small red lip
+    ctx.fillStyle = '#0d0d0d';
+    for (const dx of [-0.13, 0.13]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(2.55), r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(cx, at(2.35), r * 0.05, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (kind === 'daimyo') {
+    // Dark face with stern slits
+    ctx.fillStyle = '#1a1a1a';
+    roundedRect(ctx, cx, at(2.10), r * 0.55, r * 0.45, r * 0.10);
+    ctx.fill();
+    ctx.fillStyle = accent;
+    for (const dx of [-0.14, 0.14]) {
+      roundedRect(ctx, cx + dx * r, at(2.15), r * 0.13, r * 0.05, r * 0.02);
       ctx.fill();
     }
   }

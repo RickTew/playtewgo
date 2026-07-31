@@ -27,6 +27,12 @@ export const THEME_BOARDS = {
     { key: 'seaChart', name: 'Sea Chart', light: true },
     { key: 'driftwood', name: 'Driftwood' },
   ],
+  feudaljapan: [
+    { key: 'kayaGoban', name: 'Kaya Goban', light: true },
+    { key: 'gardenStone', name: 'Garden Stone' },
+    { key: 'tatamiMat', name: 'Tatami Mat', light: true },
+    { key: 'redLacquer', name: 'Red Lacquer' },
+  ],
 };
 
 export function boardsForTheme(theme) {
@@ -157,6 +163,32 @@ export function paintBoardRect(c, key, x, y, w, h) {
       slab(c, x, y, w, h, '#8C8273', '#4D473D');
       tonePatches(c, x, y, w, h, rand, '107, 99, 87', 5, 0.22);
       cornerDots(c, x, y, w, h, Math.min(10, w * 0.07), Math.min(3, w * 0.025), '#664D38', '#38291A');
+      break;
+    case 'kayaGoban':
+      slab(c, x, y, w, h, '#E0B870', '#8C6633');
+      tonePatches(c, x, y, w, h, rand, '199, 153, 82', 5, 0.30);
+      break;
+    case 'gardenStone':
+      slab(c, x, y, w, h, '#6B756B', '#3D473D');
+      tonePatches(c, x, y, w, h, rand, '82, 97, 77', 5, 0.22);
+      break;
+    case 'tatamiMat':
+      slab(c, x, y, w, h, '#CCB578', '#243D29');
+      tonePatches(c, x, y, w, h, rand, '153, 133, 77', 5, 0.16);
+      c.strokeStyle = 'rgba(217, 179, 77, 0.55)';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
+      c.stroke();
+      break;
+    case 'redLacquer':
+      slab(c, x, y, w, h, '#7A1414', '#1F0A0A');
+      tonePatches(c, x, y, w, h, rand, '77, 13, 13', 5, 0.30);
+      c.strokeStyle = 'rgba(217, 179, 77, 0.55)';
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.roundRect(x + 4, y + 4, w - 8, h - 8, 7);
+      c.stroke();
       break;
     case 'starMap': {
       slab(c, x, y, w, h, '#0f1730', '#2a3a66');
