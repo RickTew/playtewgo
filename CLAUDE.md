@@ -164,11 +164,14 @@ theirs AS the controls) was NOT built and is still on the table.**
   of the ENEMY's figures. Always the figure, never the Flat/Chip disc,
   because a shelf has to say WHO was taken. The right shelf fills toward
   its own edge so trophies sit under their own label.
-- **Profile dock + world medallions** (E) replace all six dropdowns.
+- **Profile dock** (E, then reworked into B) replaces all six dropdowns.
   Those selects still exist as hidden state that the rest of game.js
   reads and writes; the player now sets them on the setup screen and in
   the two pickers. Player name lives in tewgo.web.playerName and is used
   by nameOf(), so the shelf shows their name in vs-AI games.
+  The round world medallions that first sat here were REMOVED: Rick read
+  them as a piece picker, and the theme is already chosen on the setup
+  screen, so a second theme picker under the board was redundant.
 - **Unlock gating** (C) ports ProgressionManager.isUnlocked into
   engine/progression.js: THEME_UNLOCK_AFTER (space/feudaljapan 0, then
   3/7/12/20/30/38) and THEME_ORDER (iOS registry order, deliberately NOT
@@ -179,6 +182,40 @@ theirs AS the controls) was NOT built and is still on the table.**
 - **Profile page** (F) ports UI/ProfileView.swift: stat tiles, the
   next-unlock card, Gold progress, and the collection counted live from
   the registries (8 worlds, 40 figures, 97 backgrounds, 8 soundtracks).
+
+## Second pass on the lower section, later on 2026-08-01
+Rick's feedback after playing it, all shipped:
+- **Concept B is the dock now**: your figure, VS, their figure, each one
+  tapping through to the piece picker. Two rows: figures left, tools
+  centred, New game framing the right; name, record and progress
+  underneath.
+- **Worlds moved into the profile as the box cards** (Concept C from
+  concepts.html): a painted scene with that world's two figures on it,
+  its name, and a padlock over "Play N more games" when locked. Tapping
+  an open one switches world. Round medallions read as pieces; boxes
+  read as places.
+- **The FIGURES gallery is clickable**: picking a figure equips it, and
+  picking one from another world switches to that world first, since
+  rosters belong to their world.
+- **Stacked overlays were a real bug.** Opening the profile while the
+  setup screen was up left BOTH showing, which read as a stuck window.
+  Everything now opens through `presentOverlay()`, which shows exactly
+  one, plus a sticky close X and Escape.
+- **Copy must say what a number means.** "FIGURES 8 of 40" became
+  "FIGURES UNLOCKED"; "1 GAME TO GO" became "2 MORE GAMES TO UNLOCK";
+  "Next world: Ocean in 4 games" became "Finish 4 more games to unlock
+  the Ocean world". Rick's standard: a player should never have to guess
+  what a label refers to.
+
+## Rick's working preferences, learned the hard way this session
+- **No long dashes anywhere**, including chat replies. Hyphen, comma,
+  parentheses, or two sentences. This is in his global CLAUDE.md and I
+  still broke it repeatedly.
+- **No `Co-Authored-By: Claude` trailer** on commits. He opted out in
+  May 2026. Six commits on 2026-08-01 carry it by mistake; he has not
+  asked for a history rewrite.
+- **Keep replies short.** Answer the question asked. Long summaries lose
+  him. This one matters: he said so explicitly.
 
 ## Full unlock: Stripe wired 2026-08-01, ONE step left
 Rick wants BOTH rails eventually: Stripe first, Steam later as a
@@ -220,16 +257,29 @@ failure.
 - Per the iOS monetization rule, the unlock is cosmetic only. It must
   never touch board state, win rate or AI difficulty.
 
-## Not yet built (candidates, in rough order)
-Themes, progression, the profile and unlock gating are DONE. What's
-left, in the order updates.html promises it:
-- The Stripe full unlock (see "Full unlock" above): checkout, a server
-  side entitlement check, then call grantPro('stripe')
-- Online multiplayer, the last big roadmap item (needs a backend;
-  Supabase is available; the state codec already matches the iOS
-  multiplayer payload shape, which was built for exactly this)
-- Concept B from /play/concepts.html if Rick wants it: the two figures
-  as the loadout controls
+## START HERE next session (handoff 2026-08-01 evening)
+Themes, progression, the profile, unlock gating and the Stripe plumbing
+are all DONE and live. Three things are open, in this order:
+
+1. **Phone pass, NOT VERIFIED.** The whole lower section was rebuilt
+   twice today and only ever checked on desktop: the browser stopped
+   honouring resize requests part way through (reported a 675x448 window
+   while rendering at 1300 CSS px). Check /play/ on a real phone first.
+   The suspects are `.dock-row1` wrapping, the world-card gallery, and
+   the profile overlay at `max-width: 620px`.
+2. **Turn the Stripe unlock on.** Two steps, both Rick's:
+   run `/mcp` and authorize "claude.ai Stripe" so Claude can work with
+   the account, then set the secret (command in the Full unlock section
+   above). Rehearse with a `sk_test_` key and Stripe's 4242 card before
+   the live key. Verify: buy, confirm the code appears, clear
+   localStorage, restore with the code.
+3. **Online multiplayer**, the last big roadmap item. Supabase is
+   already in play (TewBit Games hub, `tewgo` schema exists), and the
+   state codec already matches the iOS multiplayer payload shape.
+
+`/play/concepts.html` (noindex) still holds the six design concepts.
+A, B, C, E and F are all built now; keep it as the record of what was
+tried and what Rick picked.
 - Service worker for offline play (skipped deliberately: cache
   invalidation risk vs benefit; revisit after family playtests)
 - Whatever family playtests surface (the site exists so family and
