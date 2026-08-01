@@ -3,7 +3,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createProgression, GOLD_WIN_THRESHOLD } from '../play/engine/progression.js';
+import { createProgression, GOLD_WIN_THRESHOLD, THEME_UNLOCK_AFTER } from '../play/engine/progression.js';
 
 function fakeStorage(initial = {}) {
   const map = { ...initial };
@@ -83,4 +83,84 @@ test('a storage that throws never breaks recording', () => {
   assert.equal(p.gamesCompleted(), 1);
   assert.equal(p.wins(), 1);
   assert.equal(p.losses(), 1);
+});
+
+// ---- Theme unlock gating (iOS ProgressionManager.isUnlocked) ----
+
+const ORDER = ['space', 'feudaljapan', 'dungeon', 'ocean', 'undead', 'western', 'desert', 'classic'];
+
+function playGames(p, n) {
+  for (let i = 0; i < n; i += 1) p.recordGameCompleted();
+}
+
+test('the two starter themes are open on a brand new profile', () => {
+  const p = createProgression(fakeStorage());
+  assert.equal(p.isThemeUnlocked('space'), true);
+  assert.equal(p.isThemeUnlocked('feudaljapan'), true);
+  assert.equal(p.gamesUntilTheme('space'), 0);
+  for (const id of ORDER.slice(2)) {
+    assert.equal(p.isThemeUnlocked(id), false, id + ' should start locked');
+  }
+});
+
+test('themes open at their thresholds, counting games not wins', () => {
+  const p = createProgression(fakeStorage());
+  playGames(p, 3);           // three losses still counts as three games
+  assert.equal(p.wins(), 0);
+  assert.equal(p.isThemeUnlocked('dungeon'), true);
+  assert.equal(p.isThemeUnlocked('ocean'), false);
+  assert.equal(p.gamesUntilTheme('ocean'), 4);
+  playGames(p, 4);
+  assert.equal(p.isThemeUnlocked('ocean'), true);
+  assert.equal(p.gamesUntilTheme('ocean'), 0);
+});
+
+test('every threshold matches the iOS registry', () => {
+  const expected = { space: 0, feudaljapan: 0, dungeon: 3, ocean: 7, undead: 12, western: 20, desert: 30, classic: 38 };
+  assert.deepEqual(THEME_UNLOCK_AFTER, expected);
+  for (const [id, need] of Object.entries(expected)) {
+    const p = createProgression(fakeStorage());
+    playGames(p, Math.max(0, need - 1));
+    assert.equal(p.isThemeUnlocked(id), need === 0, id + ' one game short');
+    p.recordGameCompleted();
+    assert.equal(p.isThemeUnlocked(id), true, id + ' at the threshold');
+  }
+});
+
+test('nextLockedTheme walks the registry order and ends at null', () => {
+  const p = createProgression(fakeStorage());
+  assert.equal(p.nextLockedTheme(ORDER), 'dungeon');
+  playGames(p, 3);
+  assert.equal(p.nextLockedTheme(ORDER), 'ocean');
+  playGames(p, 35);
+  assert.equal(p.gamesCompleted(), 38);
+  assert.equal(p.nextLockedTheme(ORDER), null);
+});
+
+test('the full unlock opens every theme and zeroes the countdowns', () => {
+  const p = createProgression(fakeStorage());
+  assert.equal(p.hasPro(), false);
+  p.grantPro('stripe');
+  assert.equal(p.hasPro(), true);
+  assert.equal(p.proSource(), 'stripe');
+  for (const id of ORDER) {
+    assert.equal(p.isThemeUnlocked(id), true, id);
+    assert.equal(p.gamesUntilTheme(id), 0, id);
+  }
+  assert.equal(p.nextLockedTheme(ORDER), null);
+});
+
+test('the full unlock persists and remembers which rail granted it', () => {
+  const storage = fakeStorage();
+  createProgression(storage).grantPro('steam');
+  const back = createProgression(storage);
+  assert.equal(back.hasPro(), true);
+  assert.equal(back.proSource(), 'steam');
+  assert.equal(back.isThemeUnlocked('classic'), true);
+});
+
+test('an unknown theme id is treated as free rather than locked forever', () => {
+  const p = createProgression(fakeStorage());
+  assert.equal(p.isThemeUnlocked('brandnew'), true);
+  assert.equal(p.gamesUntilTheme('brandnew'), 0);
 });
