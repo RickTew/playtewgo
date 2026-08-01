@@ -149,12 +149,58 @@ until games > 0), victory overlay announces the unlock the moment the
 10th win lands. A persisted gold selection stays applied in themes
 where it is still locked (iOS parity).
 
+## Profile, dock and unlock gating shipped 2026-08-01 (fourth pass)
+Rick's brief: the controls row was "messy as well as boring", the game
+is "about OPTIONS so we want to really show them off", and the web
+version "entirely missed" the sense of a personal PAGE and PROFILE.
+
+Design options were explored on `/play/concepts.html` (noindex, still in
+the repo, drawn with the real scene/figure art). Six concepts; Rick
+picked A, C, E and F. **Concept B (face-off loadout: your figure vs
+theirs AS the controls) was NOT built and is still on the table.**
+
+- **Capture shelves** (A) replace the "You 2/5" pills. Five sockets a
+  side; a filled socket holds the pair that side captured, drawn as two
+  of the ENEMY's figures. Always the figure, never the Flat/Chip disc,
+  because a shelf has to say WHO was taken. The right shelf fills toward
+  its own edge so trophies sit under their own label.
+- **Profile dock + world medallions** (E) replace all six dropdowns.
+  Those selects still exist as hidden state that the rest of game.js
+  reads and writes; the player now sets them on the setup screen and in
+  the two pickers. Player name lives in tewgo.web.playerName and is used
+  by nameOf(), so the shelf shows their name in vs-AI games.
+- **Unlock gating** (C) ports ProgressionManager.isUnlocked into
+  engine/progression.js: THEME_UNLOCK_AFTER (space/feudaljapan 0, then
+  3/7/12/20/30/38) and THEME_ORDER (iOS registry order, deliberately NOT
+  themes.js declaration order). Counts COMPLETED GAMES, not wins, so
+  losing still progresses. Locked worlds are unpickable in the setup
+  dropdown; crossing a threshold announces the world on the victory
+  overlay and flashes its medallion.
+- **Profile page** (F) ports UI/ProfileView.swift: stat tiles, the
+  next-unlock card, Gold progress, and the collection counted live from
+  the registries (8 worlds, 40 figures, 97 backgrounds, 8 soundtracks).
+
+## Full unlock: decided but NOT built (Rick, 2026-08-01)
+Rick wants BOTH rails eventually: Stripe first so the web can sell the
+unlock, Steam later as a distribution channel. So `grantPro(source)`
+stores the NAME of the granting rail ('stripe' / 'steam'), not a bare
+true, and no migration is needed to add the second.
+
+The client-side flag is a convenience cache ONLY. It is trivially edited
+in devtools, so anything that costs money must verify server side before
+being honored. The "Unlock everything" button on the profile is
+deliberately inert and says so; do not make it grant pro locally.
+
 ## Not yet built (candidates, in rough order)
-Themes and progression are DONE (2026-07-31). What's left, in the
-order updates.html promises it:
+Themes, progression, the profile and unlock gating are DONE. What's
+left, in the order updates.html promises it:
+- The Stripe full unlock (see "Full unlock" above): checkout, a server
+  side entitlement check, then call grantPro('stripe')
 - Online multiplayer, the last big roadmap item (needs a backend;
   Supabase is available; the state codec already matches the iOS
   multiplayer payload shape, which was built for exactly this)
+- Concept B from /play/concepts.html if Rick wants it: the two figures
+  as the loadout controls
 - Service worker for offline play (skipped deliberately: cache
   invalidation risk vs benefit; revisit after family playtests)
 - Whatever family playtests surface (the site exists so family and
