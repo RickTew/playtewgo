@@ -164,6 +164,21 @@ Phone pass shipped 2026-07-31: touch drag-to-aim (down = ghost + crosshair
 guides, drag to adjust, release places, off-board cancels; mouse unchanged),
 manifest start_url=/play/, install button on beforeinstallprompt.
 
+Phone layout fix 2026-08-01 (Rick: "stuck on the options page, nothing to
+push"). Two CSS traps, both worth remembering:
+- `body` is a column flexbox. Giving it `height: 100%` made that height
+  DEFINITE, so every child flex-shrank to fit the screen. On an iPhone
+  .board-wrap (overflow:hidden) squashed from 365px to 269px, clipping the
+  bottom of the board AND the setup screen's Start button, and the page
+  could not scroll to reach it. Fix: html keeps height:100%, body keeps
+  only min-height:100dvh, plus `body > * { flex-shrink: 0 }`.
+- An ancestor with `backdrop-filter` is a containing block for
+  `position: fixed`, so .board-wrap's blur kept the overlays trapped in the
+  board box. It is turned off inside the phone media query.
+Overlays (setup, victory, both pickers) now go full-viewport under
+620px wide or 620px tall, so their buttons are always reachable. Light
+scenes also flip the overlay background now (it was black-on-black).
+
 ## User context
 Same user as the iOS project: not a web expert, explain clearly, no long
 dashes in text, commit at every green milestone without being asked.

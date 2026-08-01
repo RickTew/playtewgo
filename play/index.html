@@ -20,7 +20,13 @@
     --card: rgba(255,255,255,0.05);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { height: 100%; }
+  html { height: 100%; }
+  /* NOTE: body must NOT get height:100%. It is a column flexbox, so a
+     definite height makes every child flex-shrink to fit the screen: on a
+     phone that squashed .board-wrap (overflow:hidden) to ~270px, clipping
+     the bottom of the board AND the setup screen's Start button, with no
+     page scroll to reach it. min-height + no shrinking = the page grows
+     and scrolls instead. */
   body {
     background: var(--bg);
     color: var(--text);
@@ -31,6 +37,7 @@
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
+  body > * { flex-shrink: 0; }
   /* Space scene: painted by play/space.js on a full-viewport canvas
      (layered nebula glows, starfield, ringed planet - the iOS Nebula look) */
   #scene {
@@ -126,9 +133,30 @@
     border-radius: 16px; padding: 24px; overflow-y: auto;
   }
   .overlay.show { display: flex; }
+  /* light scenes flip the text dark, so the overlay has to flip too or the
+     setup screen is black-on-black */
+  body.light .overlay { background: rgba(236,238,244,0.93); }
   /* margin:auto centers short content and lets tall content scroll from
      the top instead of clipping (the piece picker got cut off) */
   .overlay > div { margin: auto; }
+  /* Phones and short windows: the board box is smaller than the setup
+     screen and the pickers, so an overlay pinned to it hides its own
+     buttons. Fill the viewport instead - always scrollable, always
+     showing Start / Done. */
+  @media (max-width: 620px), (max-height: 620px) {
+    /* a backdrop-filter ancestor is a containing block for position:fixed,
+       so the board panel's blur has to go for the overlays to reach the
+       viewport edges (it is decoration, and cheaper off on phones) */
+    .board-wrap { backdrop-filter: none; }
+    .overlay {
+      position: fixed; z-index: 20; border-radius: 0;
+      background: rgba(5,5,26,0.94);
+      padding: calc(18px + env(safe-area-inset-top)) 14px
+               calc(18px + env(safe-area-inset-bottom));
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
   .setup-rows {
     display: flex; flex-direction: column; gap: 14px;
     align-items: center; margin: 20px 0;
