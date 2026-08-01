@@ -691,6 +691,20 @@ function drawShelf(side) {
   shelfShown[side] = count;
 }
 
+// ----- Overlays -----
+// Exactly one at a time. Opening the profile while the setup screen was
+// still up used to stack them, which read as a stuck window: two sets of
+// buttons layered, and the one you wanted scrolled out of reach.
+function presentOverlay(el) {
+  for (const o of document.querySelectorAll('.overlay')) {
+    o.classList.toggle('show', o === el);
+  }
+}
+
+function closeOverlays() {
+  for (const o of document.querySelectorAll('.overlay')) o.classList.remove('show');
+}
+
 function updateHud() {
   youLabelEl.textContent = nameOf(ONE);
   aiLabelEl.textContent = nameOf(TWO);
@@ -736,7 +750,7 @@ function showOverlay() {
     themeJustUnlocked = null;
   }
   shareBtnEl.style.display = winner !== null && (!isAiGame() || winner === HUMAN) ? '' : 'none';
-  overlayEl.classList.add('show');
+  presentOverlay(overlayEl);
 }
 
 // ----- Game flow -----
@@ -765,7 +779,6 @@ function recordFinishedGame() {
   // victory card, and it repaints the dock behind the overlay either way.
   themeJustUnlocked = before && progression.isThemeUnlocked(before) ? before : null;
   updateDock();
-  buildWorlds();
 }
 
 function endIfOver(player) {
@@ -1060,7 +1073,7 @@ function buildScenePicker() {
 
 document.getElementById('sceneBtn').addEventListener('click', () => {
   buildScenePicker();
-  scenePickerEl.classList.add('show');
+  presentOverlay(scenePickerEl);
 });
 document.getElementById('sceneDone').addEventListener('click', () => {
   scenePickerEl.classList.remove('show');
@@ -1197,7 +1210,7 @@ function buildPicker() {
 
 document.getElementById('pieceBtn').addEventListener('click', () => {
   buildPicker();
-  piecePickerEl.classList.add('show');
+  presentOverlay(piecePickerEl);
 });
 document.getElementById('pickerDone').addEventListener('click', () => {
   piecePickerEl.classList.remove('show');
@@ -1226,7 +1239,6 @@ function applyTheme(key) {
   applyScene();
   ensureMusic();
   updateDock();
-  buildWorlds();
 }
 
 themeEl.addEventListener('change', () => applyTheme(themeEl.value));
@@ -1236,21 +1248,7 @@ themeEl.addEventListener('change', () => applyTheme(themeEl.value));
 const avatarCvEl = document.getElementById('avatarCv');
 const playerNameEl = document.getElementById('playerName');
 const dockRecordEl = document.getElementById('dockRecord');
-const worldsEl = document.getElementById('worlds');
-const worldsHintEl = document.getElementById('worldsHint');
 const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
-
-/** Paints a theme's default scene with a figure standing on it. */
-function paintMedallion(cv, themeKey, px) {
-  paintScene(cv, THEMES[themeKey].defaultScene, px, px);
-  cv.style.width = px / 2 + 'px';
-  cv.style.height = px / 2 + 'px';
-  const c = cv.getContext('2d');
-  c.setTransform(2, 0, 0, 2, 0, 0);
-  const kind = THEMES[themeKey].defaults[0];
-  const h = px / 2;
-  drawFigure(c, kind, h / 2, h * 0.94, (h * 0.74) / figureHeight(kind));
-}
 
 function drawAvatar() {
   if (!avatarCvEl) return;
@@ -1273,61 +1271,15 @@ function updateDock() {
       ? 'No games yet. Your record shows up here.'
       : `<b>${progression.wins()}</b> won &middot; <b>${progression.losses()}</b> lost vs AI`;
   }
-}
-
-// Remembered so a world that opens mid-session gets the gold flash exactly
-// once. The first build seeds the set silently: arriving at the page with
-// three worlds already earned should not flash two of them.
-const seenUnlocked = new Set();
-let worldsBuilt = false;
-
-function buildWorlds() {
-  if (!worldsEl) return;
-  worldsEl.innerHTML = '';
-  for (const key of THEME_ORDER) {
-    if (!THEMES[key]) continue;
-    const unlocked = progression.isThemeUnlocked(key);
-    const b = document.createElement('button');
-    b.className = 'world' + (unlocked ? '' : ' locked') + (key === theme ? ' selected' : '');
-    const left = progression.gamesUntilTheme(key);
-    b.title = unlocked
-      ? THEMES[key].name
-      : `${THEMES[key].name}: ${left} more game${left === 1 ? '' : 's'}`;
-    const cv = document.createElement('canvas');
-    paintMedallion(cv, key, 92);
-    b.appendChild(cv);
-    if (!unlocked) {
-      const lk = document.createElement('span');
-      lk.className = 'wlock';
-      lk.innerHTML = LOCK_SVG;
-      b.appendChild(lk);
-    } else if (worldsBuilt && !seenUnlocked.has(key)) {
-      b.classList.add('just');
-    }
-    b.addEventListener('click', () => {
-      if (progression.isThemeUnlocked(key)) {
-        applyTheme(key);
-        return;
-      }
-      // Locked worlds are not dead: they say what it takes to open them.
-      const n = progression.gamesUntilTheme(key);
-      worldsHintEl.innerHTML =
-        `<b>${THEMES[key].name}</b> opens after ${n} more game${n === 1 ? '' : 's'}. Finishing counts, win or lose.`;
-    });
-    worldsEl.appendChild(b);
-    if (unlocked) seenUnlocked.add(key);
-  }
-  worldsBuilt = true;
-  // The standing hint is whatever is next on the ladder.
-  const next = progression.nextLockedTheme(THEME_ORDER);
-  if (next && THEMES[next]) {
-    const n = progression.gamesUntilTheme(next);
-    worldsHintEl.innerHTML =
-      `Next: <b>${THEMES[next].name}</b> in ${n} game${n === 1 ? '' : 's'}.`;
-  } else {
-    worldsHintEl.textContent = progression.hasPro()
-      ? 'Every world unlocked.'
-      : 'Every world unlocked. Nice.';
+  // One quiet line about what is next, now that the worlds row has moved
+  // to the profile. Nothing to say once everything is open.
+  const nextEl = document.getElementById('dockNext');
+  if (nextEl) {
+    const next = progression.nextLockedTheme(THEME_ORDER);
+    const n = next ? progression.gamesUntilTheme(next) : 0;
+    nextEl.innerHTML = next && THEMES[next]
+      ? `Next world: <b>${THEMES[next].name}</b> in ${n} game${n === 1 ? '' : 's'}`
+      : '';
   }
 }
 
@@ -1340,6 +1292,55 @@ const pfOpen = { worlds: true, figures: true, backgrounds: false, soundtracks: f
 
 function unlockedThemes() {
   return THEME_ORDER.filter((k) => THEMES[k] && progression.isThemeUnlocked(k));
+}
+
+/**
+ * The world cards: a painted scene with that world's two default figures
+ * standing on it, its name, and a padlock plus the cost when it is still
+ * locked. Tapping an open one switches world.
+ */
+function worldCards(gal) {
+  gal.classList.add('world-gallery');
+  for (const key of THEME_ORDER) {
+    if (!THEMES[key]) continue;
+    const unlocked = progression.isThemeUnlocked(key);
+    const card = document.createElement('button');
+    card.className = 'wcard' + (unlocked ? '' : ' locked') + (key === theme ? ' current' : '');
+    const cv = document.createElement('canvas');
+    const w = 152;
+    const h = 96;
+    paintScene(cv, THEMES[key].defaultScene, w * 2, h * 2);
+    cv.style.width = w + 'px';
+    cv.style.height = h + 'px';
+    const c = cv.getContext('2d');
+    c.setTransform(2, 0, 0, 2, 0, 0);
+    const [a, b] = THEMES[key].defaults;
+    const fh = h * 0.44;
+    drawFigure(c, a, w * 0.34, h - 7, fh / figureHeight(a));
+    drawFigure(c, b, w * 0.66, h - 7, fh / figureHeight(b));
+    card.appendChild(cv);
+
+    const name = document.createElement('span');
+    name.className = 'wname';
+    name.textContent = THEMES[key].name;
+    card.appendChild(name);
+
+    if (!unlocked) {
+      const left = progression.gamesUntilTheme(key);
+      const lock = document.createElement('span');
+      lock.className = 'wlockbox';
+      lock.innerHTML = LOCK_SVG
+        + `<span class="wneed">Play ${left} more game${left === 1 ? '' : 's'}</span>`;
+      card.appendChild(lock);
+    }
+
+    card.addEventListener('click', () => {
+      if (!progression.isThemeUnlocked(key)) return;
+      applyTheme(key);
+      openProfile();
+    });
+    gal.appendChild(card);
+  }
 }
 
 /** A gallery row of theme scenes, one per world. */
@@ -1377,7 +1378,7 @@ function buildCollection() {
     {
       key: 'worlds', title: 'WORLDS',
       have: open.length, total: themeTotal,
-      fill: (gal) => sceneStrip(gal, (k) => [{ key: THEMES[k].defaultScene, label: THEMES[k].name }]),
+      fill: worldCards,
     },
     {
       key: 'figures', title: 'FIGURES',
@@ -1388,8 +1389,13 @@ function buildCollection() {
           if (!THEMES[k]) continue;
           const locked = !progression.isThemeUnlocked(k);
           for (const kind of THEMES[k].figures) {
-            const it = document.createElement('div');
-            it.className = 'gitem' + (locked ? ' locked' : '');
+            const it = document.createElement('button');
+            const equipped = !locked && k === theme && pieceKind[ONE] === kind;
+            it.className = 'gitem' + (locked ? ' locked' : ' pick')
+              + (equipped ? ' equipped' : '');
+            it.title = locked
+              ? `${FIGURES[kind].name}, locked with ${THEMES[k].name}`
+              : `Play as ${FIGURES[kind].name}`;
             const cv = document.createElement('canvas');
             cv.width = 88; cv.height = 108;
             cv.style.width = '44px'; cv.style.height = '54px';
@@ -1401,6 +1407,16 @@ function buildCollection() {
             l.className = 'gl';
             l.textContent = FIGURES[kind].name;
             it.appendChild(l);
+            // Yes, you can change your figure from here. Picking one from
+            // another world switches to that world first, since rosters
+            // belong to their world.
+            if (!locked) {
+              it.addEventListener('click', () => {
+                if (k !== theme) applyTheme(k);
+                selectPiece(ONE, kind);
+                openProfile();
+              });
+            }
             gal.appendChild(it);
           }
         }
@@ -1519,14 +1535,21 @@ function openProfile() {
     document.getElementById('pfOwnedCode').textContent = code ?? '';
   }
   buildCollection();
-  profileEl.classList.add('show');
+  presentOverlay(profileEl);
 }
 
 document.getElementById('profileBtn')?.addEventListener('click', openProfile);
-document.getElementById('profileDone')?.addEventListener('click', () => {
-  profileEl.classList.remove('show');
-});
+document.getElementById('profileDone')?.addEventListener('click', closeOverlays);
+document.getElementById('profileX')?.addEventListener('click', closeOverlays);
 document.getElementById('avatarBtn')?.addEventListener('click', openProfile);
+
+// Escape closes whatever is open, except the setup screen, which is the
+// front door and has its own Continue and Start buttons.
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (setupEl?.classList.contains('show')) return;
+  closeOverlays();
+});
 // ----- The paid full unlock -----
 
 const unlockNoteEl = document.getElementById('pfUnlockNote');
@@ -1540,7 +1563,6 @@ function setUnlockNote(text, kind) {
 /** Applies a confirmed unlock everywhere it shows. */
 function applyUnlock(source) {
   progression.grantPro(source);
-  buildWorlds();
   updateDock();
   if (profileEl?.classList.contains('show')) openProfile();
 }
@@ -1648,7 +1670,7 @@ function openSetup() {
   if (cancelEl) cancelEl.style.display = hasLiveGame ? '' : 'none';
   const startEl = document.getElementById('startGame');
   if (startEl) startEl.className = hasLiveGame ? 'btn-ghost' : 'btn-gold';
-  setupEl.classList.add('show');
+  presentOverlay(setupEl);
 }
 
 document.getElementById('setupCancel')?.addEventListener('click', () => {
@@ -1766,7 +1788,6 @@ updateToggles();
 draw();
 updateHud();
 updateDock();
-buildWorlds();
 
 // Dev hook: /play/?sharecard previews the victory card without winning
 if (location.search.includes('sharecard')) {

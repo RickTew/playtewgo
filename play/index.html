@@ -109,33 +109,36 @@
   .record { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .record b { color: var(--text); font-variant-numeric: tabular-nums; }
   .dock-tools { display: flex; gap: 6px; }
-  /* World medallions: the theme picker, and the unlock ladder, in one row. */
-  .worlds {
-    display: flex; gap: 8px; margin-top: 12px;
-    overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin;
+  /* The dock is the whole lower section now, so give it a card of its own
+     rather than letting it float loose under the board. */
+  .dock {
+    background: rgba(8, 9, 24, 0.55);
+    border: 1px solid #ffffff1a; border-radius: 16px;
+    padding: 10px 12px;
   }
-  .world {
-    position: relative; flex-shrink: 0; width: 46px; height: 46px;
-    border-radius: 50%; overflow: hidden; padding: 0; line-height: 0;
-    border: 2px solid #ffffff26;
+  body.light .dock { background: rgba(255,255,255,0.5); border-color: #00000018; }
+  /* The next thing to play toward, kept in the dock now that the worlds
+     row has moved to the profile. */
+  .dock-next {
+    flex-basis: 100%; font-size: 12px; color: var(--muted);
+    margin-top: 2px; text-align: center;
   }
-  .world canvas { width: 100%; height: 100%; }
-  .world:hover { border-color: #ffffff70; }
-  .world.selected { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,214,10,0.5); }
-  .world.locked canvas { filter: grayscale(0.9) brightness(0.45); }
-  .world .wlock {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    pointer-events: none;
-  }
-  .world .wlock svg { width: 15px; height: 15px; color: rgba(255,255,255,0.9); }
-  .world.just { animation: worldpop 0.9s ease-out; }
-  @keyframes worldpop {
-    0% { box-shadow: 0 0 0 3px var(--gold), 0 0 26px rgba(255,214,10,0.9); }
-    100% { box-shadow: 0 0 0 0 rgba(255,214,10,0); }
-  }
-  .worlds-hint { font-size: 12px; color: var(--muted); min-height: 1.3em; margin-top: 2px; }
-  .worlds-hint b { color: var(--gold); }
+  .dock-next b { color: var(--gold); }
+  .dock-next:empty { display: none; }
   /* ----- Profile overlay (iOS ProfileView) ----- */
+  /* A close control that is always reachable, whatever the scroll position.
+     The Done button at the bottom of a long profile was not enough. */
+  .overlay-x {
+    position: sticky; top: 0; z-index: 2;
+    display: block; margin: 0 0 -34px auto;
+    width: 34px; height: 34px; padding: 0; line-height: 0; border-radius: 50%;
+    background: rgba(0,0,0,0.5); border: 1px solid #ffffff2a;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.07s ease, border-color 0.07s ease, color 0.07s ease;
+  }
+  .overlay-x svg { width: 16px; height: 16px; margin: auto; }
+  .overlay-x:hover { background: rgba(255,214,10,0.2); border-color: var(--gold); color: var(--gold); }
+  body.light .overlay-x { background: rgba(255,255,255,0.7); border-color: #00000024; }
   #profile > div { text-align: left; width: 100%; max-width: 520px; }
   .pf-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
   .pf-avatar {
@@ -203,10 +206,46 @@
   .csec-body { display: none; padding: 0 14px 14px; }
   .csec.open .csec-body { display: block; }
   .gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
-  .gitem { text-align: center; flex-shrink: 0; }
+  .gitem {
+    text-align: center; flex-shrink: 0; background: none; border: none;
+    padding: 4px; border-radius: 10px;
+  }
   .gitem canvas { display: block; border-radius: 6px; }
   .gitem .gl { font-size: 10px; color: var(--muted); margin-top: 3px; }
   .gitem.locked canvas { filter: grayscale(0.9) brightness(0.4); }
+  .gitem.locked { cursor: default; }
+  .gitem.pick { transition: background 0.08s ease, transform 0.08s ease; }
+  .gitem.pick:hover { background: rgba(255,255,255,0.10); transform: translateY(-2px); }
+  .gitem.equipped { background: rgba(255,214,10,0.16); outline: 1px solid var(--gold); }
+  .gitem.equipped .gl { color: var(--gold); }
+  /* World cards: the box treatment, a painted scene with that world's two
+     figures standing on it. Reads as a place, not a piece. */
+  .world-gallery { gap: 12px; padding-top: 2px; }
+  .wcard {
+    position: relative; flex-shrink: 0; padding: 0; overflow: hidden;
+    border-radius: 12px; border: 1px solid #ffffff26; line-height: 0;
+    transition: transform 0.09s ease, border-color 0.09s ease, box-shadow 0.09s ease;
+  }
+  .wcard canvas { display: block; }
+  .wcard:hover { transform: translateY(-3px); border-color: #ffffff80; }
+  .wcard .wname {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 20px 8px 6px;
+    font-size: 12.5px; font-weight: 700; line-height: 1.2; color: #fff;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  }
+  .wcard.current { border-color: var(--gold); box-shadow: 0 0 12px rgba(255,214,10,0.45); }
+  .wcard.locked { cursor: default; }
+  .wcard.locked canvas { filter: grayscale(0.85) brightness(0.45); }
+  .wcard.locked:hover { transform: none; border-color: #ffffff26; }
+  .wcard .wlockbox {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 5px; line-height: 1.2;
+  }
+  .wcard .wlockbox svg { width: 20px; height: 20px; color: #fff; }
+  .wcard .wneed {
+    font-size: 10.5px; font-weight: 700; color: #fff;
+    text-shadow: 0 1px 4px #000;
+  }
   .unlock-cta {
     margin-top: 14px; text-align: center; padding: 16px 14px; border-radius: 16px;
     background: linear-gradient(135deg, rgba(255,214,10,0.12), rgba(140,0,217,0.12));
@@ -259,9 +298,23 @@
   }
   select:focus, button:focus { outline: 1px solid var(--gold); }
   #newGame { font-weight: 700; }
-  .toggle { padding: 9px 11px; line-height: 0; }
+  .toggle {
+    padding: 9px 11px; line-height: 0;
+    transition: background 0.07s ease, border-color 0.07s ease,
+                color 0.07s ease, transform 0.07s ease;
+  }
   .toggle svg { width: 18px; height: 18px; }
   .toggle.off { opacity: 0.35; }
+  /* Snappy and obvious on hover: gold edge, gold glyph, a small lift.
+     The old state changed almost nothing and felt dead (Rick). */
+  .toggle:hover {
+    background: rgba(255,214,10,0.16);
+    border-color: var(--gold);
+    color: var(--gold);
+    transform: translateY(-2px);
+    opacity: 1;
+  }
+  .toggle:active { transform: translateY(0); }
   #soundToggle .slash { display: none; }
   #soundToggle.off .slash { display: inline; }
   .swatch-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 6px 0 18px; }
@@ -504,6 +557,9 @@
        Ported from the iOS ProfileView. -->
   <div class="overlay" id="profile">
     <div>
+      <button class="overlay-x" id="profileX" title="Close" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
       <div class="pf-head">
         <div class="pf-avatar"><canvas id="pfAvatarCv"></canvas></div>
         <div>
@@ -589,12 +645,13 @@
     </button>
     </span>
     <button class="btn-gold" id="newGame">New game</button>
+    <div class="dock-next" id="dockNext"></div>
   </div>
 
-  <!-- Every world on show, locked ones included, so there is always
-       something visible to play toward. Built by game.js. -->
-  <div class="worlds" id="worlds"></div>
-  <div class="worlds-hint" id="worldsHint"></div>
+  <!-- The worlds row lived here and moved to the profile: the theme is
+       picked on the setup screen before a game, so a second theme picker
+       under the board was both redundant and easy to misread as a piece
+       picker (Rick, 2026-08-01). What is left is one row. -->
 
   <!-- Kept for the rest of game.js to read and write; the player now sets
        these on the setup screen and in the pickers. -->
