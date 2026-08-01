@@ -588,15 +588,8 @@ function draw() {
     drawStone(x, y, radius, current, 0.55);
   }
 
-  // Last-move ring
-  if (lastMove) {
-    const [x, y] = pointFor(lastMove[0], lastMove[1], m);
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, radius * 1.15, 0, Math.PI * 2);
-    ctx.stroke();
-  }
+  // No last-move marker: iOS draws none, and the web ring read as a stray
+  // white circle. lastMove itself stays - endIfOver checks the win from it.
 }
 
 function luminance(hex) {
