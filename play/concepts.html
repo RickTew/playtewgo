@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEWGO Lab: HUD and lower section concepts</title>
+<meta name="robots" content="noindex">
+<style>
+  :root {
+    --bg: #0a0a14;
+    --gold: #ffd60a;
+    --blue: #4fa3ff;
+    --text: #f2f2f7;
+    --muted: #9a9ab0;
+    --card: rgba(255,255,255,0.05);
+    --panel-w: min(94vw, 680px);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100dvh; padding: 16px 12px 80px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body > * { flex-shrink: 0; }
+  #scene { position: fixed; inset: 0; z-index: -1; width: 100%; height: 100%; background: var(--bg); }
+
+  header { text-align: center; padding: 10px 0 4px; }
+  .logo { font-size: 30px; font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 24px rgba(255,214,10,0.25); }
+  .logo .go { color: var(--gold); }
+  .lab { vertical-align: super; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--gold); background: #ffd60a1a; border-radius: 999px; padding: 2px 8px; margin-left: 6px; }
+  .intro { color: var(--muted); font-size: 14px; max-width: 560px; text-align: center; margin: 6px 0 10px; line-height: 1.5; }
+
+  section { width: var(--panel-w); margin-top: 34px; }
+  .eyebrow { color: var(--gold); font-size: 11px; font-weight: 800; letter-spacing: 3px; }
+  section h2 { font-size: 21px; margin: 4px 0 2px; }
+  .why { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
+
+  .panel {
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 0%, rgba(79, 163, 255, 0.07), transparent 70%),
+      rgba(8, 9, 24, 0.62);
+    border: 1px solid #ffffff1f; border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 0 60px rgba(28, 28, 74, 0.45);
+    padding: 16px;
+  }
+  .demo-note { color: var(--muted); font-size: 12px; margin-top: 10px; text-align: center; }
+
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .btn {
+    background: var(--card); border: 1px solid #ffffff24; border-radius: 999px;
+    padding: 8px 16px; font-size: 14px;
+  }
+  .btn:hover { border-color: #ffffff45; }
+  .btn-gold {
+    background: var(--gold); color: #1a1a05; border: none; border-radius: 999px;
+    padding: 10px 22px; font-size: 15px; font-weight: 800;
+    box-shadow: 0 4px 18px rgba(255,214,10,0.35);
+  }
+  .btn-gold:hover { filter: brightness(1.08); }
+  canvas { display: block; }
+
+  /* ---------- Concept A: capture shelves ---------- */
+  .shelves { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .shelf { flex: 1; min-width: 240px; }
+  .shelf-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .shelf.you .shelf-title { color: var(--gold); }
+  .shelf.ai .shelf-title { color: var(--blue); }
+  .sockets { display: flex; gap: 8px; }
+  .socket {
+    width: 52px; height: 48px; border-radius: 10px;
+    background: rgba(255,255,255,0.04); border: 1px dashed #ffffff22;
+    display: flex; align-items: flex-end; justify-content: center; overflow: hidden;
+  }
+  .socket.filled { border-style: solid; border-color: #ffffff30; background: rgba(255,255,255,0.07); }
+  .socket canvas { transform-origin: 50% 90%; }
+  .socket.pop canvas { animation: pop 0.35s ease-out; }
+  @keyframes pop { 0% { transform: scale(1.6) translateY(-6px); } 100% { transform: scale(1); } }
+  .shelf.won .sockets { filter: drop-shadow(0 0 10px rgba(255,214,10,0.6)); }
+  .shelf-win { font-size: 12px; font-weight: 800; color: var(--gold); margin-top: 6px; visibility: hidden; }
+  .shelf.won .shelf-win { visibility: visible; }
+  .cap-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+
+  /* ---------- Concept B: face-off loadout ---------- */
+  .faceoff { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .fighter {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: none; border: none; border-radius: 14px; padding: 8px 14px;
+  }
+  .fighter:hover { background: rgba(255,255,255,0.05); }
+  .fighter canvas { transition: transform 0.15s ease; }
+  .fighter:hover canvas { transform: translateY(-3px); }
+  .fighter .fname { font-size: 14px; font-weight: 700; }
+  .fighter .ftag { font-size: 11px; color: var(--muted); }
+  .fighter.you .fname { color: var(--gold); }
+  .fighter.ai .fname { color: var(--blue); }
+  .vs {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    background: radial-gradient(circle at 35% 30%, #fff3b0, var(--gold));
+    color: #1a1a05; font-weight: 900; font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 20px rgba(255,214,10,0.45);
+  }
+  .faceoff-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .chip {
+    background: var(--card); border: 1px solid #ffffff24; border-radius: 999px;
+    padding: 7px 14px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 8px var(--blue); }
+  .toggle {
+    background: var(--card); border: 1px solid #ffffff24; border-radius: 12px;
+    width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .toggle svg { width: 20px; height: 20px; }
+  .toggle:hover { border-color: #ffffff45; }
+
+  /* ---------- Concept C: theme shelf ---------- */
+  .shelf-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 10px; scrollbar-width: thin; }
+  .tcard {
+    position: relative; flex-shrink: 0; width: 168px; border-radius: 12px; overflow: hidden;
+    border: 1px solid #ffffff24; background: #000; text-align: left; padding: 0;
+  }
+  .tcard canvas { width: 168px; height: 104px; }
+  .tcard .tname {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 22px 8px 6px;
+    font-size: 13px; font-weight: 700; color: #fff;
+    background: linear-gradient(transparent, rgba(0,0,0,0.75));
+  }
+  .tcard.locked canvas { filter: grayscale(0.85) brightness(0.5); }
+  .tcard .lock {
+    position: absolute; inset: 0; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 4px; color: #fff;
+  }
+  .tcard.locked .lock { display: flex; }
+  .tcard .lock svg { width: 22px; height: 22px; }
+  .tcard .lock .need { font-size: 11px; font-weight: 700; text-shadow: 0 1px 4px #000; }
+  .tcard.selected { border-color: var(--gold); box-shadow: 0 0 14px rgba(255,214,10,0.4); }
+  .tcard.flash { animation: unlockflash 0.9s ease-out; }
+  @keyframes unlockflash {
+    0% { box-shadow: 0 0 0 3px var(--gold), 0 0 30px rgba(255,214,10,0.9); }
+    100% { box-shadow: 0 0 0 0 rgba(255,214,10,0); }
+  }
+  .scrub { display: flex; align-items: center; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+  .scrub input { flex: 1; min-width: 160px; accent-color: var(--gold); }
+  .scrub .count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .scrub .count b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Concept D: profile dock ---------- */
+  .dock { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .avatar {
+    width: 64px; height: 64px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    border: 2px solid var(--gold); box-shadow: 0 0 16px rgba(255,214,10,0.35);
+  }
+  .avatar canvas { width: 60px; height: 60px; }
+  .dock-id { min-width: 130px; }
+  .dock-id .pname { font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .dock-id .pname svg { width: 13px; height: 13px; color: var(--muted); }
+  .dock-id .record { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .dock-id .record b { color: var(--text); }
+  .goldtrack { flex: 1; min-width: 170px; }
+  .goldtrack .glabel { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .goldtrack .glabel b { color: var(--gold); }
+  .bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .bar .fill { height: 100%; width: 30%; border-radius: 999px;
+    background: linear-gradient(90deg, #b8860b, var(--gold)); box-shadow: 0 0 10px rgba(255,214,10,0.5); }
+
+  /* ---------- Concept E: dock + expandable shelf ---------- */
+  .medals { display: flex; gap: 8px; flex-wrap: wrap; }
+  .medal {
+    width: 42px; height: 42px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    border: 2px solid #ffffff2e; background: #000; padding: 0; position: relative;
+  }
+  .medal canvas { width: 38px; height: 38px; }
+  .medal.locked canvas { filter: grayscale(0.9) brightness(0.45); }
+  .medal.locked::after {
+    content: ""; position: absolute; inset: 0;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>') center / 14px no-repeat;
+  }
+  .medal.selected { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,214,10,0.5); }
+  .medal:hover { border-color: #ffffff70; }
+  .eshelf { margin-top: 14px; display: none; }
+  .eshelf.open { display: block; }
+
+  /* ---------- Concept F: the profile page ---------- */
+  .pf-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .pf-avatar {
+    width: 72px; height: 72px; border-radius: 18px; overflow: hidden; flex-shrink: 0;
+    border: 1px solid #ffffff26; position: relative;
+  }
+  .pf-avatar canvas { width: 70px; height: 70px; }
+  .pf-name { font-size: 22px; font-weight: 900; }
+  .badges { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+  .badge {
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    padding: 3px 9px; border-radius: 999px;
+  }
+  .badge.pro { background: var(--gold); color: #1a1a05; }
+  .badge.local { background: rgba(255,255,255,0.12); color: #fff; }
+  .stats { display: flex; gap: 8px; margin-bottom: 12px; }
+  .stat {
+    flex: 1; text-align: center; padding: 10px 4px; border-radius: 12px;
+    background: rgba(255,255,255,0.05); border: 1px solid #ffffff14;
+  }
+  .stat .v { font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 9px; font-weight: 800; letter-spacing: 1px; color: var(--muted); margin-top: 3px; }
+  .next {
+    border-radius: 16px; padding: 14px; margin-bottom: 12px;
+    background: linear-gradient(135deg, rgba(255,214,10,0.08), rgba(255,255,255,0.04));
+    border: 1px solid rgba(255,214,10,0.3);
+  }
+  .next-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 800; letter-spacing: 1px; margin-bottom: 10px; }
+  .next-top .lbl { color: var(--gold); }
+  .next-top .togo { color: rgba(255,255,255,0.7); }
+  .next-body { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+  .next-thumb {
+    width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0;
+    position: relative; overflow: hidden; border: 1px solid #ffffff2e;
+  }
+  .next-thumb canvas { width: 62px; height: 62px; filter: grayscale(0.85) brightness(0.5); }
+  .next-thumb .lk {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  }
+  .next-thumb .lk svg { width: 20px; height: 20px; }
+  .next-name { font-size: 16px; font-weight: 800; letter-spacing: 0.5px; }
+  .next-roster { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .next-count { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .collect { display: flex; flex-direction: column; gap: 8px; }
+  .csec { border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid #ffffff14; overflow: hidden; }
+  .csec-head {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; background: none; border: none; text-align: left;
+  }
+  .csec-head:hover { background: rgba(255,255,255,0.04); }
+  .csec-head .ct { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; flex: 1; }
+  .csec-head .cn { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .csec-head .cn b { color: var(--gold); }
+  .csec-head .chev { color: var(--muted); transition: transform 0.18s ease; }
+  .csec-head .chev svg { width: 14px; height: 14px; display: block; }
+  .csec.open .chev { transform: rotate(90deg); }
+  .csec-body { display: none; padding: 0 14px 14px; }
+  .csec.open .csec-body { display: block; }
+  .gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .gitem { text-align: center; flex-shrink: 0; }
+  .gitem canvas { display: block; }
+  .gitem .gl { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .gitem.locked canvas { filter: grayscale(0.9) brightness(0.4); }
+  .unlock-cta {
+    margin-top: 14px; text-align: center; padding: 16px 14px; border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,214,10,0.12), rgba(140,0,217,0.12));
+    border: 1px solid rgba(255,214,10,0.3);
+  }
+  .unlock-cta .ut { font-size: 16px; font-weight: 900; letter-spacing: 0.5px; }
+  .unlock-cta .us { font-size: 13px; color: var(--muted); margin: 4px 0 12px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<header>
+  <div class="logo">TEW<span class="go">GO</span><span class="lab">LAB</span></div>
+</header>
+<p class="intro">
+  Five live concepts for the strip above the board and the section below it.
+  Everything here is drawn with the real game art. Poke each one, then pick a
+  letter or mix pieces of several.
+</p>
+
+<section>
+  <div class="eyebrow">CONCEPT A, TOP STRIP</div>
+  <h2>Capture shelves</h2>
+  <p class="why">Instead of "You 2/5", every captured pair sits on your shelf as
+  the actual enemy figures you took. Five filled sockets is the win, so the shelf
+  itself shows how close each side is.</p>
+  <div class="panel">
+    <div class="shelves">
+      <div class="shelf you" id="shelfYou">
+        <div class="shelf-title">You</div>
+        <div class="sockets"></div>
+        <div class="shelf-win">5 pairs. That wins the game!</div>
+      </div>
+      <div class="shelf ai" id="shelfAi">
+        <div class="shelf-title">AI</div>
+        <div class="sockets"></div>
+        <div class="shelf-win">5 pairs. That wins the game!</div>
+      </div>
+    </div>
+    <div class="cap-buttons">
+      <button class="btn" id="capYou">You capture a pair</button>
+      <button class="btn" id="capAi">AI captures a pair</button>
+      <button class="btn" id="capReset">Reset</button>
+    </div>
+  </div>
+  <p class="demo-note">In the real game the pair would fly from the board onto the shelf.</p>
+</section>
+
+<section>
+  <div class="eyebrow">CONCEPT B, LOWER SECTION</div>
+  <h2>Face-off loadout</h2>
+  <p class="why">Your figure and your opponent's figure are the controls. Tap
+  either one to change it, exactly like picking a fighter. The pickers you have
+  today open from here, so the six dropdowns disappear.</p>
+  <div class="panel">
+    <div class="faceoff">
+      <div style="display:flex; align-items:center; gap:4px">
+        <button class="fighter you" id="fighterYou">
+          <canvas></canvas>
+          <span class="fname">Robot</span>
+          <span class="ftag">You. Tap to change</span>
+        </button>
+        <div class="vs">VS</div>
+        <button class="fighter ai" id="fighterAi">
+          <canvas></canvas>
+          <span class="fname">Alien</span>
+          <span class="ftag">AI Medium. Tap to change</span>
+        </button>
+      </div>
+      <div class="faceoff-right">
+        <span class="chip"><span class="dot"></span>Space</span>
+        <button class="toggle" title="Board and Background"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="8.7" cy="9.7" r="1.6"/><path d="M20.5 15.5l-4.8-4.8L6 20.4"/></svg></button>
+        <button class="toggle" title="Sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4z"/><path d="M15.5 9a4.2 4.2 0 010 6"/><path d="M18 6.6a8 8 0 010 10.8"/></svg></button>
+        <button class="btn-gold">New game</button>
+      </div>
+    </div>
+  </div>
+  <p class="demo-note">Try tapping the two figures. They cycle through the Space roster.</p>
+</section>
+
+<section>
+  <div class="eyebrow">CONCEPT C, LOWER SECTION</div>
+  <h2>Theme shelf</h2>
+  <p class="why">All eight worlds on display, like a trophy shelf. Locked worlds
+  stay visible in silhouette so players can see what they are playing toward.
+  The thresholds below are the real ones from the iOS app. Drag the slider to
+  watch worlds unlock.</p>
+  <div class="panel">
+    <div class="shelf-scroll" id="themeShelf"></div>
+    <div class="scrub">
+      <span class="count">Games finished: <b id="gamesCount">2</b></span>
+      <input type="range" id="gamesSlider" min="0" max="40" value="2">
+    </div>
+  </div>
+  <p class="demo-note">Space and Feudal Japan start unlocked. Dungeon opens at 3 games, Ocean at 7, Undead at 12, Western at 20, Desert at 30, Classic at 38.</p>
+</section>
+
+<section>
+  <div class="eyebrow">CONCEPT D, LOWER SECTION</div>
+  <h2>Profile dock</h2>
+  <p class="why">The page becomes THEIR page. Their figure is their avatar,
+  their name sits next to their vs AI record, and the gold bar shows progress
+  toward the Gold color unlock in the current world.</p>
+  <div class="panel">
+    <div class="dock">
+      <div class="avatar"><canvas id="avatarCv"></canvas></div>
+      <div class="dock-id">
+        <div class="pname">Player One
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+        </div>
+        <div class="record"><b>12</b> wins, <b>5</b> losses vs AI</div>
+      </div>
+      <div class="goldtrack">
+        <div class="glabel">3 of 10 Space wins to <b>GOLD</b></div>
+        <div class="bar"><div class="fill"></div></div>
+      </div>
+      <button class="btn-gold">New game</button>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">CONCEPT E, LOWER SECTION</div>
+  <h2>Profile dock plus theme medallions</h2>
+  <p class="why">The combination I would ship. The dock from D is the always-on
+  bar, and a row of world medallions sits under it. Tap an unlocked medallion to
+  jump worlds. Tap the shelf button to expand the full theme shelf from C.</p>
+  <div class="panel">
+    <div class="dock" style="margin-bottom:14px">
+      <div class="avatar"><canvas id="avatarCvE"></canvas></div>
+      <div class="dock-id">
+        <div class="pname" id="eName">Player One</div>
+        <div class="record" id="eRecord"><b>12</b> wins, <b>5</b> losses vs AI</div>
+      </div>
+      <button class="btn" id="eShelfBtn">Worlds</button>
+      <button class="btn-gold">New game</button>
+    </div>
+    <div class="medals" id="medals"></div>
+    <div class="eshelf" id="eShelf"><div class="shelf-scroll"></div></div>
+  </div>
+  <p class="demo-note">Medallions use the same unlock state as the slider in Concept C.</p>
+</section>
+
+<section>
+  <div class="eyebrow">CONCEPT F, THE MISSING PIECE</div>
+  <h2>The profile page</h2>
+  <p class="why">The iOS app has a whole profile screen and the web version never
+  got one. This is that screen, ported: stats, the next world you are playing
+  toward, and your collection with real counts. It answers "what have I got and
+  what am I working on". Drive it with the Concept C slider above.</p>
+  <div class="panel">
+    <div class="pf-head">
+      <div class="pf-avatar"><canvas id="pfAvatar"></canvas></div>
+      <div>
+        <div class="pf-name">Player One</div>
+        <div class="badges">
+          <span class="badge local">LOCAL PROFILE</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="v" id="stPlayed">25</div><div class="l">PLAYED</div></div>
+      <div class="stat"><div class="v" id="stWon">14</div><div class="l">WON</div></div>
+      <div class="stat"><div class="v" id="stLost">11</div><div class="l">LOST</div></div>
+      <div class="stat"><div class="v" id="stRate">56</div><div class="l">WIN %</div></div>
+    </div>
+
+    <div class="next" id="nextCard">
+      <div class="next-top"><span class="lbl">NEXT UNLOCK</span><span class="togo" id="nextTogo"></span></div>
+      <div class="next-body">
+        <div class="next-thumb"><canvas id="nextCv"></canvas><span class="lk"></span></div>
+        <div>
+          <div class="next-name" id="nextName"></div>
+          <div class="next-roster" id="nextRoster"></div>
+        </div>
+      </div>
+      <div class="bar"><div class="fill" id="nextFill"></div></div>
+      <div class="next-count" id="nextCount"></div>
+    </div>
+
+    <div class="collect" id="collect"></div>
+
+    <div class="unlock-cta">
+      <div class="ut">Unlock all 8 worlds</div>
+      <div class="us">Skip the grind. Every world, every figure, instantly.</div>
+      <button class="btn-gold">Unlock everything</button>
+    </div>
+  </div>
+  <p class="demo-note">The unlock button is where the paid full unlock lands. Which payment rail it uses is still open.</p>
+</section>
+
+<script type="module">
+import { THEMES, paintScene } from './themes.js';
+import { FIGURES, drawFigure, figureHeight } from './pieces.js';
+
+// Backdrop
+const sceneEl = document.getElementById('scene');
+function backdrop() { paintScene(sceneEl, 'nebula'); }
+backdrop();
+addEventListener('resize', backdrop);
+
+// Real unlock thresholds from the iOS ThemeRegistry (games finished, any theme)
+const UNLOCK_AFTER = {
+  space: 0, feudaljapan: 0, dungeon: 3, ocean: 7,
+  undead: 12, western: 20, desert: 30, classic: 38,
+};
+const THEME_ORDER = ['space', 'feudaljapan', 'dungeon', 'ocean', 'undead', 'western', 'desert', 'classic'];
+
+// Draws a figure onto a canvas at 2x for crisp rendering.
+// targetH is the figure height in CSS pixels.
+function figCanvas(cv, kind, cssW, cssH, targetH, tilt = 0) {
+  cv.width = cssW * 2; cv.height = cssH * 2;
+  cv.style.width = cssW + 'px'; cv.style.height = cssH + 'px';
+  const c = cv.getContext('2d');
+  c.setTransform(2, 0, 0, 2, 0, 0);
+  c.save();
+  c.translate(cssW / 2, cssH - 2);
+  c.rotate(tilt);
+  drawFigure(c, kind, 0, 0, targetH / figureHeight(kind));
+  c.restore();
+  return cv;
+}
+
+// A theme card: painted default scene with the two default figures standing on it.
+function themeCard(key, w = 168, h = 104) {
+  const cv = document.createElement('canvas');
+  paintScene(cv, THEMES[key].defaultScene, w * 2, h * 2);
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  const c = cv.getContext('2d');
+  c.setTransform(2, 0, 0, 2, 0, 0);
+  const [a, b] = THEMES[key].defaults;
+  const fh = h * 0.42;
+  drawFigure(c, a, w * 0.34, h - 8, fh / figureHeight(a));
+  drawFigure(c, b, w * 0.66, h - 8, fh / figureHeight(b));
+  return cv;
+}
+
+/* ---------- Concept A: capture shelves ---------- */
+const SLOTS = 5;
+const capState = { you: 2, ai: 1 };
+function buildShelf(el, enemyKind, count, popIndex) {
+  const sockets = el.querySelector('.sockets');
+  sockets.innerHTML = '';
+  for (let i = 0; i < SLOTS; i += 1) {
+    const s = document.createElement('div');
+    s.className = 'socket' + (i < count ? ' filled' : '') + (i === popIndex ? ' pop' : '');
+    if (i < count) {
+      const cv = document.createElement('canvas');
+      // A captured pair: two enemy figures leaning into each other.
+      cv.width = 48 * 2; cv.height = 44 * 2;
+      cv.style.width = '48px'; cv.style.height = '44px';
+      const c = cv.getContext('2d');
+      c.setTransform(2, 0, 0, 2, 0, 0);
+      const r = 34 / figureHeight(enemyKind);
+      c.save(); c.translate(16, 42); c.rotate(-0.22); drawFigure(c, enemyKind, 0, 0, r); c.restore();
+      c.save(); c.translate(33, 42); c.rotate(0.22); drawFigure(c, enemyKind, 0, 0, r); c.restore();
+      s.appendChild(cv);
+    }
+    sockets.appendChild(s);
+  }
+  el.classList.toggle('won', count >= SLOTS);
+}
+const shelfYou = document.getElementById('shelfYou');
+const shelfAi = document.getElementById('shelfAi');
+function renderShelves(pop) {
+  buildShelf(shelfYou, 'alien', capState.you, pop === 'you' ? capState.you - 1 : -1);
+  buildShelf(shelfAi, 'robot', capState.ai, pop === 'ai' ? capState.ai - 1 : -1);
+}
+renderShelves();
+document.getElementById('capYou').onclick = () => {
+  if (capState.you < SLOTS) { capState.you += 1; renderShelves('you'); }
+};
+document.getElementById('capAi').onclick = () => {
+  if (capState.ai < SLOTS) { capState.ai += 1; renderShelves('ai'); }
+};
+document.getElementById('capReset').onclick = () => {
+  capState.you = 0; capState.ai = 0; renderShelves();
+};
+
+/* ---------- Concept B: face-off loadout ---------- */
+const spaceRoster = THEMES.space.figures;
+const fo = { you: 0, ai: 2 };
+function renderFighter(btnId, side) {
+  const btn = document.getElementById(btnId);
+  const kind = spaceRoster[fo[side]];
+  figCanvas(btn.querySelector('canvas'), kind, 72, 84, 74);
+  btn.querySelector('.fname').textContent = FIGURES[kind].name;
+}
+renderFighter('fighterYou', 'you');
+renderFighter('fighterAi', 'ai');
+document.getElementById('fighterYou').onclick = () => {
+  fo.you = (fo.you + 1) % spaceRoster.length;
+  if (fo.you === fo.ai) fo.you = (fo.you + 1) % spaceRoster.length;
+  renderFighter('fighterYou', 'you');
+};
+document.getElementById('fighterAi').onclick = () => {
+  fo.ai = (fo.ai + 1) % spaceRoster.length;
+  if (fo.ai === fo.you) fo.ai = (fo.ai + 1) % spaceRoster.length;
+  renderFighter('fighterAi', 'ai');
+};
+
+/* ---------- Concept C: theme shelf with live gating ---------- */
+const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+const shelfEl = document.getElementById('themeShelf');
+const cards = {};
+for (const key of THEME_ORDER) {
+  const b = document.createElement('button');
+  b.className = 'tcard';
+  b.appendChild(themeCard(key));
+  const name = document.createElement('span');
+  name.className = 'tname';
+  name.textContent = THEMES[key].name;
+  b.appendChild(name);
+  const lock = document.createElement('span');
+  lock.className = 'lock';
+  lock.innerHTML = LOCK_SVG + '<span class="need"></span>';
+  b.appendChild(lock);
+  shelfEl.appendChild(b);
+  cards[key] = b;
+}
+const slider = document.getElementById('gamesSlider');
+const countEl = document.getElementById('gamesCount');
+let prevGames = -1;
+function applyGating(games) {
+  countEl.textContent = games;
+  for (const key of THEME_ORDER) {
+    const need = UNLOCK_AFTER[key];
+    const locked = games < need;
+    const wasLocked = prevGames >= 0 && prevGames < need;
+    const card = cards[key];
+    card.classList.toggle('locked', locked);
+    if (locked) {
+      const left = need - games;
+      card.querySelector('.need').textContent =
+        'Play ' + left + (left === 1 ? ' more game' : ' more games');
+    } else if (wasLocked) {
+      card.classList.remove('flash');
+      void card.offsetWidth;
+      card.classList.add('flash');
+    }
+  }
+  prevGames = games;
+  renderMedals(games);
+  renderProfile(games);
+}
+slider.oninput = () => applyGating(Number(slider.value));
+
+/* ---------- Concept D: profile dock ---------- */
+function avatar(cvId, themeKey, kind) {
+  const cv = document.getElementById(cvId);
+  paintScene(cv, THEMES[themeKey].defaultScene, 120, 120);
+  cv.style.width = '60px'; cv.style.height = '60px';
+  const c = cv.getContext('2d');
+  c.setTransform(2, 0, 0, 2, 0, 0);
+  drawFigure(c, kind, 30, 56, 44 / figureHeight(kind));
+}
+avatar('avatarCv', 'space', 'robot');
+
+/* ---------- Concept E: dock + medallions + expandable shelf ---------- */
+let eTheme = 'space';
+const medalsEl = document.getElementById('medals');
+function renderMedals(games) {
+  medalsEl.innerHTML = '';
+  for (const key of THEME_ORDER) {
+    const locked = games < UNLOCK_AFTER[key];
+    const b = document.createElement('button');
+    b.className = 'medal' + (locked ? ' locked' : '') + (key === eTheme ? ' selected' : '');
+    b.title = THEMES[key].name + (locked ? ' (locked)' : '');
+    const cv = document.createElement('canvas');
+    const kind = THEMES[key].defaults[0];
+    paintScene(cv, THEMES[key].defaultScene, 76, 76);
+    cv.style.width = '38px'; cv.style.height = '38px';
+    const c = cv.getContext('2d');
+    c.setTransform(2, 0, 0, 2, 0, 0);
+    drawFigure(c, kind, 19, 36, 28 / figureHeight(kind));
+    b.appendChild(cv);
+    if (!locked) {
+      b.onclick = () => {
+        eTheme = key;
+        avatar('avatarCvE', key, THEMES[key].defaults[0]);
+        renderMedals(Number(slider.value));
+      };
+    }
+    medalsEl.appendChild(b);
+  }
+}
+avatar('avatarCvE', 'space', 'robot');
+
+const eShelf = document.getElementById('eShelf');
+const eShelfRow = eShelf.querySelector('.shelf-scroll');
+document.getElementById('eShelfBtn').onclick = () => {
+  const open = eShelf.classList.toggle('open');
+  if (open && eShelfRow.children.length === 0) {
+    for (const key of THEME_ORDER) {
+      const wrap = document.createElement('div');
+      wrap.className = 'tcard' + (Number(slider.value) < UNLOCK_AFTER[key] ? ' locked' : '');
+      wrap.appendChild(themeCard(key));
+      const name = document.createElement('span');
+      name.className = 'tname';
+      name.textContent = THEMES[key].name;
+      wrap.appendChild(name);
+      eShelfRow.appendChild(wrap);
+    }
+  }
+};
+
+/* ---------- Concept F: the profile page ---------- */
+avatar('pfAvatar', 'space', 'robot');
+
+// Real collection totals, counted from the live registries rather than typed in.
+const TOTAL_THEMES = THEME_ORDER.length;
+const TOTAL_PIECES = THEME_ORDER.reduce((n, k) => n + THEMES[k].figures.length, 0);
+const TOTAL_SCENES = THEME_ORDER.reduce((n, k) => n + THEMES[k].scenes.length, 0);
+
+const CSEC = [
+  { key: 'themes', title: 'WORLDS', per: () => 1 },
+  { key: 'pieces', title: 'FIGURES', per: (k) => THEMES[k].figures.length },
+  { key: 'scenes', title: 'BACKGROUNDS', per: (k) => THEMES[k].scenes.length },
+  { key: 'music', title: 'SOUNDTRACKS', per: () => 1 },
+];
+const CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+const collectEl = document.getElementById('collect');
+const openSections = { themes: true, pieces: true, scenes: false, music: false };
+const TOTALS = { themes: TOTAL_THEMES, pieces: TOTAL_PIECES, scenes: TOTAL_SCENES, music: TOTAL_THEMES };
+
+function renderCollection(games) {
+  collectEl.innerHTML = '';
+  const unlockedKeys = THEME_ORDER.filter((k) => games >= UNLOCK_AFTER[k]);
+  for (const sec of CSEC) {
+    const have = unlockedKeys.reduce((n, k) => n + sec.per(k), 0);
+    const wrap = document.createElement('div');
+    wrap.className = 'csec' + (openSections[sec.key] ? ' open' : '');
+    const head = document.createElement('button');
+    head.className = 'csec-head';
+    head.innerHTML = '<span class="chev">' + CHEV + '</span>'
+      + '<span class="ct">' + sec.title + '</span>'
+      + '<span class="cn"><b>' + have + '</b> of ' + TOTALS[sec.key] + '</span>';
+    head.onclick = () => {
+      openSections[sec.key] = !openSections[sec.key];
+      wrap.classList.toggle('open', openSections[sec.key]);
+    };
+    wrap.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'csec-body';
+    const gal = document.createElement('div');
+    gal.className = 'gallery';
+
+    if (sec.key === 'themes' || sec.key === 'music') {
+      for (const k of THEME_ORDER) {
+        const locked = games < UNLOCK_AFTER[k];
+        const it = document.createElement('div');
+        it.className = 'gitem' + (locked ? ' locked' : '');
+        const cv = document.createElement('canvas');
+        paintScene(cv, THEMES[k].defaultScene, 128, 80);
+        cv.style.width = '64px'; cv.style.height = '40px';
+        cv.style.borderRadius = '8px';
+        it.appendChild(cv);
+        const l = document.createElement('div');
+        l.className = 'gl';
+        l.textContent = THEMES[k].name;
+        it.appendChild(l);
+        gal.appendChild(it);
+      }
+    } else if (sec.key === 'pieces') {
+      for (const k of THEME_ORDER) {
+        const locked = games < UNLOCK_AFTER[k];
+        for (const kind of THEMES[k].figures) {
+          const it = document.createElement('div');
+          it.className = 'gitem' + (locked ? ' locked' : '');
+          const cv = document.createElement('canvas');
+          figCanvas(cv, kind, 44, 54, 48);
+          it.appendChild(cv);
+          const l = document.createElement('div');
+          l.className = 'gl';
+          l.textContent = FIGURES[kind].name;
+          it.appendChild(l);
+          gal.appendChild(it);
+        }
+      }
+    } else {
+      for (const k of THEME_ORDER) {
+        const locked = games < UNLOCK_AFTER[k];
+        for (const sc of THEMES[k].scenes) {
+          const it = document.createElement('div');
+          it.className = 'gitem' + (locked ? ' locked' : '');
+          const cv = document.createElement('canvas');
+          paintScene(cv, sc.key, 112, 72);
+          cv.style.width = '56px'; cv.style.height = '36px';
+          cv.style.borderRadius = '6px';
+          it.appendChild(cv);
+          gal.appendChild(it);
+        }
+      }
+    }
+    body.appendChild(gal);
+    wrap.appendChild(body);
+    collectEl.appendChild(wrap);
+  }
+}
+
+const LOCK_DARK = '<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+const nextCard = document.getElementById('nextCard');
+function renderProfile(games) {
+  // Demo record: roughly 56% wins, so the tiles move with the slider too.
+  const won = Math.round(games * 0.56);
+  document.getElementById('stPlayed').textContent = games;
+  document.getElementById('stWon').textContent = won;
+  document.getElementById('stLost').textContent = games - won;
+  document.getElementById('stRate').textContent = games ? Math.round((won / games) * 100) : 0;
+
+  const nextKey = THEME_ORDER.find((k) => games < UNLOCK_AFTER[k]);
+  if (!nextKey) {
+    nextCard.style.display = 'none';
+    renderCollection(games);
+    return;
+  }
+  nextCard.style.display = '';
+  const need = UNLOCK_AFTER[nextKey];
+  const left = need - games;
+  document.getElementById('nextTogo').textContent =
+    left + (left === 1 ? ' GAME TO GO' : ' GAMES TO GO');
+  document.getElementById('nextName').textContent = THEMES[nextKey].name.toUpperCase();
+  document.getElementById('nextRoster').textContent =
+    THEMES[nextKey].figures.map((k) => FIGURES[k].name).join(', ');
+  document.getElementById('nextFill').style.width = Math.round((games / need) * 100) + '%';
+  document.getElementById('nextCount').textContent = games + ' of ' + need + ' games';
+  const cv = document.getElementById('nextCv');
+  paintScene(cv, THEMES[nextKey].defaultScene, 124, 124);
+  cv.style.width = '62px'; cv.style.height = '62px';
+  const c = cv.getContext('2d');
+  c.setTransform(2, 0, 0, 2, 0, 0);
+  const kind = THEMES[nextKey].defaults[0];
+  drawFigure(c, kind, 31, 58, 46 / figureHeight(kind));
+  nextCard.querySelector('.lk').innerHTML = LOCK_DARK;
+  renderCollection(games);
+}
+
+// Initial gating pass (also builds the medallions and the profile)
+applyGating(Number(slider.value));
+</script>
+</body>
+</html>
