@@ -1208,13 +1208,12 @@ function buildPicker() {
   }
 }
 
-document.getElementById('pieceBtn').addEventListener('click', () => {
+function openPiecePicker() {
   buildPicker();
   presentOverlay(piecePickerEl);
-});
-document.getElementById('pickerDone').addEventListener('click', () => {
-  piecePickerEl.classList.remove('show');
-});
+}
+document.getElementById('pieceBtn').addEventListener('click', openPiecePicker);
+document.getElementById('pickerDone').addEventListener('click', closeOverlays);
 
 modeEl.addEventListener('change', () => {
   mode = modeEl.value === '2p' ? '2p' : 'ai';
@@ -1245,21 +1244,29 @@ themeEl.addEventListener('change', () => applyTheme(themeEl.value));
 
 // ----- Profile dock and world medallions -----
 
-const avatarCvEl = document.getElementById('avatarCv');
 const playerNameEl = document.getElementById('playerName');
 const dockRecordEl = document.getElementById('dockRecord');
 const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
 
-function drawAvatar() {
-  if (!avatarCvEl) return;
-  paintScene(avatarCvEl, sceneKey, 108, 108);
-  avatarCvEl.style.width = '54px';
-  avatarCvEl.style.height = '54px';
-  const c = avatarCvEl.getContext('2d');
+/** One side of the dock face-off: the figure that side is playing as. */
+function drawFighter(cvId, nameId, side) {
+  const cv = document.getElementById(cvId);
+  if (!cv) return;
+  cv.width = 88;
+  cv.height = 104;
+  const c = cv.getContext('2d');
   c.setTransform(2, 0, 0, 2, 0, 0);
-  // The player's own piece, in their own colors, on their own background.
-  drawFigure(c, pieceKind[ONE], 27, 50, 38 / figureHeight(pieceKind[ONE]), 1,
-    { palette: styleFor(ONE), finish });
+  c.clearRect(0, 0, 44, 52);
+  const kind = pieceKind[side];
+  drawFigure(c, kind, 22, 50, 46 / figureHeight(kind), 1,
+    { palette: styleFor(side), finish });
+  const nameEl = document.getElementById(nameId);
+  if (nameEl) nameEl.textContent = FIGURES[kind].name;
+}
+
+function drawAvatar() {
+  drawFighter('fighterYouCv', 'fighterYouName', ONE);
+  drawFighter('fighterAiCv', 'fighterAiName', TWO);
 }
 
 function updateDock() {
@@ -1278,7 +1285,7 @@ function updateDock() {
     const next = progression.nextLockedTheme(THEME_ORDER);
     const n = next ? progression.gamesUntilTheme(next) : 0;
     nextEl.innerHTML = next && THEMES[next]
-      ? `Next world: <b>${THEMES[next].name}</b> in ${n} game${n === 1 ? '' : 's'}`
+      ? `Finish ${n} more game${n === 1 ? '' : 's'} to unlock the <b>${THEMES[next].name}</b> world`
       : '';
   }
 }
@@ -1376,12 +1383,12 @@ function buildCollection() {
   const sum = (keys, f) => keys.reduce((n, k) => n + f(k), 0);
   const sections = [
     {
-      key: 'worlds', title: 'WORLDS',
+      key: 'worlds', title: 'WORLDS UNLOCKED',
       have: open.length, total: themeTotal,
       fill: worldCards,
     },
     {
-      key: 'figures', title: 'FIGURES',
+      key: 'figures', title: 'FIGURES UNLOCKED',
       have: sum(open, (k) => THEMES[k].figures.length),
       total: sum(THEME_ORDER.filter((k) => THEMES[k]), (k) => THEMES[k].figures.length),
       fill: (gal) => {
@@ -1423,13 +1430,13 @@ function buildCollection() {
       },
     },
     {
-      key: 'backgrounds', title: 'BACKGROUNDS',
+      key: 'backgrounds', title: 'BACKGROUNDS UNLOCKED',
       have: sum(open, (k) => THEMES[k].scenes.length),
       total: sum(THEME_ORDER.filter((k) => THEMES[k]), (k) => THEMES[k].scenes.length),
       fill: (gal) => sceneStrip(gal, (k) => THEMES[k].scenes),
     },
     {
-      key: 'soundtracks', title: 'SOUNDTRACKS',
+      key: 'soundtracks', title: 'SOUNDTRACKS UNLOCKED',
       have: open.length, total: themeTotal,
       fill: (gal) => sceneStrip(gal, (k) => [{ key: THEMES[k].defaultScene, label: THEMES[k].name }]),
     },
@@ -1489,13 +1496,14 @@ function openProfile() {
     const need = THEME_UNLOCK_AFTER[next];
     const left = progression.gamesUntilTheme(next);
     document.getElementById('pfNextTogo').textContent =
-      `${left} GAME${left === 1 ? '' : 'S'} TO GO`;
+      `${left} MORE GAME${left === 1 ? '' : 'S'} TO UNLOCK`;
     document.getElementById('pfNextName').textContent = THEMES[next].name.toUpperCase();
     document.getElementById('pfNextRoster').textContent =
       THEMES[next].figures.map((k) => FIGURES[k].name).join(', ');
     document.getElementById('pfNextFill').style.width =
       Math.round((Math.min(games, need) / need) * 100) + '%';
-    document.getElementById('pfNextCount').textContent = `${Math.min(games, need)} of ${need} games`;
+    document.getElementById('pfNextCount').textContent =
+      `${Math.min(games, need)} of ${need} games played. Finishing counts, win or lose.`;
     const nc = document.getElementById('pfNextCv');
     paintScene(nc, THEMES[next].defaultScene, 128, 128);
     nc.style.width = '64px';
@@ -1615,7 +1623,7 @@ handleReturn(localStorage).then((r) => {
   }
 });
 
-document.getElementById('nameBtn')?.addEventListener('click', () => {
+function renamePlayer() {
   const next = prompt('What should we call you?', playerName);
   if (next === null) return;
   const clean = next.trim().slice(0, 20);
@@ -1624,7 +1632,17 @@ document.getElementById('nameBtn')?.addEventListener('click', () => {
   try { localStorage.setItem(NAME_KEY, playerName); } catch { /* ignore */ }
   updateDock();
   updateHud();
+}
+
+// The pencil renames; the rest of the button opens the profile.
+document.querySelector('#avatarBtn .pname svg')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  renamePlayer();
 });
+
+// Both figures ARE the controls: tapping one opens the piece picker.
+document.getElementById('fighterYou')?.addEventListener('click', () => openPiecePicker());
+document.getElementById('fighterAi')?.addEventListener('click', () => openPiecePicker());
 
 // ----- New game setup screen -----
 // Arriving fresh (no game in progress) lands on choices first, not
