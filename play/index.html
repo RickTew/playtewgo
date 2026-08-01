@@ -57,19 +57,25 @@
     color: var(--gold); background: #ffd60a1a; border-radius: 999px; padding: 2px 8px; margin-left: 6px;
   }
   :root { --board-size: min(94vw, 72dvh, 640px); }
-  .hud {
-    width: var(--board-size);
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 8px; margin-bottom: 8px; font-size: 14px;
+  .hud { width: var(--board-size); margin-bottom: 8px; font-size: 14px; }
+  /* Capture shelves: each side's captured PAIRS shown as the enemy figures
+     they took, so how close someone is to the five-pair win is visible
+     without reading a number. Painted in game.js onto the two canvases. */
+  .shelves { display: flex; gap: 10px; align-items: flex-end; }
+  .shelf { flex: 1; min-width: 0; }
+  .shelf-head {
+    display: flex; align-items: baseline; gap: 6px;
+    font-size: 12px; font-weight: 700; margin-bottom: 3px;
   }
-  .pill {
-    background: var(--card); border: 1px solid #ffffff14; border-radius: 999px;
-    padding: 6px 14px; white-space: nowrap;
-  }
-  .pill b { font-variant-numeric: tabular-nums; }
-  .you b { color: var(--gold); }
-  .ai b { color: var(--blue); }
-  #status { color: var(--muted); text-align: center; flex: 1; min-width: 0; }
+  .shelf.ai .shelf-head { justify-content: flex-end; }
+  .shelf-head b { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .shelf-head b::after { content: "/5"; font-weight: 500; opacity: 0.5; }
+  .you .shelf-head b { color: var(--gold); }
+  .ai .shelf-head b { color: var(--blue); }
+  .shelf canvas { width: 100%; height: auto; transform-origin: 50% 100%; }
+  .shelf canvas.bump { animation: shelfbump 0.4s cubic-bezier(0.2, 1.6, 0.4, 1); }
+  @keyframes shelfbump { 0% { transform: scale(1.06); } 100% { transform: scale(1); } }
+  #status { color: var(--muted); text-align: center; margin-top: 6px; min-height: 1.2em; }
   .board-wrap {
     position: relative;
     width: var(--board-size);
@@ -248,9 +254,17 @@
 </header>
 
 <div class="hud">
-  <span class="pill you"><span id="youLabel">You</span> <b id="youPairs">0</b>/5</span>
-  <span id="status">Your move</span>
-  <span class="pill ai"><span id="aiLabel">AI</span> <b id="aiPairs">0</b>/5</span>
+  <div class="shelves">
+    <div class="shelf you">
+      <div class="shelf-head"><span id="youLabel">You</span><b id="youPairs">0</b></div>
+      <canvas id="youShelf"></canvas>
+    </div>
+    <div class="shelf ai">
+      <div class="shelf-head"><span id="aiLabel">AI</span><b id="aiPairs">0</b></div>
+      <canvas id="aiShelf"></canvas>
+    </div>
+  </div>
+  <div id="status">Your move</div>
 </div>
 
 <div class="board-wrap">

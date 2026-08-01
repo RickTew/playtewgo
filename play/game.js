@@ -605,6 +605,80 @@ function counterColor(side) {
   return sceneByKey(sceneKey)?.light ? sorted[0] : sorted[1];
 }
 
+// ----- Capture shelves -----
+// Five sockets per side. A filled socket holds the PAIR that side captured,
+// drawn as two of the enemy's own figures leaning together, so the shelf
+// shows both how close the win is and whose pieces are gone.
+const CAPTURES_TO_WIN = 5;
+const shelfCanvases = { [ONE]: document.getElementById('youShelf'), [TWO]: document.getElementById('aiShelf') };
+const shelfShown = { [ONE]: -1, [TWO]: -1 };
+
+function drawShelf(side) {
+  const cv = shelfCanvases[side];
+  if (!cv) return;
+  const count = board.captureCount[side];
+  const cssW = cv.clientWidth;
+  if (cssW === 0) return;
+  // Sockets are square-ish and sized to the strip, so the shelf shrinks with
+  // the board on a phone instead of overflowing it.
+  const gap = Math.max(3, cssW * 0.02);
+  const slot = (cssW - gap * (CAPTURES_TO_WIN - 1)) / CAPTURES_TO_WIN;
+  const cssH = slot * 0.94;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(cssW * dpr);
+  cv.height = Math.round(cssH * dpr);
+  cv.style.height = cssH + 'px';
+  const c = cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const enemy = opponentOf(side);
+  const light = sceneByKey(sceneKey)?.light;
+  const full = count >= CAPTURES_TO_WIN;
+  for (let i = 0; i < CAPTURES_TO_WIN; i += 1) {
+    const x = i * (slot + gap);
+    // The right-hand shelf fills toward its own edge so each side's trophies
+    // sit under that side's label instead of drifting to the middle.
+    const filled = side === ONE ? i < count : i >= CAPTURES_TO_WIN - count;
+    c.beginPath();
+    c.roundRect(x + 0.5, 0.5, slot - 1, cssH - 1, Math.max(4, slot * 0.16));
+    c.fillStyle = light
+      ? (filled ? 'rgba(0,0,0,0.10)' : 'rgba(0,0,0,0.04)')
+      : (filled ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.035)');
+    c.fill();
+    if (full) {
+      c.strokeStyle = 'rgba(255,214,10,0.85)';
+      c.lineWidth = 1.5;
+    } else {
+      c.strokeStyle = light ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.14)';
+      c.lineWidth = 1;
+    }
+    c.stroke();
+    if (!filled) continue;
+
+    // Always the figure, never the flat/chip disc: a trophy shelf has to say
+    // WHO was captured, and a plain disc says nothing.
+    const kind = pieceKind[enemy];
+    const r = (cssH * 0.72) / figureHeight(kind);
+    const feetY = cssH - cssH * 0.13;
+    const lean = slot * 0.15;
+    for (const [dx, rot] of [[-lean, -0.2], [lean, 0.2]]) {
+      c.save();
+      c.translate(x + slot / 2 + dx, feetY);
+      c.rotate(rot);
+      drawFigure(c, kind, 0, 0, r, 1, { palette: styleFor(enemy), finish });
+      c.restore();
+    }
+  }
+  // A freshly taken pair pops the whole strip, which reads at a glance even
+  // when the board has the player's attention.
+  if (shelfShown[side] >= 0 && count > shelfShown[side]) {
+    cv.classList.remove('bump');
+    void cv.offsetWidth;
+    cv.classList.add('bump');
+  }
+  shelfShown[side] = count;
+}
+
 function updateHud() {
   youLabelEl.textContent = nameOf(ONE);
   aiLabelEl.textContent = nameOf(TWO);
@@ -612,6 +686,8 @@ function updateHud() {
   aiPairsEl.textContent = board.captureCount[TWO];
   youPairsEl.style.color = counterColor(ONE);
   aiPairsEl.style.color = counterColor(TWO);
+  drawShelf(ONE);
+  drawShelf(TWO);
   if (gameOver) {
     statusEl.textContent = 'Game over';
   } else if (isAiGame()) {
@@ -750,6 +826,10 @@ function newGame() {
   lastMove = null;
   hover = null;
   anims = [];
+  // Empty shelves are the starting state, not a capture: clearing this stops
+  // the pop animation firing on a fresh board.
+  shelfShown[ONE] = -1;
+  shelfShown[TWO] = -1;
   overlayEl.classList.remove('show');
   try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
   ensureMusic();
@@ -1208,6 +1288,10 @@ const sceneEl = document.getElementById('scene');
 window.addEventListener('resize', () => {
   paintScene(sceneEl, sceneKey);
   draw();
+  // The shelves size themselves from their CSS width, so they have to be
+  // repainted whenever the board strip changes width.
+  drawShelf(ONE);
+  drawShelf(TWO);
 });
 
 try {
