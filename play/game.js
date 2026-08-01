@@ -9,7 +9,7 @@ import { encodeState, decodeState } from './engine/state.js';
 import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
 import { FIGURES, figureHeight, drawFigure, traceFigure, COLOR_SCHEMES, paletteFor } from './pieces.js';
 import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
-import { createProgression, GOLD_WIN_THRESHOLD } from './engine/progression.js';
+import { createProgression, GOLD_WIN_THRESHOLD, THEME_ORDER, THEME_UNLOCK_AFTER } from './engine/progression.js';
 
 const HUMAN = ONE;
 const AI_PLAYER = TWO;
@@ -52,6 +52,15 @@ let mode = 'ai'; // 'ai' | '2p' (pass and play on one device)
 let theme = 'space';
 let sceneKey = THEMES.space.defaultScene;
 const pieceKind = { [ONE]: 'robot', [TWO]: 'alien' };
+
+// The player's own name, shown on their shelf and their profile. Declared up
+// here with the rest of the player state because nameOf() reads it.
+const NAME_KEY = 'tewgo.web.playerName';
+let playerName = 'Player One';
+try {
+  const savedName = localStorage.getItem(NAME_KEY);
+  if (savedName && savedName.trim()) playerName = savedName.trim().slice(0, 20);
+} catch { /* private mode: stay with the default name */ }
 
 // Piece TYPE (iOS PieceVariant): flat disc / chip / compact figure / tall
 // figure. Global across themes, like tewgo.pieceVariant on iOS.
@@ -128,7 +137,9 @@ function isAiGame() {
 }
 
 function nameOf(player) {
-  if (isAiGame()) return player === HUMAN ? 'You' : 'AI';
+  // Pass-and-play has two humans at one device, so the figures name the
+  // sides; vs AI, the player's own name goes on their shelf.
+  if (isAiGame()) return player === HUMAN ? playerName : 'AI';
   return FIGURES[pieceKind[player]].name;
 }
 let lastMove = null;
@@ -718,6 +729,11 @@ function showOverlay() {
       overlayReasonEl.textContent = captured ? 'Captured five pairs.' : 'Five in a row.';
     }
   }
+  if (themeJustUnlocked && THEMES[themeJustUnlocked]) {
+    overlayReasonEl.textContent +=
+      ` ${THEMES[themeJustUnlocked].name} is now unlocked!`;
+    themeJustUnlocked = null;
+  }
   shareBtnEl.style.display = winner !== null && (!isAiGame() || winner === HUMAN) ? '' : 'none';
   overlayEl.classList.add('show');
 }
@@ -733,8 +749,10 @@ function canPlay() {
 // pass-and-play never records (a player could grind Gold against themselves
 // in seconds per game). Draws complete a game but record no win or loss.
 let goldJustUnlocked = false;
+let themeJustUnlocked = null;
 function recordFinishedGame() {
   if (!isAiGame()) return;
+  const before = progression.nextLockedTheme(THEME_ORDER);
   progression.recordGameCompleted();
   if (winner === HUMAN) {
     progression.recordWin(theme);
@@ -742,6 +760,11 @@ function recordFinishedGame() {
   } else if (winner !== null) {
     progression.recordLoss();
   }
+  // This game may have crossed a world's threshold. Worth announcing on the
+  // victory card, and it repaints the dock behind the overlay either way.
+  themeJustUnlocked = before && progression.isThemeUnlocked(before) ? before : null;
+  updateDock();
+  buildWorlds();
 }
 
 function endIfOver(player) {
@@ -947,6 +970,9 @@ function applyScene() {
   document.body.classList.toggle('light', !!sceneByKey(sceneKey).light);
   draw();
   updateHud();
+  // The avatar is the player's piece on the player's background, so it
+  // follows both.
+  drawAvatar();
 }
 
 const boardColEl = document.getElementById('boardCol');
@@ -1064,6 +1090,7 @@ function selectPiece(side, kind) {
   buildPicker();
   draw();
   updateHud();
+  drawAvatar();
 }
 
 function setVariant(v) {
@@ -1197,9 +1224,316 @@ function applyTheme(key) {
   rebuildBoardSelect();
   applyScene();
   ensureMusic();
+  updateDock();
+  buildWorlds();
 }
 
 themeEl.addEventListener('change', () => applyTheme(themeEl.value));
+
+// ----- Profile dock and world medallions -----
+
+const avatarCvEl = document.getElementById('avatarCv');
+const playerNameEl = document.getElementById('playerName');
+const dockRecordEl = document.getElementById('dockRecord');
+const worldsEl = document.getElementById('worlds');
+const worldsHintEl = document.getElementById('worldsHint');
+const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+
+/** Paints a theme's default scene with a figure standing on it. */
+function paintMedallion(cv, themeKey, px) {
+  paintScene(cv, THEMES[themeKey].defaultScene, px, px);
+  cv.style.width = px / 2 + 'px';
+  cv.style.height = px / 2 + 'px';
+  const c = cv.getContext('2d');
+  c.setTransform(2, 0, 0, 2, 0, 0);
+  const kind = THEMES[themeKey].defaults[0];
+  const h = px / 2;
+  drawFigure(c, kind, h / 2, h * 0.94, (h * 0.74) / figureHeight(kind));
+}
+
+function drawAvatar() {
+  if (!avatarCvEl) return;
+  paintScene(avatarCvEl, sceneKey, 108, 108);
+  avatarCvEl.style.width = '54px';
+  avatarCvEl.style.height = '54px';
+  const c = avatarCvEl.getContext('2d');
+  c.setTransform(2, 0, 0, 2, 0, 0);
+  // The player's own piece, in their own colors, on their own background.
+  drawFigure(c, pieceKind[ONE], 27, 50, 38 / figureHeight(pieceKind[ONE]), 1,
+    { palette: styleFor(ONE), finish });
+}
+
+function updateDock() {
+  if (playerNameEl) playerNameEl.textContent = playerName;
+  drawAvatar();
+  if (dockRecordEl) {
+    const games = progression.gamesCompleted();
+    dockRecordEl.innerHTML = games === 0
+      ? 'No games yet. Your record shows up here.'
+      : `<b>${progression.wins()}</b> won &middot; <b>${progression.losses()}</b> lost vs AI`;
+  }
+}
+
+// Remembered so a world that opens mid-session gets the gold flash exactly
+// once. The first build seeds the set silently: arriving at the page with
+// three worlds already earned should not flash two of them.
+const seenUnlocked = new Set();
+let worldsBuilt = false;
+
+function buildWorlds() {
+  if (!worldsEl) return;
+  worldsEl.innerHTML = '';
+  for (const key of THEME_ORDER) {
+    if (!THEMES[key]) continue;
+    const unlocked = progression.isThemeUnlocked(key);
+    const b = document.createElement('button');
+    b.className = 'world' + (unlocked ? '' : ' locked') + (key === theme ? ' selected' : '');
+    const left = progression.gamesUntilTheme(key);
+    b.title = unlocked
+      ? THEMES[key].name
+      : `${THEMES[key].name}: ${left} more game${left === 1 ? '' : 's'}`;
+    const cv = document.createElement('canvas');
+    paintMedallion(cv, key, 92);
+    b.appendChild(cv);
+    if (!unlocked) {
+      const lk = document.createElement('span');
+      lk.className = 'wlock';
+      lk.innerHTML = LOCK_SVG;
+      b.appendChild(lk);
+    } else if (worldsBuilt && !seenUnlocked.has(key)) {
+      b.classList.add('just');
+    }
+    b.addEventListener('click', () => {
+      if (progression.isThemeUnlocked(key)) {
+        applyTheme(key);
+        return;
+      }
+      // Locked worlds are not dead: they say what it takes to open them.
+      const n = progression.gamesUntilTheme(key);
+      worldsHintEl.innerHTML =
+        `<b>${THEMES[key].name}</b> opens after ${n} more game${n === 1 ? '' : 's'}. Finishing counts, win or lose.`;
+    });
+    worldsEl.appendChild(b);
+    if (unlocked) seenUnlocked.add(key);
+  }
+  worldsBuilt = true;
+  // The standing hint is whatever is next on the ladder.
+  const next = progression.nextLockedTheme(THEME_ORDER);
+  if (next && THEMES[next]) {
+    const n = progression.gamesUntilTheme(next);
+    worldsHintEl.innerHTML =
+      `Next: <b>${THEMES[next].name}</b> in ${n} game${n === 1 ? '' : 's'}.`;
+  } else {
+    worldsHintEl.textContent = progression.hasPro()
+      ? 'Every world unlocked.'
+      : 'Every world unlocked. Nice.';
+  }
+}
+
+// ----- Profile overlay (iOS ProfileView) -----
+
+const profileEl = document.getElementById('profile');
+const CHEV_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>';
+// Sections start open on the two that are worth showing off.
+const pfOpen = { worlds: true, figures: true, backgrounds: false, soundtracks: false };
+
+function unlockedThemes() {
+  return THEME_ORDER.filter((k) => THEMES[k] && progression.isThemeUnlocked(k));
+}
+
+/** A gallery row of theme scenes, one per world. */
+function sceneStrip(gal, perTheme) {
+  for (const k of THEME_ORDER) {
+    if (!THEMES[k]) continue;
+    const locked = !progression.isThemeUnlocked(k);
+    for (const sc of perTheme(k)) {
+      const it = document.createElement('div');
+      it.className = 'gitem' + (locked ? ' locked' : '');
+      const cv = document.createElement('canvas');
+      paintScene(cv, sc.key, 112, 72);
+      cv.style.width = '56px';
+      cv.style.height = '36px';
+      it.appendChild(cv);
+      if (sc.label) {
+        const l = document.createElement('div');
+        l.className = 'gl';
+        l.textContent = sc.label;
+        it.appendChild(l);
+      }
+      gal.appendChild(it);
+    }
+  }
+}
+
+function buildCollection() {
+  const host = document.getElementById('pfCollect');
+  if (!host) return;
+  host.innerHTML = '';
+  const open = unlockedThemes();
+  const themeTotal = THEME_ORDER.filter((k) => THEMES[k]).length;
+  const sum = (keys, f) => keys.reduce((n, k) => n + f(k), 0);
+  const sections = [
+    {
+      key: 'worlds', title: 'WORLDS',
+      have: open.length, total: themeTotal,
+      fill: (gal) => sceneStrip(gal, (k) => [{ key: THEMES[k].defaultScene, label: THEMES[k].name }]),
+    },
+    {
+      key: 'figures', title: 'FIGURES',
+      have: sum(open, (k) => THEMES[k].figures.length),
+      total: sum(THEME_ORDER.filter((k) => THEMES[k]), (k) => THEMES[k].figures.length),
+      fill: (gal) => {
+        for (const k of THEME_ORDER) {
+          if (!THEMES[k]) continue;
+          const locked = !progression.isThemeUnlocked(k);
+          for (const kind of THEMES[k].figures) {
+            const it = document.createElement('div');
+            it.className = 'gitem' + (locked ? ' locked' : '');
+            const cv = document.createElement('canvas');
+            cv.width = 88; cv.height = 108;
+            cv.style.width = '44px'; cv.style.height = '54px';
+            const c = cv.getContext('2d');
+            c.setTransform(2, 0, 0, 2, 0, 0);
+            drawFigure(c, kind, 22, 52, 48 / figureHeight(kind));
+            it.appendChild(cv);
+            const l = document.createElement('div');
+            l.className = 'gl';
+            l.textContent = FIGURES[kind].name;
+            it.appendChild(l);
+            gal.appendChild(it);
+          }
+        }
+      },
+    },
+    {
+      key: 'backgrounds', title: 'BACKGROUNDS',
+      have: sum(open, (k) => THEMES[k].scenes.length),
+      total: sum(THEME_ORDER.filter((k) => THEMES[k]), (k) => THEMES[k].scenes.length),
+      fill: (gal) => sceneStrip(gal, (k) => THEMES[k].scenes),
+    },
+    {
+      key: 'soundtracks', title: 'SOUNDTRACKS',
+      have: open.length, total: themeTotal,
+      fill: (gal) => sceneStrip(gal, (k) => [{ key: THEMES[k].defaultScene, label: THEMES[k].name }]),
+    },
+  ];
+
+  for (const sec of sections) {
+    const wrap = document.createElement('div');
+    wrap.className = 'csec' + (pfOpen[sec.key] ? ' open' : '');
+    const head = document.createElement('button');
+    head.className = 'csec-head';
+    head.innerHTML = `<span class="chev">${CHEV_SVG}</span>`
+      + `<span class="ct">${sec.title}</span>`
+      + `<span class="cn"><b>${sec.have}</b> of ${sec.total}</span>`;
+    head.addEventListener('click', () => {
+      pfOpen[sec.key] = !pfOpen[sec.key];
+      wrap.classList.toggle('open', pfOpen[sec.key]);
+    });
+    wrap.appendChild(head);
+    const body = document.createElement('div');
+    body.className = 'csec-body';
+    const gal = document.createElement('div');
+    gal.className = 'gallery';
+    sec.fill(gal);
+    body.appendChild(gal);
+    wrap.appendChild(body);
+    host.appendChild(wrap);
+  }
+}
+
+function openProfile() {
+  if (!profileEl) return;
+  const games = progression.gamesCompleted();
+  const won = progression.wins();
+  document.getElementById('pfName').textContent = playerName;
+  document.getElementById('pfBadges').innerHTML = progression.hasPro()
+    ? '<span class="pro">PRO</span>'
+    : '<span class="local">LOCAL PROFILE</span>';
+  document.getElementById('pfPlayed').textContent = games;
+  document.getElementById('pfWon').textContent = won;
+  document.getElementById('pfLost').textContent = progression.losses();
+  document.getElementById('pfRate').textContent = games ? Math.round((won / games) * 100) : 0;
+
+  const pfCv = document.getElementById('pfAvatarCv');
+  paintScene(pfCv, sceneKey, 144, 144);
+  pfCv.style.width = '72px';
+  pfCv.style.height = '72px';
+  const pc = pfCv.getContext('2d');
+  pc.setTransform(2, 0, 0, 2, 0, 0);
+  drawFigure(pc, pieceKind[ONE], 36, 66, 50 / figureHeight(pieceKind[ONE]), 1,
+    { palette: styleFor(ONE), finish });
+
+  // Next unlock
+  const nextEl = document.getElementById('pfNext');
+  const next = progression.nextLockedTheme(THEME_ORDER);
+  if (next && THEMES[next]) {
+    nextEl.style.display = '';
+    const need = THEME_UNLOCK_AFTER[next];
+    const left = progression.gamesUntilTheme(next);
+    document.getElementById('pfNextTogo').textContent =
+      `${left} GAME${left === 1 ? '' : 'S'} TO GO`;
+    document.getElementById('pfNextName').textContent = THEMES[next].name.toUpperCase();
+    document.getElementById('pfNextRoster').textContent =
+      THEMES[next].figures.map((k) => FIGURES[k].name).join(', ');
+    document.getElementById('pfNextFill').style.width =
+      Math.round((Math.min(games, need) / need) * 100) + '%';
+    document.getElementById('pfNextCount').textContent = `${Math.min(games, need)} of ${need} games`;
+    const nc = document.getElementById('pfNextCv');
+    paintScene(nc, THEMES[next].defaultScene, 128, 128);
+    nc.style.width = '64px';
+    nc.style.height = '64px';
+    const ncx = nc.getContext('2d');
+    ncx.setTransform(2, 0, 0, 2, 0, 0);
+    const nk = THEMES[next].defaults[0];
+    drawFigure(ncx, nk, 32, 60, 46 / figureHeight(nk));
+    nextEl.querySelector('.lk').innerHTML = LOCK_SVG;
+  } else {
+    nextEl.style.display = 'none';
+  }
+
+  // Gold progress in the world they are actually playing
+  const goldEl = document.getElementById('pfGold');
+  const themeWins = progression.winsInTheme(theme);
+  if (progression.isGoldUnlocked(theme)) {
+    goldEl.querySelector('.glabel').innerHTML =
+      `<b>GOLD</b> unlocked in ${themeDef().name}`;
+    document.getElementById('pfGoldFill').style.width = '100%';
+  } else {
+    goldEl.querySelector('.glabel').innerHTML =
+      `${themeWins} of ${GOLD_WIN_THRESHOLD} ${themeDef().name} wins to <b>GOLD</b>`;
+    document.getElementById('pfGoldFill').style.width =
+      Math.round((themeWins / GOLD_WIN_THRESHOLD) * 100) + '%';
+  }
+
+  document.getElementById('pfUnlock').style.display = progression.hasPro() ? 'none' : '';
+  buildCollection();
+  profileEl.classList.add('show');
+}
+
+document.getElementById('profileBtn')?.addEventListener('click', openProfile);
+document.getElementById('profileDone')?.addEventListener('click', () => {
+  profileEl.classList.remove('show');
+});
+document.getElementById('avatarBtn')?.addEventListener('click', openProfile);
+document.getElementById('pfUnlockBtn')?.addEventListener('click', () => {
+  // No payment rail wired up yet. Say so plainly rather than pretending to
+  // charge, and never grant the unlock from the client.
+  const cta = document.getElementById('pfUnlock');
+  cta.querySelector('.us').textContent =
+    'Not on sale yet. The web unlock is still being built.';
+});
+
+document.getElementById('nameBtn')?.addEventListener('click', () => {
+  const next = prompt('What should we call you?', playerName);
+  if (next === null) return;
+  const clean = next.trim().slice(0, 20);
+  if (!clean) return;
+  playerName = clean;
+  try { localStorage.setItem(NAME_KEY, playerName); } catch { /* ignore */ }
+  updateDock();
+  updateHud();
+});
 
 // ----- New game setup screen -----
 // Arriving fresh (no game in progress) lands on choices first, not
@@ -1211,6 +1545,16 @@ function openSetup() {
   if (!setupEl) {
     showIntro();
     return;
+  }
+  // Locked worlds stay listed but unpickable, with the cost spelled out, so
+  // the setup screen shows the same ladder the medallions do.
+  for (const opt of document.getElementById('setupTheme').options) {
+    const unlocked = progression.isThemeUnlocked(opt.value);
+    const base = THEMES[opt.value]?.name ?? opt.value;
+    opt.disabled = !unlocked;
+    opt.textContent = unlocked
+      ? base
+      : `${base} (${progression.gamesUntilTheme(opt.value)} more games)`;
   }
   document.getElementById('setupTheme').value = theme;
   document.getElementById('setupMode').value = mode;
@@ -1352,6 +1696,8 @@ openSetup();
 updateToggles();
 draw();
 updateHud();
+updateDock();
+buildWorlds();
 
 // Dev hook: /play/?sharecard previews the victory card without winning
 if (location.search.includes('sharecard')) {

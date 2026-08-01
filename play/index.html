@@ -89,11 +89,134 @@
   }
   canvas { display: block; width: 100%; height: auto; }
   #board { touch-action: none; }
-  .controls {
-    width: var(--board-size);
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; margin-top: 12px; flex-wrap: wrap;
+  .controls { width: var(--board-size); margin-top: 12px; }
+  /* Profile dock: the page belongs to somebody. Their figure is the avatar,
+     their name and vs-AI record sit beside it. */
+  .dock { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .avatar {
+    width: 54px; height: 54px; border-radius: 14px; overflow: hidden;
+    padding: 0; flex-shrink: 0; border: 1px solid #ffffff2a; line-height: 0;
   }
+  .avatar:hover { border-color: var(--gold); }
+  .avatar canvas { width: 100%; height: 100%; }
+  .dock-id { flex: 1; min-width: 110px; }
+  .pname {
+    background: none; border: none; padding: 0; font-size: 16px; font-weight: 800;
+    display: flex; align-items: center; gap: 6px; border-radius: 6px;
+  }
+  .pname svg { width: 12px; height: 12px; color: var(--muted); flex-shrink: 0; }
+  .pname:hover svg { color: var(--gold); }
+  .record { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .record b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .dock-tools { display: flex; gap: 6px; }
+  /* World medallions: the theme picker, and the unlock ladder, in one row. */
+  .worlds {
+    display: flex; gap: 8px; margin-top: 12px;
+    overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin;
+  }
+  .world {
+    position: relative; flex-shrink: 0; width: 46px; height: 46px;
+    border-radius: 50%; overflow: hidden; padding: 0; line-height: 0;
+    border: 2px solid #ffffff26;
+  }
+  .world canvas { width: 100%; height: 100%; }
+  .world:hover { border-color: #ffffff70; }
+  .world.selected { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,214,10,0.5); }
+  .world.locked canvas { filter: grayscale(0.9) brightness(0.45); }
+  .world .wlock {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .world .wlock svg { width: 15px; height: 15px; color: rgba(255,255,255,0.9); }
+  .world.just { animation: worldpop 0.9s ease-out; }
+  @keyframes worldpop {
+    0% { box-shadow: 0 0 0 3px var(--gold), 0 0 26px rgba(255,214,10,0.9); }
+    100% { box-shadow: 0 0 0 0 rgba(255,214,10,0); }
+  }
+  .worlds-hint { font-size: 12px; color: var(--muted); min-height: 1.3em; margin-top: 2px; }
+  .worlds-hint b { color: var(--gold); }
+  /* ----- Profile overlay (iOS ProfileView) ----- */
+  #profile > div { text-align: left; width: 100%; max-width: 520px; }
+  .pf-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .pf-avatar {
+    width: 72px; height: 72px; border-radius: 18px; overflow: hidden;
+    flex-shrink: 0; border: 1px solid #ffffff26; line-height: 0;
+  }
+  .pf-avatar canvas { width: 100%; height: 100%; }
+  .pf-name { font-size: 22px; font-weight: 900; }
+  .badges { display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+  .badges span {
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    padding: 3px 9px; border-radius: 999px;
+  }
+  .badges .pro { background: var(--gold); color: #1a1a05; }
+  .badges .local { background: rgba(255,255,255,0.12); }
+  .stats { display: flex; gap: 8px; margin-bottom: 12px; }
+  .stat {
+    flex: 1; text-align: center; padding: 10px 4px; border-radius: 12px;
+    background: rgba(255,255,255,0.05); border: 1px solid #ffffff14;
+  }
+  .stat .v { font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 9px; font-weight: 800; letter-spacing: 1px; color: var(--muted); margin-top: 3px; }
+  .pf-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.1); overflow: hidden; }
+  .pf-bar .fill {
+    height: 100%; border-radius: 999px; width: 0;
+    background: linear-gradient(90deg, #b8860b, var(--gold));
+  }
+  .next {
+    border-radius: 16px; padding: 14px; margin-bottom: 12px;
+    background: linear-gradient(135deg, rgba(255,214,10,0.08), rgba(255,255,255,0.04));
+    border: 1px solid rgba(255,214,10,0.3);
+  }
+  .next-top {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; font-weight: 800; letter-spacing: 1px; margin-bottom: 10px;
+  }
+  .next-top .lbl { color: var(--gold); }
+  .next-top .togo { color: rgba(255,255,255,0.7); }
+  .next-body { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+  .next-thumb {
+    width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0;
+    position: relative; overflow: hidden; border: 1px solid #ffffff2e; line-height: 0;
+  }
+  .next-thumb canvas { width: 100%; height: 100%; filter: grayscale(0.85) brightness(0.5); }
+  .next-thumb .lk { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .next-thumb .lk svg { width: 20px; height: 20px; color: rgba(255,255,255,0.9); }
+  .next-name { font-size: 16px; font-weight: 800; letter-spacing: 0.5px; }
+  .next-roster { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .next-count { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .gold-track { margin-bottom: 12px; }
+  .gold-track .glabel { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .gold-track .glabel b { color: var(--gold); }
+  .collect { display: flex; flex-direction: column; gap: 8px; }
+  .csec { border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid #ffffff14; overflow: hidden; }
+  .csec-head {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; background: none; border: none; border-radius: 0; text-align: left;
+  }
+  .csec-head .ct { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; flex: 1; }
+  .csec-head .cn { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .csec-head .cn b { color: var(--gold); }
+  .csec-head .chev { color: var(--muted); transition: transform 0.18s ease; line-height: 0; }
+  .csec-head .chev svg { width: 14px; height: 14px; display: block; }
+  .csec.open .chev { transform: rotate(90deg); }
+  .csec-body { display: none; padding: 0 14px 14px; }
+  .csec.open .csec-body { display: block; }
+  .gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .gitem { text-align: center; flex-shrink: 0; }
+  .gitem canvas { display: block; border-radius: 6px; }
+  .gitem .gl { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .gitem.locked canvas { filter: grayscale(0.9) brightness(0.4); }
+  .unlock-cta {
+    margin-top: 14px; text-align: center; padding: 16px 14px; border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255,214,10,0.12), rgba(140,0,217,0.12));
+    border: 1px solid rgba(255,214,10,0.3);
+  }
+  .unlock-cta .ut { font-size: 16px; font-weight: 900; }
+  .unlock-cta .us { font-size: 13px; color: var(--muted); margin: 4px 0 12px; }
+  body.light .badges .local { background: rgba(0,0,0,0.12); }
+  body.light .stat, body.light .csec { background: rgba(0,0,0,0.05); border-color: #00000018; }
+  body.light .pf-bar { background: rgba(0,0,0,0.12); }
   select, button {
     font: inherit; color: var(--text);
     background: var(--card); border: 1px solid #ffffff2a; border-radius: 12px;
@@ -346,50 +469,69 @@
       <button class="btn-gold" id="pickerDone">Done</button>
     </div>
   </div>
+  <!-- Profile: the answer to "what have I got, and what am I working on".
+       Ported from the iOS ProfileView. -->
+  <div class="overlay" id="profile">
+    <div>
+      <div class="pf-head">
+        <div class="pf-avatar"><canvas id="pfAvatarCv"></canvas></div>
+        <div>
+          <div class="pf-name" id="pfName">Player One</div>
+          <div class="badges" id="pfBadges"></div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="v" id="pfPlayed">0</div><div class="l">PLAYED</div></div>
+        <div class="stat"><div class="v" id="pfWon">0</div><div class="l">WON</div></div>
+        <div class="stat"><div class="v" id="pfLost">0</div><div class="l">LOST</div></div>
+        <div class="stat"><div class="v" id="pfRate">0</div><div class="l">WIN %</div></div>
+      </div>
+      <div class="next" id="pfNext">
+        <div class="next-top"><span class="lbl">NEXT UNLOCK</span><span class="togo" id="pfNextTogo"></span></div>
+        <div class="next-body">
+          <div class="next-thumb"><canvas id="pfNextCv"></canvas><span class="lk"></span></div>
+          <div>
+            <div class="next-name" id="pfNextName"></div>
+            <div class="next-roster" id="pfNextRoster"></div>
+          </div>
+        </div>
+        <div class="pf-bar"><div class="fill" id="pfNextFill"></div></div>
+        <div class="next-count" id="pfNextCount"></div>
+      </div>
+      <div class="gold-track" id="pfGold">
+        <div class="glabel" id="pfGoldLabel"></div>
+        <div class="pf-bar"><div class="fill" id="pfGoldFill"></div></div>
+      </div>
+      <div class="collect" id="pfCollect"></div>
+      <div class="unlock-cta" id="pfUnlock">
+        <div class="ut">Unlock all 8 worlds</div>
+        <div class="us">Skip the grind. Every world, every figure, instantly.</div>
+        <button class="btn-gold" id="pfUnlockBtn">Unlock everything</button>
+      </div>
+      <button class="btn-ghost" id="profileDone" style="margin-top:14px">Done</button>
+    </div>
+  </div>
 </div>
 
+<!-- The lower section is the player's dock: who they are, what they have
+     unlocked, and the four things they change mid-game. Theme, Mode, AI
+     level, Board, Grid and Piece type used to be six dropdowns here; they
+     now live on the setup screen and inside the two pickers, and these
+     selects are kept only as the hidden state the rest of game.js reads. -->
 <div class="controls">
-  <label>
-    Theme
-    <select id="theme">
-      <option value="space" selected>Space</option>
-      <option value="ocean">Ocean</option>
-      <option value="feudaljapan">Feudal Japan</option>
-      <option value="dungeon">Dungeon</option>
-      <option value="undead">Undead</option>
-      <option value="western">Western</option>
-      <option value="desert">Desert</option>
-      <option value="classic">Classic</option>
-    </select>
-  </label>
-  <label>
-    Mode
-    <select id="mode">
-      <option value="ai" selected>vs AI</option>
-      <option value="2p">2 players</option>
-    </select>
-  </label>
-  <label id="difficultyLabel">
-    AI level
-    <select id="difficulty">
-      <option value="easy">Easy</option>
-      <option value="medium" selected>Medium</option>
-      <option value="hard">Hard</option>
-    </select>
-  </label>
-  <label>
-    Board
-    <select id="boardSel"></select>
-  </label>
-  <label>
-    Grid
-    <select id="gridSel"></select>
-  </label>
-  <label>
-    Piece type
-    <select id="variantSel"></select>
-  </label>
-  <span>
+  <div class="dock">
+    <button class="avatar" id="avatarBtn" title="Your profile"><canvas id="avatarCv"></canvas></button>
+    <div class="dock-id">
+      <button class="pname" id="nameBtn" title="Rename yourself">
+        <span id="playerName">Player One</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>
+      </button>
+      <div class="record" id="dockRecord"></div>
+    </div>
+    <span class="dock-tools">
+      <button class="toggle" id="profileBtn" title="Profile and collection">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-1c0-3.3 3.6-5 8-5s8 1.7 8 5v1"/><circle cx="12" cy="7.5" r="3.8"/></svg>
+      </button>
     <button class="toggle" id="sceneBtn" title="Board &amp; Background">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="8.7" cy="9.7" r="1.6"/><path d="M20.5 15.5l-4.8-4.8L6 20.4"/></svg>
     </button>
@@ -402,8 +544,41 @@
     <button class="toggle" id="musicToggle" title="Music">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>
     </button>
-  </span>
-  <button id="newGame">New game</button>
+    </span>
+    <button class="btn-gold" id="newGame">New game</button>
+  </div>
+
+  <!-- Every world on show, locked ones included, so there is always
+       something visible to play toward. Built by game.js. -->
+  <div class="worlds" id="worlds"></div>
+  <div class="worlds-hint" id="worldsHint"></div>
+
+  <!-- Kept for the rest of game.js to read and write; the player now sets
+       these on the setup screen and in the pickers. -->
+  <div hidden>
+    <select id="theme">
+      <option value="space" selected>Space</option>
+      <option value="ocean">Ocean</option>
+      <option value="feudaljapan">Feudal Japan</option>
+      <option value="dungeon">Dungeon</option>
+      <option value="undead">Undead</option>
+      <option value="western">Western</option>
+      <option value="desert">Desert</option>
+      <option value="classic">Classic</option>
+    </select>
+    <select id="mode">
+      <option value="ai" selected>vs AI</option>
+      <option value="2p">2 players</option>
+    </select>
+    <span id="difficultyLabel"><select id="difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium" selected>Medium</option>
+      <option value="hard">Hard</option>
+    </select></span>
+    <select id="boardSel"></select>
+    <select id="gridSel"></select>
+    <select id="variantSel"></select>
+  </div>
 </div>
 
 <footer>

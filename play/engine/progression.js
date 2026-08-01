@@ -28,6 +28,13 @@ export const THEME_UNLOCK_AFTER = {
   classic: 38,
 };
 
+/**
+ * The unlock ladder, in iOS ThemeRegistry.all order. This is the order the
+ * worlds are shown and the order nextLockedTheme walks, so it is deliberately
+ * NOT the order themes.js happens to declare them in.
+ */
+export const THEME_ORDER = Object.keys(THEME_UNLOCK_AFTER);
+
 const KEY = 'tewgo.web.progress';
 const PRO_KEY = 'tewgo.web.pro';
 
