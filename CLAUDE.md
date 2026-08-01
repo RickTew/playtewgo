@@ -180,16 +180,45 @@ theirs AS the controls) was NOT built and is still on the table.**
   next-unlock card, Gold progress, and the collection counted live from
   the registries (8 worlds, 40 figures, 97 backgrounds, 8 soundtracks).
 
-## Full unlock: decided but NOT built (Rick, 2026-08-01)
-Rick wants BOTH rails eventually: Stripe first so the web can sell the
-unlock, Steam later as a distribution channel. So `grantPro(source)`
-stores the NAME of the granting rail ('stripe' / 'steam'), not a bare
-true, and no migration is needed to add the second.
+## Full unlock: Stripe wired 2026-08-01, ONE step left
+Rick wants BOTH rails eventually: Stripe first, Steam later as a
+distribution channel. `grantPro(source)` stores the NAME of the granting
+rail ('stripe' / 'steam'), not a bare true, so adding Steam needs no
+migration.
 
-The client-side flag is a convenience cache ONLY. It is trivially edited
-in devtools, so anything that costs money must verify server side before
-being honored. The "Unlock everything" button on the profile is
-deliberately inert and says so; do not make it grant pro locally.
+**Price: $4.99 one time**, matching iOS. Do not invent a different one;
+it is already published in ~/Dev/TEWGO/FEATURES.md and updates.html.
+
+**Backend** (this repo is still a no-build static site; the backend is
+separate infrastructure, not a build step):
+- Supabase project **TewBit Games**, ref `guwquufbifuzmphcdsdt`, the same
+  shared hub AstroHold uses. TEWGO owns the `tewgo` schema.
+- `tewgo.unlocks`: RLS enabled with NO policies, so it is unreachable
+  from the browser. Only the edge function's service role touches it.
+- Edge function `tewgo-unlock` (source kept in
+  `supabase/functions/tewgo-unlock/index.ts`), verify_jwt false, three
+  actions: checkout, verify, restore. Talks to Stripe's REST API
+  directly, so there is no SDK to keep current.
+
+**THE ONE REMAINING STEP, and only Rick can do it:**
+```
+supabase secrets set STRIPE_SECRET_KEY=sk_test_... --project-ref guwquufbifuzmphcdsdt
+```
+Test key first to rehearse the whole flow with Stripe's 4242 test card,
+then the live key to actually sell. Never ask Claude to handle the live
+key. Until it is set, the function returns 503 `not_configured` and the
+button says "The store is not open yet", which is the intended honest
+failure.
+
+**Rules that must not be softened:**
+- The browser is NEVER the authority on payment. `tewgo.web.pro` is a
+  convenience cache, exactly like the iOS local hasPro. Only Stripe
+  confirming `payment_status == 'paid'` grants an unlock.
+- Restore is by the random `TEWGO-XXXX-XXXX` code minted at purchase,
+  NOT by email: an email lookup would be enumerable. Rick can look up a
+  code by email in Supabase for support.
+- Per the iOS monetization rule, the unlock is cosmetic only. It must
+  never touch board state, win rate or AI difficulty.
 
 ## Not yet built (candidates, in rough order)
 Themes, progression, the profile and unlock gating are DONE. What's

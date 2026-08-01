@@ -214,6 +214,37 @@
   }
   .unlock-cta .ut { font-size: 16px; font-weight: 900; }
   .unlock-cta .us { font-size: 13px; color: var(--muted); margin: 4px 0 12px; }
+  .unlock-note { font-size: 12px; margin-top: 10px; min-height: 1em; }
+  .unlock-note.bad { color: #ff8a80; }
+  .unlock-note.good { color: #7ee08a; }
+  .linkish {
+    background: none; border: none; padding: 6px 0 0; font-size: 12px;
+    color: var(--muted); text-decoration: underline; border-radius: 0;
+  }
+  .linkish:hover { color: var(--text); }
+  .restore-row { display: none; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+  .restore-row.show { display: flex; }
+  .restore-row input {
+    font: inherit; font-size: 14px; color: var(--text); text-align: center;
+    background: rgba(0,0,0,0.3); border: 1px solid #ffffff2a; border-radius: 10px;
+    padding: 9px 12px; width: 170px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .restore-row input:focus { outline: 1px solid var(--gold); }
+  .unlock-owned {
+    display: none; margin-top: 14px; text-align: center; padding: 16px 14px;
+    border-radius: 16px; background: rgba(46,184,102,0.10);
+    border: 1px solid rgba(46,184,102,0.35);
+  }
+  .unlock-owned.show { display: block; }
+  .owned-title { font-size: 15px; font-weight: 900; color: #7ee08a; }
+  .owned-note { font-size: 12px; color: var(--muted); margin: 6px 0 8px; }
+  .unlock-owned code {
+    font-size: 15px; font-weight: 700; letter-spacing: 2px; color: var(--gold);
+    background: rgba(0,0,0,0.3); padding: 7px 14px; border-radius: 8px;
+    display: inline-block; user-select: all;
+  }
+  body.light .restore-row input { background: rgba(0,0,0,0.06); }
+  body.light .unlock-owned code { background: rgba(0,0,0,0.08); }
   body.light .badges .local { background: rgba(0,0,0,0.12); }
   body.light .stat, body.light .csec { background: rgba(0,0,0,0.05); border-color: #00000018; }
   body.light .pf-bar { background: rgba(0,0,0,0.12); }
@@ -505,8 +536,20 @@
       <div class="collect" id="pfCollect"></div>
       <div class="unlock-cta" id="pfUnlock">
         <div class="ut">Unlock all 8 worlds</div>
-        <div class="us">Skip the grind. Every world, every figure, instantly.</div>
-        <button class="btn-gold" id="pfUnlockBtn">Unlock everything</button>
+        <div class="us">Skip the grind. Every world, every figure, instantly. It never changes how the game plays.</div>
+        <button class="btn-gold" id="pfUnlockBtn">Unlock all worlds &nbsp;$4.99</button>
+        <div class="unlock-note" id="pfUnlockNote"></div>
+        <button class="linkish" id="pfRestoreBtn">Already bought it? Restore</button>
+        <div class="restore-row" id="pfRestoreRow">
+          <input id="pfRestoreCode" type="text" inputmode="latin" autocomplete="off"
+                 spellcheck="false" placeholder="TEWGO-ABCD-2345" maxlength="15">
+          <button class="btn-ghost" id="pfRestoreGo">Restore</button>
+        </div>
+      </div>
+      <div class="unlock-owned" id="pfOwned">
+        <div class="owned-title">All 8 worlds unlocked</div>
+        <div class="owned-note">Your unlock code, for playing on another device:</div>
+        <code id="pfOwnedCode"></code>
       </div>
       <button class="btn-ghost" id="profileDone" style="margin-top:14px">Done</button>
     </div>

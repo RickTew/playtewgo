@@ -10,6 +10,7 @@ import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
 import { FIGURES, figureHeight, drawFigure, traceFigure, COLOR_SCHEMES, paletteFor } from './pieces.js';
 import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
 import { createProgression, GOLD_WIN_THRESHOLD, THEME_ORDER, THEME_UNLOCK_AFTER } from './engine/progression.js';
+import { startCheckout, handleReturn, restoreWithCode, savedCode } from './unlock.js';
 
 const HUMAN = ONE;
 const AI_PLAYER = TWO;
@@ -1506,7 +1507,17 @@ function openProfile() {
       Math.round((themeWins / GOLD_WIN_THRESHOLD) * 100) + '%';
   }
 
-  document.getElementById('pfUnlock').style.display = progression.hasPro() ? 'none' : '';
+  // Bought or not bought: the buy panel and the owned panel swap places,
+  // and the owned one carries the code needed to restore elsewhere.
+  const owned = progression.hasPro();
+  document.getElementById('pfUnlock').style.display = owned ? 'none' : '';
+  const ownedEl = document.getElementById('pfOwned');
+  ownedEl.classList.toggle('show', owned);
+  if (owned) {
+    const code = savedCode(localStorage);
+    ownedEl.querySelector('.owned-note').style.display = code ? '' : 'none';
+    document.getElementById('pfOwnedCode').textContent = code ?? '';
+  }
   buildCollection();
   profileEl.classList.add('show');
 }
@@ -1516,12 +1527,70 @@ document.getElementById('profileDone')?.addEventListener('click', () => {
   profileEl.classList.remove('show');
 });
 document.getElementById('avatarBtn')?.addEventListener('click', openProfile);
-document.getElementById('pfUnlockBtn')?.addEventListener('click', () => {
-  // No payment rail wired up yet. Say so plainly rather than pretending to
-  // charge, and never grant the unlock from the client.
-  const cta = document.getElementById('pfUnlock');
-  cta.querySelector('.us').textContent =
-    'Not on sale yet. The web unlock is still being built.';
+// ----- The paid full unlock -----
+
+const unlockNoteEl = document.getElementById('pfUnlockNote');
+
+function setUnlockNote(text, kind) {
+  if (!unlockNoteEl) return;
+  unlockNoteEl.textContent = text ?? '';
+  unlockNoteEl.className = 'unlock-note' + (kind ? ` ${kind}` : '');
+}
+
+/** Applies a confirmed unlock everywhere it shows. */
+function applyUnlock(source) {
+  progression.grantPro(source);
+  buildWorlds();
+  updateDock();
+  if (profileEl?.classList.contains('show')) openProfile();
+}
+
+document.getElementById('pfUnlockBtn')?.addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  setUnlockNote('Opening the secure checkout...', null);
+  const failure = await startCheckout();
+  // On success the browser has already left for Stripe, so reaching here at
+  // all means it did not work.
+  btn.disabled = false;
+  setUnlockNote(failure, 'bad');
+});
+
+document.getElementById('pfRestoreBtn')?.addEventListener('click', () => {
+  document.getElementById('pfRestoreRow')?.classList.toggle('show');
+  document.getElementById('pfRestoreCode')?.focus();
+});
+
+async function submitRestore() {
+  const input = document.getElementById('pfRestoreCode');
+  const go = document.getElementById('pfRestoreGo');
+  if (!input) return;
+  go.disabled = true;
+  setUnlockNote('Checking that code...', null);
+  const r = await restoreWithCode(localStorage, input.value);
+  go.disabled = false;
+  if (r.ok) {
+    setUnlockNote('Restored. Every world is open.', 'good');
+    applyUnlock('stripe');
+  } else {
+    setUnlockNote(r.message, 'bad');
+  }
+}
+document.getElementById('pfRestoreGo')?.addEventListener('click', submitRestore);
+document.getElementById('pfRestoreCode')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitRestore();
+});
+
+// Coming back from Stripe: verify server side before anything unlocks.
+handleReturn(localStorage).then((r) => {
+  if (r.state === 'unlocked') {
+    applyUnlock('stripe');
+    openProfile();
+    setUnlockNote(null, null);
+  } else if (r.state === 'cancelled' || r.state === 'failed') {
+    openProfile();
+    setUnlockNote(r.message, r.state === 'failed' ? 'bad' : null);
+  }
 });
 
 document.getElementById('nameBtn')?.addEventListener('click', () => {
