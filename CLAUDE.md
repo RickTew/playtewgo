@@ -19,6 +19,19 @@ pushed. Ask Rick if it should get a GitHub remote. `play/engine/` is a direct Ja
 Any rule or AI change must land in BOTH engines with matching tests. The iOS
 repo is read-only reference from here; never edit it from this project.
 
+## TODO next session (2026-08-04)
+Port the iOS capture-defense fix to `play/engine/ai.js`. iOS commit 99f8139
+in `~/Dev/TEWGO`: the old "block opponent win" step returned the first
+blocking square before any capture was considered. New behavior: when the
+opponent threatens to complete a win, gather blocking squares PLUS capture
+moves, keep only defenses that leave the opponent with no immediate win, and
+(top tiers only) rank safe captures above safe blocks. "Safe" = the opponent
+cannot reply by rebuilding an open four the AI cannot break (a capture off
+the END of a line re-opens the line and loses; only a middle capture is
+safe). Port the regression test testDefendsFourByCapturingInsteadOfBlocking
+from GameAITests too. See defenseMove/allowsUndefusableOpenFour in
+`TEWGO/Game/GameAI.swift`.
+
 ## Tech decisions (2026-07-31)
 - **No build step, on purpose.** Plain ES modules served as-is by GitHub Pages
   (deploys from main branch root; CNAME = playtewgo.com). No bundler, no
