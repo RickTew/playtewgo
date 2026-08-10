@@ -301,14 +301,15 @@ were needed and are DONE, remember them for the next schema:
   Write only), matching Rick's per-project key pattern, currently the
   rk_test_ one made in the sandbox on 2026-08-10.
 
-**GOING LIVE, the only remaining steps, Rick's alone:** create the same
-TEWGO restricted key in LIVE mode (Checkout Sessions: Write), then in
-his OWN Terminal (never in chat, never to Claude):
-```
-supabase secrets set STRIPE_SECRET_KEY=rk_live_... --project-ref guwquufbifuzmphcdsdt
-```
-Then update the "not on sale yet" wording on updates.html. Until then
-the store sells test-mode only.
+**LIVE since 2026-08-10.** Rick created the live TEWGO restricted key
+(Checkout Sessions: Write) and set it from his own Terminal via
+~/set-tewgo-live-key.sh (keep that script; it is the safe path for key
+rotation, it validates rk_live_/sk_live_ prefixes and refuses
+placeholders). Live checkout verified opening at $2.59 / THB adaptive
+WITHOUT paying. updates.html wording flipped to on-sale. The test-mode
+row TEWGO-JJPP-CPDN (livemode false) stays in tewgo.unlocks as Rick's
+own rehearsal unlock; codes restore regardless of livemode, delete the
+row if that ever matters.
 
 **Rules that must not be softened:**
 - The browser is NEVER the authority on payment. `tewgo.web.pro` is a
