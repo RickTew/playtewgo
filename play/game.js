@@ -144,6 +144,7 @@ function nameOf(player) {
   return FIGURES[pieceKind[player]].name;
 }
 let lastMove = null;
+let lastMover = null; // who played lastMove, for the "just played" marker
 let winCells = null; // the winning five, shown until the next game starts
 let aiTimer = null;
 let hover = null; // [row, col] ghost-stone preview, mouse only
@@ -724,8 +725,29 @@ function draw() {
     drawStone(x, y, radius, current, 0.55);
   }
 
-  // No last-move marker: iOS draws none, and the web ring read as a stray
-  // white circle. lastMove itself stays - endIfOver checks the win from it.
+  // The stone that was just played, ringed at its own intersection in the
+  // mover's colour. Persona round 2: two of five players (including the
+  // strategist) lost track of the AI's replies entirely - "playing
+  // blindfolded against a good opponent" - because a tall figure's reply
+  // vanishes into the shapes around it. An earlier attempt at this read
+  // as a stray WHITE circle floating on the board, so this one is the
+  // mover's own colour, sits on the intersection with the ground shadow,
+  // and yields to the winning line at game over.
+  if (lastMove && lastMover !== null && !winCells) {
+    const [lr, lc] = lastMove;
+    const [x, y] = pointFor(lr, lc, m);
+    const glow = styleFor(lastMover).glowRgb;
+    ctx.save();
+    ctx.strokeStyle = `rgba(${glow}, 0.95)`;
+    ctx.lineWidth = Math.max(1.5, m.cell * 0.07);
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 1.2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = `rgba(${glow}, 0.3)`;
+    ctx.lineWidth = Math.max(3, m.cell * 0.16);
+    ctx.stroke();
+    ctx.restore();
+  }
 }
 
 function luminance(hex) {
@@ -988,6 +1010,7 @@ function scheduleAiMove() {
     } else {
       const captures = board.place(AI_PLAYER, move[0], move[1]);
       lastMove = move;
+      lastMover = AI_PLAYER;
       pushPop(move[0], move[1]);
       pushFades(captures, HUMAN);
       playSfx('place');
@@ -1015,6 +1038,7 @@ function placeAt(row, col) {
   const mover = current;
   const captures = board.place(mover, row, col);
   lastMove = [row, col];
+  lastMover = mover;
   hover = null;
   pushPop(row, col);
   pushFades(captures, opponentOf(mover));
@@ -1063,6 +1087,7 @@ function newGame() {
   gameOver = false;
   winner = null;
   lastMove = null;
+  lastMover = null;
   winCells = null;
   shelfCanvases[ONE]?.classList.remove('winglow');
   shelfCanvases[TWO]?.classList.remove('winglow');

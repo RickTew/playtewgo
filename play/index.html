@@ -168,6 +168,20 @@
   }
   .dock-next b { color: var(--gold); }
   /* Phones: let row 1 wrap and centre everything. */
+  /* Landscape phone: the portrait stack put the header and capture trays
+     in the top half and pushed the board below the fold, so a rotated
+     player had to scroll mid-move (persona round 1, Marcus). Shrink the
+     chrome and let the board use the height that frees up. */
+  @media (orientation: landscape) and (max-height: 560px) {
+    :root { --board-size: min(94vw, 86dvh, 640px); }
+    header { padding: 2px 0 4px; }
+    .logo { font-size: 19px; letter-spacing: 1px; }
+    .beta { font-size: 8px; padding: 1px 6px; }
+    .hud { margin-bottom: 4px; font-size: 12px; }
+    #status { margin-top: 2px; }
+    .rules-hint { margin: 0 0 4px; font-size: 12px; }
+    .controls { margin-top: 8px; }
+  }
   @media (max-width: 620px) {
     .dock-row1 { flex-wrap: wrap; justify-content: center; }
     .dock-row2 { justify-content: center; }
@@ -256,7 +270,19 @@
   .csec.open .chev { transform: rotate(90deg); }
   .csec-body { display: none; padding: 0 14px 14px; }
   .csec.open .csec-body { display: block; }
-  .gallery { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  /* These rows scroll sideways and gave no sign of it, so a phone player
+     saw "3 of 8" worlds and only three cards (persona round 1, Marcus).
+     A visible thin scrollbar plus a fade at the right edge say "there is
+     more this way" without adding controls. */
+  .gallery {
+    display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;
+    scrollbar-width: thin; scrollbar-color: #ffffff40 transparent;
+    -webkit-overflow-scrolling: touch;
+    mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
+  }
+  .gallery::-webkit-scrollbar { height: 5px; }
+  .gallery::-webkit-scrollbar-thumb { background: #ffffff40; border-radius: 3px; }
+  .gallery::-webkit-scrollbar-track { background: transparent; }
   .gitem {
     text-align: center; flex-shrink: 0; background: none; border: none;
     padding: 4px; border-radius: 10px;
