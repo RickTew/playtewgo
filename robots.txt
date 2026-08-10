@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Internal, and no longer published (see _config.yml). Listed so anything
+# already crawled drops out.
+Disallow: /playtest/
+Disallow: /CLAUDE.md
+Disallow: /THEME_CHECKLIST.md
+Disallow: /tests/
+Disallow: /supabase/
+
+# Design explorations, kept for the record, not for players.
+Disallow: /play/concepts.html

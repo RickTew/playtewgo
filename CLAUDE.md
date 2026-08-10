@@ -287,7 +287,7 @@ separate infrastructure, not a build step):
 
 **TEST REHEARSAL PASSED 2026-08-10.** Function redeployed at 259 cents,
 checkout page showed $2.59 (and adaptive THB), Rick paid with the 4242
-card, verify minted TEWGO-JJPP-CPDN into tewgo.unlocks (amount_total
+card, verify minted a TEWGO-XXXX-XXXX code into tewgo.unlocks (amount_total
 259), restore accepts it, wrong codes 404, re-verify returns the same
 code, and /play/?unlock=cs_... applied PRO with 8/8 worlds. Two fixes
 were needed and are DONE, remember them for the next schema:
@@ -307,9 +307,15 @@ were needed and are DONE, remember them for the next schema:
 rotation, it validates rk_live_/sk_live_ prefixes and refuses
 placeholders). Live checkout verified opening at $2.59 / THB adaptive
 WITHOUT paying. updates.html wording flipped to on-sale. The test-mode
-row TEWGO-JJPP-CPDN (livemode false) stays in tewgo.unlocks as Rick's
-own rehearsal unlock; codes restore regardless of livemode, delete the
-row if that ever matters.
+rehearsal row (livemode false) stays in tewgo.unlocks as Rick's own
+unlock; codes restore regardless of livemode.
+
+**NEVER write a real unlock code into any file in this repo.** The repo
+is PUBLIC and Pages served every file until _config.yml was added on
+2026-08-10, so the rehearsal code sat readable on playtewgo.com and in
+git history: anyone could paste it into Restore for a free unlock. Look
+codes up in Supabase when support needs one; refer to them here only as
+TEWGO-XXXX-XXXX.
 
 **Rules that must not be softened:**
 - The browser is NEVER the authority on payment. `tewgo.web.pro` is a

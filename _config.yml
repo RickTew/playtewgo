@@ -1,0 +1,24 @@
+# GitHub Pages publishes EVERY file in this repo by default, which put the
+# internal docs on playtewgo.com (the playtest reports, this project's
+# CLAUDE.md, the engine tests, the unlock function source). Anything listed
+# here stays in the repo for us and off the public site.
+#
+# This is config, not a build step: Pages already runs Jekyll on this repo,
+# and every page is still plain hand-written HTML served as-is.
+#
+# NOTE: setting `exclude` REPLACES Jekyll's defaults, so the usual suspects
+# are repeated here.
+exclude:
+  - playtest        # persona harness, briefs and reports (internal critique)
+  - CLAUDE.md       # working notes, infrastructure, decisions
+  - THEME_CHECKLIST.md
+  - tests           # engine tests
+  - supabase        # edge function source (no secrets, but not player-facing)
+  - package.json
+  - package-lock.json
+  - node_modules
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+  - .sass-cache
+  - .jekyll-cache
