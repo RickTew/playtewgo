@@ -142,9 +142,13 @@ test('capture economy tables', () => {
     [400, 550, 800, 1200, 20000]);
   assert.deepEqual([0, 1, 2, 3, 4].map((n) => ai.vulnerablePairPenalty(n)),
     [1000, 1400, 2000, 3200, 30000]);
+  assert.deepEqual([0, 1, 2, 3, 4].map((n) => ai.captureContestBonus(n)),
+    [0, 0, 0, 1200, 1600]);
   // The penalty must always exceed a closed three (500) so shape
   // hunting never parks a pair for free, and at four opponent pairs it
   // must exceed even an open four (20000) - the capture wins the game.
+  // (Raising the base tiers further needs the sim harness as referee;
+  // see the tuning note on vulnerablePairPenalty.)
   assert.ok(ai.vulnerablePairPenalty(0) > 500);
   assert.ok(ai.vulnerablePairPenalty(4) > 20000);
 });

@@ -69,11 +69,21 @@
   }
   .shelf.ai .shelf-head { justify-content: flex-end; }
   .shelf-head b { font-size: 13px; font-variant-numeric: tabular-nums; }
-  .shelf-head b::after { content: "/5"; font-weight: 500; opacity: 0.5; }
+  .shelf-head b::after { content: "/5 pairs"; font-weight: 500; opacity: 0.5; }
+  .rules-hint {
+    font-size: 13px; color: var(--text); text-align: center;
+    margin: 2px 0 8px; opacity: 0.9;
+  }
   .you .shelf-head b { color: var(--gold); }
   .ai .shelf-head b { color: var(--blue); }
   .shelf canvas { width: 100%; height: auto; transform-origin: 50% 100%; }
   .shelf canvas.bump { animation: shelfbump 0.4s cubic-bezier(0.2, 1.6, 0.4, 1); }
+  /* A capture win has no line on the board; the winner's full shelf IS
+     the winning move, so it glows until the next game. */
+  .shelf canvas.winglow {
+    box-shadow: 0 0 0 2px var(--gold), 0 0 18px 4px rgba(252, 194, 36, 0.55);
+    border-radius: 8px;
+  }
   @keyframes shelfbump { 0% { transform: scale(1.06); } 100% { transform: scale(1); } }
   #status { color: var(--muted); text-align: center; margin-top: 6px; min-height: 1.2em; }
   .board-wrap {
@@ -303,6 +313,35 @@
   .linkish:hover { color: var(--text); }
   .restore-row { display: none; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
   .restore-row.show { display: flex; }
+  .unlock-banner {
+    color: var(--gold);
+    font-size: 19px; font-weight: 900;
+    margin-top: 10px;
+    animation: bannerpop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
+  }
+  @keyframes bannerpop { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .capture-tip {
+    display: none;
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    max-width: 88%;
+    background: rgba(10, 11, 28, 0.95);
+    border: 1px solid var(--gold); border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 13px; font-weight: 700; text-align: center;
+    color: #fff;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .capture-tip::before {
+    content: '';
+    position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+    border-left: 7px solid transparent; border-right: 7px solid transparent;
+    border-bottom: 7px solid var(--gold);
+  }
+  .capture-tip.show { display: block; }
+  .unlock-confirm { display: none; margin-top: 10px; }
+  .unlock-confirm.show { display: block; }
+  .unlock-confirm .btns { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
   .restore-row input {
     font: inherit; font-size: 14px; color: var(--text); text-align: center;
     background: rgba(0,0,0,0.3); border: 1px solid #ffffff2a; border-radius: 10px;
@@ -386,9 +425,17 @@
     border-radius: 16px; padding: 24px; overflow-y: auto;
   }
   .overlay.show { display: flex; }
+  /* The victory overlay leaves the finished board legible: the winning
+     line is the story, so no heavy dim and no blur (round-1 playtest:
+     Priya reconstructed her loss from screenshots). Setup and pickers
+     keep the full dim. */
+  #overlay { background: rgba(5,5,26,0.42); backdrop-filter: none; }
+  #overlay > div { text-shadow: 0 1px 10px rgba(0,0,0,0.85); }
   /* light scenes flip the text dark, so the overlay has to flip too or the
      setup screen is black-on-black */
   body.light .overlay { background: rgba(236,238,244,0.93); }
+  body.light #overlay { background: rgba(236,238,244,0.5); }
+  body.light #overlay > div { text-shadow: 0 1px 10px rgba(255,255,255,0.9); }
   /* margin:auto centers short content and lets tall content scroll from
      the top instead of clipping (the piece picker got cut off) */
   .overlay > div { margin: auto; }
@@ -512,10 +559,12 @@
     </div>
   </div>
   <div id="status">Your move</div>
+  <div class="rules-hint" id="rulesHint" style="display: none;">Five in a row wins. Capturing five pairs also wins. Flank two enemy pieces to capture them.</div>
 </div>
 
 <div class="board-wrap">
   <canvas id="board"></canvas>
+  <div class="capture-tip" id="captureTip"></div>
   <div class="overlay" id="overlay">
     <div>
       <h2 id="overlayTitle"></h2>
@@ -635,6 +684,13 @@
         <div class="ut">Unlock all 8 worlds</div>
         <div class="us">Skip the grind. Every world, every figure, instantly. It never changes how the game plays.</div>
         <button class="btn-gold" id="pfUnlockBtn">Unlock all worlds &nbsp;$2.59</button>
+        <div class="unlock-confirm" id="pfConfirmRow">
+          <div class="us">One-time payment of $2.59. Cosmetic only, it never changes how the game plays. Continue to the secure payment page?</div>
+          <div class="btns">
+            <button class="btn-gold" id="pfConfirmGo">Continue to payment</button>
+            <button class="btn-ghost" id="pfConfirmNo">Not now</button>
+          </div>
+        </div>
         <div class="unlock-note" id="pfUnlockNote"></div>
         <button class="linkish" id="pfRestoreBtn">Already bought it? Restore</button>
         <div class="restore-row" id="pfRestoreRow">

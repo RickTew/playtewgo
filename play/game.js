@@ -144,6 +144,7 @@ function nameOf(player) {
   return FIGURES[pieceKind[player]].name;
 }
 let lastMove = null;
+let winCells = null; // the winning five, shown until the next game starts
 let aiTimer = null;
 let hover = null; // [row, col] ghost-stone preview, mouse only
 let anims = []; // {type:'pop'|'fade', row, col, player, start}
@@ -361,6 +362,20 @@ async function shareCard() {
   a.download = 'tewgo-victory.png';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 5000);
+  shareFeedback('Saved! Check your downloads.');
+}
+
+// The Share button used to give zero acknowledgment on the download
+// path (round-1 playtest, three personas). The button itself says what
+// just happened, briefly.
+function shareFeedback(text) {
+  const old = shareBtnEl.textContent;
+  shareBtnEl.textContent = text;
+  shareBtnEl.disabled = true;
+  setTimeout(() => {
+    shareBtnEl.textContent = old;
+    shareBtnEl.disabled = false;
+  }, 2200);
 }
 
 // ----- Persistence -----
@@ -422,6 +437,28 @@ function pushFades(captures, capturedPlayer) {
     anims.push({ type: 'fade', row: cap.row1, col: cap.col1, player: capturedPlayer, start });
     anims.push({ type: 'fade', row: cap.row2, col: cap.col2, player: capturedPlayer, start });
   }
+  if (captures.length > 0) maybeShowCaptureTip(capturedPlayer);
+}
+
+// The very first capture a player ever sees gets one explanatory callout
+// pointing at the shelves, because round-1 playtests showed a first game
+// can end with nobody understanding what the 0/5 trays mean.
+const CAPTURE_TIP_KEY = 'tewgo.web.captureTipSeen';
+let captureTipTimer = null;
+
+function maybeShowCaptureTip(capturedPlayer) {
+  try {
+    if (localStorage.getItem(CAPTURE_TIP_KEY)) return;
+    localStorage.setItem(CAPTURE_TIP_KEY, '1');
+  } catch { return; }
+  const tip = document.getElementById('captureTip');
+  if (!tip) return;
+  tip.textContent = capturedPlayer === HUMAN
+    ? 'Your pair was captured! Flanked pairs get taken to the shelf above. Five pairs wins.'
+    : 'Captured! Flanked pairs get taken to the shelf above. Five pairs wins.';
+  tip.classList.add('show');
+  if (captureTipTimer !== null) clearTimeout(captureTipTimer);
+  captureTipTimer = setTimeout(() => tip.classList.remove('show'), 8000);
 }
 
 function animTick() {
@@ -432,9 +469,24 @@ function animTick() {
   if (anims.length > 0) rafId = requestAnimationFrame(animTick);
 }
 
+let animCatchup = null;
+
 function kickAnims() {
   if (rafId === null && anims.length > 0) rafId = requestAnimationFrame(animTick);
+  // rAF never fires in a hidden/occluded tab, which froze the capture
+  // fade at its first (fully opaque) frame: captured stones LOOKED like
+  // they were still standing until the next move repainted (round-1
+  // playtest, Leo). One guaranteed catch-up repaint clears the board
+  // even when no animation frame ever ran.
+  if (animCatchup !== null) clearTimeout(animCatchup);
+  animCatchup = setTimeout(() => { animCatchup = null; draw(); }, FADE_MS + 80);
 }
+
+// Coming back to a hidden tab: repaint immediately rather than showing
+// whatever stale frame the canvas froze on.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) draw();
+});
 
 // ----- Rendering -----
 
@@ -564,12 +616,71 @@ function draw() {
     }
   }
 
-  // Captured stones shrinking away (already removed from the grid)
+  // Captured stones beaming away (already removed from the grid): the
+  // stone lifts and shrinks while a bright ring expands from the spot,
+  // so the capture reads as an EVENT, not a quiet disappearance
+  // (round-1 playtest: "no flash, no pop, no beam-up").
   for (const a of anims) {
     if (a.type !== 'fade') continue;
     const t = Math.min(1, (now - a.start) / FADE_MS);
     const [x, y] = pointFor(a.row, a.col, m);
-    drawStone(x, y, radius * (1 - 0.5 * t), a.player, 1 - t);
+    drawStone(x, y - m.cell * 0.55 * t, radius * (1 - 0.45 * t), a.player, 1 - t);
+    ctx.save();
+    ctx.globalAlpha = 0.85 * (1 - t);
+    ctx.strokeStyle = `rgba(${styleFor(a.player).glowRgb}, 1)`;
+    ctx.lineWidth = Math.max(1.5, m.cell * 0.09);
+    ctx.beginPath();
+    ctx.arc(x, y, radius * (0.9 + 1.1 * t), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // "That spot is taken": a quick red ring on a denied tap.
+  for (const a of anims) {
+    if (a.type !== 'deny') continue;
+    const t = Math.min(1, (now - a.start) / FADE_MS);
+    const [x, y] = pointFor(a.row, a.col, m);
+    ctx.save();
+    ctx.globalAlpha = 0.9 * (1 - t);
+    ctx.strokeStyle = 'rgba(255, 110, 110, 1)';
+    ctx.lineWidth = Math.max(2, m.cell * 0.1);
+    ctx.beginPath();
+    ctx.arc(x, y, radius * (1.05 + 0.3 * t), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // The winning line, bright and unmissable, from the moment the game
+  // ends until the next one starts.
+  if (winCells && winner !== null) {
+    const sorted = winCells
+      .slice()
+      .sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+    const [x0, y0] = pointFor(sorted[0][0], sorted[0][1], m);
+    const [x1, y1] = pointFor(sorted[sorted.length - 1][0], sorted[sorted.length - 1][1], m);
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = `rgba(${styleFor(winner).glowRgb}, 0.55)`;
+    ctx.lineWidth = radius * 1.1;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.lineWidth = Math.max(2, radius * 0.16);
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    for (const [r, c] of sorted) {
+      const [x, y] = pointFor(r, c, m);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.lineWidth = Math.max(2, radius * 0.14);
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 1.12, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   // Ghost stone under the mouse, in the color of whoever is to move
@@ -723,6 +834,16 @@ function updateHud() {
   }
 }
 
+// Unlock announcements used to be a small grey clause tacked onto the
+// win reason ("the biggest reward moment in the game is whispered",
+// round-1 playtest). They are their own gold banner now.
+function announceOnOverlay(text) {
+  const div = document.createElement('div');
+  div.className = 'unlock-banner';
+  div.textContent = text;
+  overlayReasonEl.appendChild(div);
+}
+
 function showOverlay() {
   if (winner === null) {
     overlayTitleEl.textContent = 'Draw';
@@ -734,7 +855,7 @@ function showOverlay() {
       overlayReasonEl.textContent = captured ? 'You captured five pairs.' : 'Five in a row.';
       if (goldJustUnlocked) {
         goldJustUnlocked = false;
-        overlayReasonEl.textContent += ` Gold colors unlocked for ${themeDef().name}!`;
+        announceOnOverlay(`Gold colors unlocked for ${themeDef().name}!`);
       }
     } else if (isAiGame()) {
       overlayTitleEl.textContent = 'AI wins';
@@ -745,8 +866,7 @@ function showOverlay() {
     }
   }
   if (themeJustUnlocked && THEMES[themeJustUnlocked]) {
-    overlayReasonEl.textContent +=
-      ` ${THEMES[themeJustUnlocked].name} is now unlocked!`;
+    announceOnOverlay(`${THEMES[themeJustUnlocked].name} is now unlocked!`);
     themeJustUnlocked = null;
   }
   shareBtnEl.style.display = winner !== null && (!isAiGame() || winner === HUMAN) ? '' : 'none';
@@ -781,11 +901,35 @@ function recordFinishedGame() {
   updateDock();
 }
 
+// The five (or more) cells of the winning line through (row, col), or
+// null when the win was by captures. Kept until the next game so the
+// board can show HOW the game ended, legibly, until dismissed (round-1
+// playtest: Priya reconstructed her Expert loss from screenshots).
+function findWinLine(player, row, col) {
+  for (const [dr, dc] of [[0, 1], [1, 0], [1, 1], [1, -1]]) {
+    const cells = [[row, col]];
+    for (const sign of [-1, 1]) {
+      let r = row + sign * dr, c = col + sign * dc;
+      while (r >= 0 && r < SIZE && c >= 0 && c < SIZE && board.grid[r][c] === player) {
+        cells.push([r, c]);
+        r += sign * dr;
+        c += sign * dc;
+      }
+    }
+    if (cells.length >= 5) return cells;
+  }
+  return null;
+}
+
 function endIfOver(player) {
   const [r, c] = lastMove;
   if (board.checkWin(player, r, c)) {
     gameOver = true;
     winner = player;
+    winCells = board.winReason(player) === 'fiveInARow' ? findWinLine(player, r, c) : null;
+    // A capture win has no line to show; the winner's shelf carries the
+    // story instead and gets a glow.
+    if (!winCells) shelfCanvases[player]?.classList.add('winglow');
   } else if (board.isFull()) {
     gameOver = true;
     winner = null;
@@ -826,7 +970,16 @@ function scheduleAiMove() {
 }
 
 function placeAt(row, col) {
-  if (!canPlay() || !board.isValid(row, col)) return;
+  if (!canPlay()) return;
+  if (!board.isValid(row, col)) {
+    // Tapping an occupied intersection was silently swallowed, which
+    // read as a freeze (round-1 playtest). A brief ring says "taken".
+    if (row >= 0 && row < SIZE && col >= 0 && col < SIZE && board.grid[row][col] !== 0) {
+      anims.push({ type: 'deny', row, col, player: null, start: performance.now() });
+      kickAnims();
+    }
+    return;
+  }
   const mover = current;
   const captures = board.place(mover, row, col);
   lastMove = [row, col];
@@ -861,6 +1014,9 @@ function newGame() {
   gameOver = false;
   winner = null;
   lastMove = null;
+  winCells = null;
+  shelfCanvases[ONE]?.classList.remove('winglow');
+  shelfCanvases[TWO]?.classList.remove('winglow');
   hover = null;
   anims = [];
   // Empty shelves are the starting state, not a capture: clearing this stops
@@ -1227,7 +1383,39 @@ modeEl.addEventListener('change', () => {
 // is purely visual.
 const themeEl = document.getElementById('theme');
 
+/** "(N more games)" with honest singular/plural. */
+function moreGamesLabel(key) {
+  const n = progression.gamesUntilTheme(key);
+  return `${n} more game${n === 1 ? '' : 's'}`;
+}
+
+// Both theme dropdowns show the same ladder: locked worlds stay listed
+// but disabled, marked, and priced in games. Round-1 playtest: the
+// below-board dropdown had no lock marks at all and switched into locked
+// worlds, and the labels went stale after an unlock until reload.
+function refreshThemeSelects() {
+  const selects = [themeEl, document.getElementById('setupTheme')];
+  for (const sel of selects) {
+    if (!sel) continue;
+    for (const opt of sel.options) {
+      const unlocked = progression.isThemeUnlocked(opt.value);
+      const base = THEMES[opt.value]?.name ?? opt.value;
+      opt.disabled = !unlocked;
+      opt.textContent = unlocked ? base : `🔒 ${base} (${moreGamesLabel(opt.value)})`;
+    }
+  }
+  themeEl.value = theme;
+}
+
 function applyTheme(key) {
+  // The lock is enforced HERE, not in dropdown option state: every path
+  // (setup Start, either dropdown, world cards, gallery, code) funnels
+  // through this function, so a locked world can never become active.
+  // Round-1 playtest proved option-disabling alone does not hold.
+  if (THEMES[key] && !progression.isThemeUnlocked(key)) {
+    refreshThemeSelects();
+    return;
+  }
   theme = THEMES[key] ? key : 'space';
   themeEl.value = theme;
   try { localStorage.setItem(THEME_KEY, theme); } catch { /* ignore */ }
@@ -1270,6 +1458,12 @@ function drawAvatar() {
 }
 
 function updateDock() {
+  refreshThemeSelects();
+  // The rules used to live only in the footer, and every round-1 persona
+  // started game 1 blind. New players get the one-liner above the board
+  // until their first game is done.
+  const rulesEl = document.getElementById('rulesHint');
+  if (rulesEl) rulesEl.style.display = progression.gamesCompleted() === 0 ? '' : 'none';
   if (playerNameEl) playerNameEl.textContent = playerName;
   drawAvatar();
   if (dockRecordEl) {
@@ -1575,7 +1769,20 @@ function applyUnlock(source) {
   if (profileEl?.classList.contains('show')) openProfile();
 }
 
-document.getElementById('pfUnlockBtn')?.addEventListener('click', async (e) => {
+// Round-1 playtest: one tap used to land straight on the live Stripe card
+// page ("a kid reached a real payment form in one click"). The price
+// button now only reveals an in-game confirm; only the confirm's own
+// button leaves for Stripe.
+document.getElementById('pfUnlockBtn')?.addEventListener('click', () => {
+  document.getElementById('pfConfirmRow')?.classList.toggle('show');
+  setUnlockNote(null, null);
+});
+
+document.getElementById('pfConfirmNo')?.addEventListener('click', () => {
+  document.getElementById('pfConfirmRow')?.classList.remove('show');
+});
+
+document.getElementById('pfConfirmGo')?.addEventListener('click', async (e) => {
   const btn = e.currentTarget;
   btn.disabled = true;
   setUnlockNote('Opening the secure checkout...', null);
@@ -1656,15 +1863,8 @@ function openSetup() {
     return;
   }
   // Locked worlds stay listed but unpickable, with the cost spelled out, so
-  // the setup screen shows the same ladder the medallions do.
-  for (const opt of document.getElementById('setupTheme').options) {
-    const unlocked = progression.isThemeUnlocked(opt.value);
-    const base = THEMES[opt.value]?.name ?? opt.value;
-    opt.disabled = !unlocked;
-    opt.textContent = unlocked
-      ? base
-      : `${base} (${progression.gamesUntilTheme(opt.value)} more games)`;
-  }
+  // the setup screen shows the same ladder the world cards do.
+  refreshThemeSelects();
   document.getElementById('setupTheme').value = theme;
   document.getElementById('setupMode').value = mode;
   document.getElementById('setupDiff').value = difficultyEl.value;
@@ -1751,6 +1951,10 @@ try {
   const savedDifficulty = localStorage.getItem(DIFFICULTY_KEY);
   if (savedDifficulty && ['easy', 'medium', 'hard', 'expert'].includes(savedDifficulty)) {
     difficultyEl.value = savedDifficulty;
+  } else if (progression.gamesCompleted() === 0) {
+    // A first-time player starts on Easy, not Medium (round-1 playtest:
+    // a 10-year-old's first opponent should be the gentle one).
+    difficultyEl.value = 'easy';
   }
   const savedMode = localStorage.getItem(MODE_KEY);
   if (savedMode === '2p' || savedMode === 'ai') {

@@ -408,11 +408,14 @@ export class GameAI {
     let s = 0;
 
     // Captures this move yields - each pair is worth more the closer its
-    // taker already is to the 5-pair win.
+    // taker already is to the 5-pair win, plus a contest bonus when the
+    // OPPONENT is the one closing in on it.
     const pairsHeldBefore = board.captureCount[aiPlayer];
+    const oppPairsBefore = board.captureCount[opponent];
     const b = board.clone();
     const captures = b.place(aiPlayer, row, col);
-    s += captures.length * this.captureValue(pairsHeldBefore);
+    s += captures.length * (this.captureValue(pairsHeldBefore)
+      + this.captureContestBonus(oppPairsBefore));
 
     // Capture count proximity to win
     if (b.captureCount[aiPlayer] >= 4) s += 2000; // one more pair wins
@@ -470,6 +473,14 @@ export class GameAI {
   // opponent a pair toward 5, AND hands back tempo, so even at 0 pairs
   // it must outweigh small shapes; at 4 pairs it is the lost game
   // (30000 tops even an open four's 20000).
+  // TUNING NOTE (2026-08-10 persona round 1): Frank the Pente-veteran
+  // persona farmed Expert by hanging shapes on it - the fix looks like
+  // raising this table, and it does NOT work: 2500-base, 2000-base, and
+  // a Hard/Expert-only 2500 table were each tried on iOS, and every
+  // variant collapsed the ladder head-to-heads (Hard/Expert losing to
+  // Medium) - single deterministic games are too chaotic to tune this
+  // weight against. Do not touch this table again without the sim
+  // harness (thousands of games per pairing) as the referee.
   vulnerablePairPenalty(oppPairsHeld) {
     switch (oppPairsHeld) {
       case 0: return 1000;
@@ -477,6 +488,21 @@ export class GameAI {
       case 2: return 2000;
       case 3: return 3200;
       default: return 30000;
+    }
+  }
+
+  // Extra worth of taking a pair when the OPPONENT is close to the
+  // 5-pair win: contesting the race removes their material and tempo.
+  // Persona round 1 (Frank): Expert "sat on three or four one-move
+  // captures for several turns" while he was one pair from a capture
+  // win - captures priced only by the AI's own race ignored his.
+  captureContestBonus(oppPairsHeld) {
+    switch (oppPairsHeld) {
+      case 0:
+      case 1:
+      case 2: return 0;
+      case 3: return 1200;
+      default: return 1600;
     }
   }
 
