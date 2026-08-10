@@ -5,8 +5,8 @@ import assert from 'node:assert/strict';
 import { GameBoard, ONE, TWO } from '../play/engine/board.js';
 import { GameAI } from '../play/engine/ai.js';
 
-const ai = new GameAI('hard');
-const expert = new GameAI('expert');
+const ai = new GameAI('hard', false);
+const expert = new GameAI('expert', false);
 
 // Build a board by placing stones; positions chosen so no captures fire.
 function board({ one = [], two = [] } = {}) {
@@ -126,10 +126,82 @@ test('expert avoids capture-win trap', () => {
   assert.equal(b.captureCount[ONE], 4);
 
   for (const difficulty of ['medium', 'hard', 'expert']) {
-    const move = new GameAI(difficulty).bestMove(b, TWO);
+    const move = new GameAI(difficulty, false).bestMove(b, TWO);
     assert.ok(move);
     assert.ok(!(move[0] === 10 && move[1] === 8),
       `${difficulty} played into the capture-win trap`);
+  }
+});
+
+// ----- Persona round 1 and 2 answers -----
+
+test('easy takes an available capture', () => {
+  // Round 1: Maya, Leo and Priya each finished their first game without
+  // a single capture happening, so Easy taught them the game was plain
+  // five-in-a-row. Easy must take a capture sitting in front of it:
+  // [AI][human][human][empty at (10,7)].
+  const b = board({ one: [[10, 5], [10, 6]], two: [[10, 4], [2, 2]] });
+  const move = new GameAI('easy', false).bestMove(b, TWO);
+  assert.ok(move);
+  assert.ok(move[0] === 10 && move[1] === 7,
+    `Easy walked past a free capture, got (${move[0]},${move[1]})`);
+});
+
+test('easy still wanders without a capture', () => {
+  // The other half of the rule: Easy takes what is there, it does not
+  // start hunting. With no capture available it must still be the
+  // wandering tier, not a greedy one.
+  const b = board({ one: [[10, 6], [10, 7]], two: [[2, 2]] });
+  const easy = new GameAI('easy', false);
+  const seen = new Set();
+  for (let i = 0; i < 25; i += 1) {
+    const m = easy.bestMove(b, TWO);
+    if (m) seen.add(`${m[0]},${m[1]}`);
+  }
+  assert.ok(seen.size > 1, 'Easy stopped wandering; it now plays one fixed move');
+});
+
+test('opening variety gives different games', () => {
+  // Round 2: Priya beat every tier by replaying one memorized line. A
+  // fresh Expert must not answer the same opening identically forever.
+  const b = new GameBoard();
+  b.place(ONE, 11, 11);
+  const expertVaried = new GameAI('expert');
+  const replies = new Set();
+  for (let i = 0; i < 25; i += 1) {
+    const m = expertVaried.bestMove(b, TWO);
+    if (m) replies.add(`${m[0]},${m[1]}`);
+  }
+  assert.ok(replies.size > 1,
+    'Expert answered the same opening identically every time - rematches are replays');
+});
+
+test('opening variety off is fully reproducible', () => {
+  // The flag the tests rely on: with variety off the same position must
+  // always give the same move, or every ladder guard is meaningless.
+  const b = new GameBoard();
+  b.place(ONE, 11, 11);
+  const fixed = new GameAI('expert', false);
+  const first = fixed.bestMove(b, TWO);
+  assert.ok(first);
+  for (let i = 0; i < 10; i += 1) {
+    const again = fixed.bestMove(b, TWO);
+    assert.ok(again[0] === first[0] && again[1] === first[1],
+      'openingVariety false was not reproducible');
+  }
+});
+
+test('opening variety never overrides a tactic', () => {
+  // Variety runs after the win/defend scans, so it must never appear in
+  // a position that has a tactic - even an almost-empty one. The human
+  // threatens five at (10,9) with only 4 stones on the board.
+  const b = board({ one: [[10, 5], [10, 6], [10, 7], [10, 8]] });
+  const varied = new GameAI('expert');
+  for (let i = 0; i < 10; i += 1) {
+    const move = varied.bestMove(b, TWO);
+    assert.ok(move);
+    assert.ok(move[0] === 10 && (move[1] === 4 || move[1] === 9),
+      `opening variety overrode a forced block, got (${move[0]},${move[1]})`);
   }
 });
 
@@ -165,7 +237,7 @@ test('all tiers avoid gifting a pair while blocking', () => {
     two: [[11, 8], [2, 2]],
   });
   for (const difficulty of ['medium', 'hard', 'expert']) {
-    const move = new GameAI(difficulty).bestMove(b, TWO);
+    const move = new GameAI(difficulty, false).bestMove(b, TWO);
     assert.ok(move);
     assert.ok(!(move[0] === 10 && move[1] === 8),
       `${difficulty}: blocked into a free capture at (10,8)`);
@@ -179,7 +251,7 @@ test('all tiers avoid gifting a pair while blocking', () => {
     one: [[10, 5], [10, 6], [10, 7], [12, 10], [13, 8]],
     two: [[11, 8], [12, 8], [11, 9]],
   });
-  const mediumMove = new GameAI('medium').bestMove(b2, TWO);
+  const mediumMove = new GameAI('medium', false).bestMove(b2, TWO);
   assert.ok(mediumMove);
   assert.ok(mediumMove[0] === 10 && mediumMove[1] === 4,
     `Medium: expected the safe block at (10,4), got (${mediumMove[0]},${mediumMove[1]})`);
@@ -238,8 +310,8 @@ test('expert beats medium head to head', () => {
   // Regression guard for the ladder itself: Expert must beat Medium (the
   // old Hard, pure greedy) in deterministic head-to-head play from both
   // seats. If a future tuning pass breaks this, the ladder has collapsed.
-  const expertAI = new GameAI('expert');
-  const mediumAI = new GameAI('medium');
+  const expertAI = new GameAI('expert', false);
+  const mediumAI = new GameAI('medium', false);
   assert.equal(playGame(expertAI, mediumAI), ONE,
     'Expert (moving first) failed to beat Medium');
   assert.equal(playGame(mediumAI, expertAI), TWO,
@@ -249,8 +321,8 @@ test('expert beats medium head to head', () => {
 test('hard beats medium head to head', () => {
   // The whole ladder, adjacent rungs. Deterministic pairings (no Easy)
   // must win from both seats.
-  const hardAI = new GameAI('hard');
-  const mediumAI = new GameAI('medium');
+  const hardAI = new GameAI('hard', false);
+  const mediumAI = new GameAI('medium', false);
   assert.equal(playGame(hardAI, mediumAI), ONE,
     'Hard (moving first) failed to beat Medium');
   assert.equal(playGame(mediumAI, hardAI), TWO,
@@ -260,8 +332,8 @@ test('hard beats medium head to head', () => {
 test('medium beats easy over a batch', () => {
   // Easy is random-among-top-8, so Medium gets a batch and a win-rate
   // floor instead of a single-game assertion.
-  const mediumAI = new GameAI('medium');
-  const easyAI = new GameAI('easy');
+  const mediumAI = new GameAI('medium', false);
+  const easyAI = new GameAI('easy', false);
   let mediumWins = 0;
   for (let i = 0; i < 10; i += 1) {
     const mediumFirst = i % 2 === 0;
@@ -287,7 +359,7 @@ test('blocks four instead of delaying capture', () => {
     two: [[10, 4], [11, 6]],
   });
   for (const difficulty of ['easy', 'medium', 'hard', 'expert']) {
-    const move = new GameAI(difficulty).bestMove(b, TWO);
+    const move = new GameAI(difficulty, false).bestMove(b, TWO);
     assert.ok(move);
     assert.ok(move[0] === 10 && move[1] === 9,
       `${difficulty}: expected the durable block at (10,9), got (${move[0]},${move[1]})`);
@@ -313,7 +385,7 @@ test('delaying capture is right when winning the pair race', () => {
   }
   assert.equal(b.captureCount[TWO], 3);
   for (const difficulty of ['hard', 'expert']) {
-    const move = new GameAI(difficulty).bestMove(b, TWO);
+    const move = new GameAI(difficulty, false).bestMove(b, TWO);
     assert.ok(move);
     assert.ok(move[0] === 8 && move[1] === 6,
       `${difficulty}: expected the race capture at (8,6), got (${move[0]},${move[1]})`);

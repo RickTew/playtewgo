@@ -83,7 +83,9 @@ filing anything from a /playtest run.
 - Plain JavaScript, not TypeScript, so the browser and Node run the same files.
 - Tests use Node's built-in runner: `npm test` (ports of the iOS
   GameBoardTests/GameStateTests/GameAITests plus progression tests,
-  44 total). Run them before every commit that touches `play/engine/`.
+  52 total). Run them before every commit that touches `play/engine/`.
+  Engine tests construct `new GameAI(tier, false)`: the second argument
+  turns OFF opening variety, without which the ladder guards are random.
 - Game auto-saves to localStorage via the same JSON state shape as the iOS
   multiplayer codec (`tewgo.web.game`, `tewgo.web.difficulty`).
 

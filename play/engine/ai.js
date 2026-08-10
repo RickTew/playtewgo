@@ -22,9 +22,19 @@ function idiv(a, b) {
 }
 
 export class GameAI {
-  /** @param {'easy'|'medium'|'hard'|'expert'} difficulty */
-  constructor(difficulty) {
+  /**
+   * @param {'easy'|'medium'|'hard'|'expert'} difficulty
+   * @param {boolean} openingVariety Persona round 2: Priya beat every
+   *   tier with one memorized line because the AI answered a given
+   *   opening identically forever ("rematches will feel like replays").
+   *   With this on, the first few replies are drawn at random from the
+   *   moves that score within a whisker of the best - variety where
+   *   nothing is at stake, and the midgame stays fully deterministic.
+   *   Tests that need reproducible games pass false.
+   */
+  constructor(difficulty, openingVariety = true) {
     this.difficulty = difficulty;
+    this.openingVariety = openingVariety;
   }
 
   /** Returns [row, col], or null when no legal move exists (board effectively full). */
@@ -47,11 +57,26 @@ export class GameAI {
       return this.#defenseMove(oppWinSquares, candidates, board, aiPlayer, opponent);
     }
 
+    // Nothing is at stake yet: vary the opening so a rematch is not a
+    // replay. Deliberately AFTER the win/defend scans so it can never
+    // override a tactic.
+    const opening = this.#openingMove(candidates, board, aiPlayer);
+    if (opening) return opening;
+
     // The 2026-08-04 ladder shift (experienced players cleared the whole
     // old ladder): every tier moved up one notch of the old ladder, and
     // Expert gained the threat search.
     switch (this.difficulty) {
       case 'easy': {
+        // Take a capture that is sitting right there, but never hunt for
+        // one. Persona round 1: Maya, Leo and Priya all finished their
+        // first game without a single capture happening, so Easy taught
+        // them the game was plain five-in-a-row. Easy is the tier that
+        // introduces the rules, so it has to demonstrate the signature
+        // one; it still wanders everywhere else.
+        const captures = this.#captureMoves(aiPlayer, board, candidates);
+        const capture = this.#scored(captures, board, aiPlayer)[0]?.[0];
+        if (capture) return capture;
         // Random among the top eight scored moves: wanders enough to be
         // beatable, but no longer plays outright nonsense.
         const top = this.#scored(candidates, board, aiPlayer).slice(0, 8).map((e) => e[0]);
@@ -373,6 +398,30 @@ export class GameAI {
   }
 
   // ----- Internals -----
+
+  // Opening variety, or null when this move should be played normally.
+  // Only fires while the board is nearly empty (at most 3 stones, so the
+  // AI's first reply and its second), and only picks among moves within
+  // a whisker of the best score, so the cost is never a worse move -
+  // early on, symmetry makes many squares score identically anyway.
+  #openingMove(candidates, board, aiPlayer) {
+    if (!this.openingVariety || this.#stoneCount(board) > 3) return null;
+    const ranked = this.#scored(candidates, board, aiPlayer);
+    const best = ranked[0]?.[1];
+    if (best === undefined) return null;
+    const floor = best - Math.max(40, Math.trunc(Math.abs(best) / 10));
+    const pool = ranked.slice(0, 6).filter((e) => e[1] >= floor);
+    if (pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)][0];
+  }
+
+  #stoneCount(board) {
+    let n = 0;
+    for (const row of board.grid) {
+      for (const v of row) if (v !== EMPTY) n += 1;
+    }
+    return n;
+  }
 
   #scored(candidates, board, aiPlayer) {
     return candidates
