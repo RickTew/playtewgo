@@ -38,6 +38,32 @@ repo is read-only reference from here; never edit it from this project.
   retune must change GameAI.swift + ai.js + both pinning tests together.
 tests/ai.test.js is the full 15-test port of GameAITests.swift (suite 44).
 
+## PLAYTEST NOTES
+Intended behavior a naive playtester would flag as bugs. Read before
+filing anything from a /playtest run.
+- Captures take EXACTLY a pair: two adjacent stones flanked on both
+  ends. Placing your own stone INTO a sandwich is SAFE, no self-capture
+  (official Pente rule; looks like a bug, is the rule).
+- Lines of three or more cannot be captured, only pairs.
+- Win is 5+ in a row (overline counts) OR 5 captured pairs.
+- Easy wanders on purpose (random among its top 8 scored moves); weak
+  Easy moves are design, not bugs.
+- The ladder is deliberate: Medium is greedy-best, Hard reads one reply
+  ahead, Expert runs the threat search and may defend a four by
+  capturing out of the line instead of blocking.
+- The board is 22x22 by design.
+- The world unlock ladder by games COMPLETED (win or lose) is intended,
+  locked cards included; Gold color scheme at 10 wins per theme, and
+  Gold stays play-earned even with the paid unlock.
+- Unlock All Worlds shows $2.59. Whether checkout charges depends on
+  which Stripe key is set (test-mode rehearsal passed 2026-08-10); a
+  528/503 "store not open" button is a known state, not a bug.
+- Automation gotchas: the FIRST click after a page load is sometimes
+  swallowed (click twice or wait 2s); audio.play() rejects without a
+  real human click, so silent audio under automation is expected;
+  python3 -m http.server hangs audio (no Range support), use the live
+  site.
+
 ## Tech decisions (2026-07-31)
 - **No build step, on purpose.** Plain ES modules served as-is by GitHub Pages
   (deploys from main branch root; CNAME = playtewgo.com). No bundler, no
