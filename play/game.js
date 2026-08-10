@@ -500,6 +500,19 @@ function drawStone(x, y, radius, player, alpha = 1) {
   const f = styleFor(player);
   if (variant === 'half' || variant === 'tall') {
     const rf = variant === 'tall' ? radius : radius * 0.68;
+    // Ground shadow at the TRUE intersection (PieceRenderer.makeFigure
+    // draws the same ellipse and the web port had dropped it). A standing
+    // figure's body overhangs the cell above, so without this anchor the
+    // occupied point reads as empty: persona round 2, Priya misread a
+    // stone by a full cell, believed the engine had a missed-capture bug,
+    // and lost ten minutes of trust to a lying sprite.
+    ctx.save();
+    ctx.globalAlpha = 0.35 * alpha;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(x, y + radius * 0.05, radius * 0.65, radius * 0.225, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
     drawFigure(ctx, kind, x, y + radius * 0.98, rf, alpha, { palette: f, finish });
     return;
   }
@@ -806,14 +819,33 @@ function drawShelf(side) {
 // Exactly one at a time. Opening the profile while the setup screen was
 // still up used to stack them, which read as a stuck window: two sets of
 // buttons layered, and the one you wanted scrolled out of reach.
+// Any overlay opening or closing clears the aim previews. Mobile browsers
+// fire a compatibility mouse-move at the tap point after an overlay
+// closes, which left the translucent ghost sitting on the board under the
+// button: persona round 2, Marcus tapped "Continue game" and thought his
+// resumed game had grown a phantom stone.
+function clearAim() {
+  if (hover !== null || touchAim !== null) {
+    hover = null;
+    touchAim = null;
+    draw();
+  }
+}
+
+function anyOverlayOpen() {
+  return document.querySelector('.overlay.show') !== null;
+}
+
 function presentOverlay(el) {
   for (const o of document.querySelectorAll('.overlay')) {
     o.classList.toggle('show', o === el);
   }
+  clearAim();
 }
 
 function closeOverlays() {
   for (const o of document.querySelectorAll('.overlay')) o.classList.remove('show');
+  clearAim();
 }
 
 function updateHud() {
@@ -999,9 +1031,26 @@ function placeAt(row, col) {
 }
 
 function handleTap(clientX, clientY) {
-  if (!canPlay()) return;
+  if (!canPlay()) {
+    // Silence during the AI's turn is indistinguishable from a dead UI
+    // or a missed tap (persona round 2, Priya). Say whose turn it is.
+    if (!gameOver && isAiGame() && current !== HUMAN) flashStatus('Wait for the AI to move');
+    return;
+  }
   const cell = cellAt(clientX, clientY);
   if (cell) placeAt(cell[0], cell[1]);
+}
+
+let statusFlashTimer = null;
+
+function flashStatus(text) {
+  statusEl.textContent = text;
+  statusEl.classList.add('flash');
+  if (statusFlashTimer !== null) clearTimeout(statusFlashTimer);
+  statusFlashTimer = setTimeout(() => {
+    statusEl.classList.remove('flash');
+    updateHud();
+  }, 1100);
 }
 
 function newGame() {
@@ -1096,7 +1145,9 @@ canvas.addEventListener('pointermove', (e) => {
     }
     return;
   }
-  const next = aimFromEvent(e);
+  // No ghost preview while a screen is up: the pointer is aiming at that
+  // screen's buttons, not at the board underneath it.
+  const next = anyOverlayOpen() ? null : aimFromEvent(e);
   const changed = (hover === null) !== (next === null)
     || (hover && next && (hover[0] !== next[0] || hover[1] !== next[1]));
   if (changed) {
@@ -1115,6 +1166,12 @@ canvas.addEventListener('pointerleave', () => {
 // New game goes through the setup screen (theme/mode/level first);
 // Play again is an instant rematch with the same settings.
 newGameEl.addEventListener('click', () => openSetup());
+
+// The victory screen covers the whole viewport on a phone, so the dock
+// underneath it is unreachable: persona round 2, Marcus had to start a
+// throwaway rematch just to reach the menu and change difficulty. The
+// way out lives on the screen that is covering everything.
+document.getElementById('overlaySetup')?.addEventListener('click', () => openSetup());
 playAgainEl.addEventListener('click', newGame);
 shareBtnEl.addEventListener('click', shareCard);
 introEl.addEventListener('pointerdown', () => {

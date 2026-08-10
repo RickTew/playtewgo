@@ -86,6 +86,7 @@
   }
   @keyframes shelfbump { 0% { transform: scale(1.06); } 100% { transform: scale(1); } }
   #status { color: var(--muted); text-align: center; margin-top: 6px; min-height: 1.2em; }
+  #status.flash { color: var(--gold); font-weight: 700; }
   .board-wrap {
     position: relative;
     width: var(--board-size);
@@ -572,6 +573,7 @@
       <div class="overlay-buttons">
         <button class="btn-gold" id="playAgain">Play again</button>
         <button class="btn-ghost" id="shareBtn">Share</button>
+        <button class="btn-ghost" id="overlaySetup">Change setup</button>
       </div>
     </div>
   </div>
