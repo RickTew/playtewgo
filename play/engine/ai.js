@@ -1,6 +1,10 @@
-// AI opponent. Direct port of TEWGO/Game/GameAI.swift (iOS repo),
-// including the 2026-06-11 upgrade: open-line scoring and the
-// capture-vulnerability penalty. Keep scoring weights in sync.
+// AI opponent. Direct port of TEWGO/Game/GameAI.swift (iOS repo) at
+// commit c6c8c11: the 2026-08-04 ladder (Easy = random top-8, Medium =
+// greedy, Hard = 2-ply veto lookahead, Expert = threat search), the
+// capture-out-of-line defense (99f8139), and the 2026-08-10 capture
+// economy (scaled pair values, capturedShapeLoss on capture replies).
+// Keep scoring weights in sync; the tables are pinned by tests on both
+// sides.
 
 import { GameBoard, SIZE, EMPTY, opponentOf } from './board.js';
 
@@ -12,8 +16,13 @@ function inB(r, c) {
   return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
 }
 
+// Swift integer division truncates toward zero; JS / does not.
+function idiv(a, b) {
+  return Math.trunc(a / b);
+}
+
 export class GameAI {
-  /** @param {'easy'|'medium'|'hard'} difficulty */
+  /** @param {'easy'|'medium'|'hard'|'expert'} difficulty */
   constructor(difficulty) {
     this.difficulty = difficulty;
   }
@@ -32,31 +41,283 @@ export class GameAI {
       if (b.checkWin(aiPlayer, r, c)) return [r, c];
     }
 
-    // Block opponent win
-    for (const [r, c] of candidates) {
-      const b = board.clone();
-      b.place(opponent, r, c);
-      if (b.checkWin(opponent, r, c)) return [r, c];
+    // Defend an opponent win next move.
+    const oppWinSquares = this.#winningSquares(opponent, board, candidates);
+    if (oppWinSquares.length > 0) {
+      return this.#defenseMove(oppWinSquares, candidates, board, aiPlayer, opponent);
     }
 
+    // The 2026-08-04 ladder shift (experienced players cleared the whole
+    // old ladder): every tier moved up one notch of the old ladder, and
+    // Expert gained the threat search.
     switch (this.difficulty) {
-      case 'easy':
-        return candidates[Math.floor(Math.random() * candidates.length)] ?? CENTER;
-
-      case 'medium': {
-        // Plays the best move most of the time, the runner-up sometimes.
-        // (Random among the top FOUR made it a pushover - the 3rd/4th
-        // choices are often outright blunders on a capture board.)
-        const top = this.#scored(candidates, board, aiPlayer).slice(0, 2).map((e) => e[0]);
-        if (top.length === 0) return CENTER;
-        if (top.length > 1 && Math.random() < 0.3) return top[1];
-        return top[0];
+      case 'easy': {
+        // Random among the top eight scored moves: wanders enough to be
+        // beatable, but no longer plays outright nonsense.
+        const top = this.#scored(candidates, board, aiPlayer).slice(0, 8).map((e) => e[0]);
+        return top[Math.floor(Math.random() * top.length)] ?? CENTER;
       }
 
-      case 'hard':
-      default:
+      case 'medium':
+        // The old Hard: the best greedy move every time, no lookahead.
         return this.#scored(candidates, board, aiPlayer)[0]?.[0] ?? CENTER;
+
+      case 'hard':
+        return this.#lookaheadMove(candidates, board, aiPlayer, opponent);
+
+      case 'expert':
+      default:
+        return this.#threatSearchMove(candidates, board, aiPlayer, opponent);
     }
+  }
+
+  // The opponent completes a win next move unless we act. Occupying the
+  // winning square is one defense; capturing a pair out of the threatened
+  // line is the other classic Pente answer, and banks a pair on top.
+  // Easy/Medium keep the simple block. Hard/Expert weigh every defense
+  // that actually defuses the threat with the 2-ply value: a capture
+  // through the middle of the line is taken (same defense plus a pair),
+  // but a capture off the END of the line is refused when it re-opens
+  // the line into an unstoppable open four (field games proved both
+  // cases: 2026-08-04 report + the Expert-vs-Medium ladder replay).
+  #defenseMove(oppWinSquares, candidates, board, aiPlayer, opponent) {
+    const bestBlock = this.#scored(oppWinSquares, board, aiPlayer)[0]?.[0] ?? null;
+    if (this.difficulty !== 'hard' && this.difficulty !== 'expert') return bestBlock;
+
+    const defenses = oppWinSquares.slice();
+    for (const m of this.#captureMoves(aiPlayer, board, candidates)) {
+      if (!defenses.some(([r, c]) => r === m[0] && c === m[1])) defenses.push(m);
+    }
+
+    let best = null;
+    let bestRank = -Infinity;
+    let bestScore = -Infinity;
+    for (const [r, c] of defenses) {
+      const b = board.clone();
+      const isCapture = b.place(aiPlayer, r, c).length > 0;
+      if (this.#winningSquares(opponent, b, this.#candidateMoves(b)).length > 0) continue;
+      // A defense is only "safe" if the opponent cannot answer it by
+      // building an open four we have no reply to. That is what
+      // separates the good capture (through the middle of the line)
+      // from the fatal one (off the end, re-opening the line).
+      const safe = !this.#allowsUndefusableOpenFour(b, aiPlayer, opponent);
+      const rank = (safe ? 2 : 0) + (safe && isCapture ? 1 : 0);
+      const s = this.#score(board, r, c, aiPlayer);
+      if (rank > bestRank || (rank === bestRank && s > bestScore)) {
+        bestRank = rank; bestScore = s; best = [r, c];
+      }
+    }
+    // Nothing fully defuses it (e.g. an unbreakable open four): take the
+    // best-scoring block and hope the opponent misses it.
+    return best ?? bestBlock;
+  }
+
+  // True when some opponent reply on this board creates an open four the
+  // AI cannot break with a win or a capture - i.e. a lost position.
+  #allowsUndefusableOpenFour(b, aiPlayer, opponent) {
+    for (const [r, c] of this.#candidateMoves(b)) {
+      const b2 = b.clone();
+      b2.place(opponent, r, c);
+      const four = this.#openFourCells(b2, opponent, r, c);
+      if (four && !this.#canDefuse(four, b2, aiPlayer)) return true;
+    }
+    return false;
+  }
+
+  // ----- Hard (2-ply veto lookahead, the original Expert) -----
+
+  // Greedy plus one question: "and then what?". Takes the top moves by
+  // the heuristic and, for each, finds the opponent's best reply on the
+  // resulting board. A move that hands the opponent an immediate win (a
+  // five, or a capture reaching 5 pairs) is vetoed outright.
+  #lookaheadMove(candidates, board, aiPlayer, opponent) {
+    const rootMoves = this.#scored(candidates, board, aiPlayer).slice(0, 12);
+    const fallback = rootMoves[0]?.[0];
+    if (!fallback) return CENTER;
+
+    let bestMove = fallback;
+    let bestValue = -Infinity;
+    for (const [move, myScore] of rootMoves) {
+      const b = board.clone();
+      b.place(aiPlayer, move[0], move[1]);
+
+      let oppWins = false;
+      let bestReply = 0;
+      for (const [r, c] of this.#candidateMoves(b)) {
+        const b2 = b.clone();
+        const caps = b2.place(opponent, r, c);
+        if (b2.checkWin(opponent, r, c)) { oppWins = true; break; }
+        const reply = this.#score(b, r, c, opponent)
+          + this.#capturedShapeLoss(caps, b, aiPlayer);
+        bestReply = Math.max(bestReply, reply);
+      }
+
+      // Reply discounted at 9/10 so the AI keeps the initiative on
+      // otherwise-equal trades instead of playing pure defense.
+      const value = oppWins ? -1000000 + myScore : myScore - idiv(bestReply * 9, 10);
+      if (value > bestValue) { bestValue = value; bestMove = move; }
+    }
+    return bestMove;
+  }
+
+  // ----- Expert (threat-aware 2-ply search) -----
+
+  // Hard's lookahead had three holes an experienced player farms:
+  // 1. Top-12 pruning could drop the only square that blocks an opponent
+  //    three, so the "block or lose" move never entered the search.
+  // 2. An opponent reply creating an OPEN four only subtracted points,
+  //    but an unbreakable open four IS a loss (two winning ends).
+  // 3. After the AI made a four the opponent was modeled as free to play
+  //    any quiet move, so forcing attacks looked weaker than they are.
+  // Expert fixes all three: opponent-hot squares are forced into the root
+  // set, an undefusable open four counts as lost, and forcing moves
+  // restrict the opponent to actual defenses (block the win square or
+  // capture out of the threat - real Pente tactics).
+  #threatSearchMove(candidates, board, aiPlayer, opponent) {
+    const ranked = this.#scored(candidates, board, aiPlayer);
+    const fallback = ranked[0]?.[0];
+    if (!fallback) return CENTER;
+
+    const roots = ranked.slice(0, 12).map((e) => e[0]);
+    for (const sq of this.#opponentFourSquares(board, opponent, candidates)) {
+      if (!roots.some(([r, c]) => r === sq[0] && c === sq[1])) roots.push(sq);
+    }
+
+    let bestMove = fallback;
+    let bestValue = -Infinity;
+    for (const move of roots) {
+      const myScore = this.#score(board, move[0], move[1], aiPlayer);
+      const b = board.clone();
+      b.place(aiPlayer, move[0], move[1]);
+      const value = this.#valueAfterMove(myScore, b, aiPlayer, opponent);
+      if (value > bestValue) { bestValue = value; bestMove = move; }
+    }
+    return bestMove;
+  }
+
+  // Board is AFTER the AI's candidate move; returns that move's value.
+  #valueAfterMove(myScore, b, aiPlayer, opponent) {
+    const replies = this.#candidateMoves(b);
+
+    // Opponent wins on the spot: vetoed no matter what we threatened.
+    if (this.#winningSquares(opponent, b, replies).length > 0) {
+      return -1000000 + myScore;
+    }
+
+    const myWins = this.#winningSquares(aiPlayer, b, replies);
+    if (myWins.length === 0) {
+      return this.#quietValue(myScore, b, replies, aiPlayer, opponent);
+    }
+
+    // Forcing move: we threaten to win next turn, so the opponent's only
+    // real options are occupying a winning square or capturing a pair to
+    // change the position. If no such answer kills EVERY threat, the
+    // game is won on the spot (e.g. an open four: two ends, one block).
+    const neutralizers = myWins.slice();
+    for (const m of this.#captureMoves(opponent, b, replies)) {
+      if (!neutralizers.some(([r, c]) => r === m[0] && c === m[1])) neutralizers.push(m);
+    }
+
+    let bestSurvivingReply = null;
+    for (const [r, c] of neutralizers) {
+      const b2 = b.clone();
+      const caps = b2.place(opponent, r, c);
+      const stillWinning = this.#winningSquares(aiPlayer, b2, this.#candidateMoves(b2)).length > 0;
+      if (!stillWinning) {
+        const replyScore = this.#score(b, r, c, opponent)
+          + this.#capturedShapeLoss(caps, b, aiPlayer);
+        bestSurvivingReply = Math.max(bestSurvivingReply ?? -Infinity, replyScore);
+      }
+    }
+    if (bestSurvivingReply === null) {
+      return 500000 + myScore; // every defense still loses
+    }
+    // Opponent escapes, but we spent their turn: small initiative bonus.
+    return myScore + 2000 - idiv(bestSurvivingReply * 9, 10);
+  }
+
+  // Value of a non-forcing move: the opponent may answer anywhere. An
+  // answer that builds an open four we cannot defuse is a loss, not a
+  // score - that exact gap is how the old Expert "fell for" open threes.
+  #quietValue(myScore, b, replies, aiPlayer, opponent) {
+    let bestReply = 0;
+    for (const [r, c] of replies) {
+      const b2 = b.clone();
+      const caps = b2.place(opponent, r, c);
+      let replyScore = this.#score(b, r, c, opponent)
+        + this.#capturedShapeLoss(caps, b, aiPlayer);
+      const four = this.#openFourCells(b2, opponent, r, c);
+      if (four && !this.#canDefuse(four, b2, aiPlayer)) {
+        replyScore = 300000;
+      }
+      bestReply = Math.max(bestReply, replyScore);
+      if (bestReply >= 300000) break;
+    }
+    return myScore - idiv(bestReply * 9, 10);
+  }
+
+  // Empty squares where `player` placing would win immediately
+  // (five in a row, or a capture reaching 5 pairs).
+  #winningSquares(player, board, candidates) {
+    return candidates.filter(([r, c]) => {
+      const b = board.clone();
+      b.place(player, r, c);
+      return b.checkWin(player, r, c);
+    });
+  }
+
+  // Empty squares where `player` placing captures at least one pair.
+  #captureMoves(player, board, candidates) {
+    return candidates.filter(([r, c]) => {
+      const b = board.clone();
+      return b.place(player, r, c).length > 0;
+    });
+  }
+
+  // Squares that are hot for the opponent: placing there would give them
+  // a line of 4+ (open three ends, gap squares of split threes, four
+  // extensions). These must survive root pruning as defensive options.
+  #opponentFourSquares(board, opponent, candidates) {
+    return candidates.filter(([r, c]) =>
+      LINE_DIRECTIONS.some(([dr, dc]) =>
+        this.#lineInfo(board, opponent, r, c, dr, dc)[0] >= 4));
+  }
+
+  // The four stones of an open four through (row, col) on the given
+  // board, or null if that placement made no open four.
+  #openFourCells(board, player, row, col) {
+    for (const [dr, dc] of LINE_DIRECTIONS) {
+      const cells = [[row, col]];
+      let open = 0;
+      for (const sign of [-1, 1]) {
+        let r = row + sign * dr, c = col + sign * dc;
+        while (inB(r, c) && board.grid[r][c] === player) {
+          cells.push([r, c]); r += sign * dr; c += sign * dc;
+        }
+        if (inB(r, c) && board.grid[r][c] === EMPTY) open += 1;
+      }
+      if (cells.length === 4 && open === 2) return cells;
+    }
+    return null;
+  }
+
+  // An open four is only actually lost if we cannot answer it: with our
+  // own immediate win, or a capture that removes one of its stones.
+  #canDefuse(fourCells, board, aiPlayer) {
+    const cands = this.#candidateMoves(board);
+    if (this.#winningSquares(aiPlayer, board, cands).length > 0) return true;
+    for (const [r, c] of cands) {
+      const b = board.clone();
+      const caps = b.place(aiPlayer, r, c);
+      if (caps.length === 0) continue;
+      for (const cap of caps) {
+        if (fourCells.some(([fr, fc]) =>
+          (fr === cap.row1 && fc === cap.col1) || (fr === cap.row2 && fc === cap.col2))) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   // ----- Internals -----
@@ -94,10 +355,12 @@ export class GameAI {
     const opponent = opponentOf(aiPlayer);
     let s = 0;
 
-    // Captures this move yields
+    // Captures this move yields - each pair is worth more the closer its
+    // taker already is to the 5-pair win.
+    const pairsHeldBefore = board.captureCount[aiPlayer];
     const b = board.clone();
     const captures = b.place(aiPlayer, row, col);
-    s += captures.length * 400;
+    s += captures.length * this.captureValue(pairsHeldBefore);
 
     // Capture count proximity to win
     if (b.captureCount[aiPlayer] >= 4) s += 2000; // one more pair wins
@@ -108,22 +371,75 @@ export class GameAI {
 
     // Block opponent lines - weighted at 3/4 so denying an open three
     // (2250) beats building our own closed three (500)
-    s += Math.floor((this.#bestLineScore(board, opponent, row, col) * 3) / 4);
+    s += idiv(this.#bestLineScore(board, opponent, row, col) * 3, 4);
 
-    // Capture threats created
-    s += this.#captureThreatCount(board, row, col, aiPlayer) * 150;
+    // Capture threats created - scaled like the capture itself (x3/8 of
+    // its value, i.e. the historical 150 at zero pairs)
+    s += this.#captureThreatCount(board, row, col, aiPlayer)
+      * idiv(this.captureValue(pairsHeldBefore) * 3, 8);
 
-    // Block opponent capture threats
-    s += this.#captureThreatCount(board, row, col, opponent) * 80;
+    // Block opponent capture threats against our own pairs - a quarter
+    // of what losing the pair would cost us (the flat 80 this replaced
+    // meant a set-up capture was almost never answered)
+    const oppCaptures = b.captureCount[opponent];
+    s += this.#captureThreatCount(board, row, col, opponent)
+      * idiv(this.vulnerablePairPenalty(oppCaptures), 4);
 
     // Don't hand the opponent free pairs: penalize every capturable pair
     // this move creates. With 5 pairs as a win condition this is the
-    // difference between a challenge and a farm. Near opponent capture
-    // win, a vulnerable pair is potentially game-losing.
-    const vulnerablePenalty = b.captureCount[opponent] >= 4 ? 5000 : 350;
-    s -= this.vulnerablePairCount(b, row, col, aiPlayer) * vulnerablePenalty;
+    // difference between a challenge and a farm.
+    s -= this.vulnerablePairCount(b, row, col, aiPlayer)
+      * this.vulnerablePairPenalty(oppCaptures);
 
     return s;
+  }
+
+  // ----- Capture economy (keep in sync with TEWGO/Game/GameAI.swift) -----
+
+  // Worth of taking one pair when the taker has already banked
+  // `pairsHeld`. Five pairs win, so each pair matters more than the one
+  // before; at 4 the capture IS the win (normally caught by checkWin
+  // before scoring, so 20000 is a search-path backstop).
+  captureValue(pairsHeld) {
+    switch (pairsHeld) {
+      case 0: return 400;
+      case 1: return 550;
+      case 2: return 800;
+      case 3: return 1200;
+      default: return 20000;
+    }
+  }
+
+  // Cost of leaving a freshly placed pair capturable, scaled by how many
+  // pairs the opponent has banked. The flat 350 this replaced was cheaper
+  // than a closed three (500), so any shape-building move happily parked
+  // a pair in front of an opponent stone ("here, take my pieces" - field
+  // report 2026-08-10). Losing a pair costs the stones, banks the
+  // opponent a pair toward 5, AND hands back tempo, so even at 0 pairs
+  // it must outweigh small shapes; at 4 pairs it is the lost game
+  // (30000 tops even an open four's 20000).
+  vulnerablePairPenalty(oppPairsHeld) {
+    switch (oppPairsHeld) {
+      case 0: return 1000;
+      case 1: return 1400;
+      case 2: return 2000;
+      case 3: return 3200;
+      default: return 30000;
+    }
+  }
+
+  // What the AI loses in shape when an opponent reply captures its
+  // stones: the best line each captured pair was holding on the
+  // pre-capture board. Without this the searches priced a capture reply
+  // at its flat pair value, so "I make an open three, you capture it"
+  // looked like a winning trade when it actually loses the shape, banks
+  // the opponent a pair, and hands over tempo. max() per capture, not a
+  // sum of both stones: both stones of a pair usually hold the same
+  // line, summing would double-count.
+  #capturedShapeLoss(captures, board, aiPlayer) {
+    return captures.reduce((sum, cap) =>
+      sum + Math.max(this.#bestLineScore(board, aiPlayer, cap.row1, cap.col1),
+                     this.#bestLineScore(board, aiPlayer, cap.row2, cap.col2)), 0);
   }
 
   #lineScore(len, openEnds) {

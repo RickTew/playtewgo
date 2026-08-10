@@ -1749,7 +1749,7 @@ window.addEventListener('resize', () => {
 
 try {
   const savedDifficulty = localStorage.getItem(DIFFICULTY_KEY);
-  if (savedDifficulty && ['easy', 'medium', 'hard'].includes(savedDifficulty)) {
+  if (savedDifficulty && ['easy', 'medium', 'hard', 'expert'].includes(savedDifficulty)) {
     difficultyEl.value = savedDifficulty;
   }
   const savedMode = localStorage.getItem(MODE_KEY);

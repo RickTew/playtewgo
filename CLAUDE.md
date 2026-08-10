@@ -19,18 +19,24 @@ pushed. Ask Rick if it should get a GitHub remote. `play/engine/` is a direct Ja
 Any rule or AI change must land in BOTH engines with matching tests. The iOS
 repo is read-only reference from here; never edit it from this project.
 
-## TODO next session (2026-08-04)
-Port the iOS capture-defense fix to `play/engine/ai.js`. iOS commit 99f8139
-in `~/Dev/TEWGO`: the old "block opponent win" step returned the first
-blocking square before any capture was considered. New behavior: when the
-opponent threatens to complete a win, gather blocking squares PLUS capture
-moves, keep only defenses that leave the opponent with no immediate win, and
-(top tiers only) rank safe captures above safe blocks. "Safe" = the opponent
-cannot reply by rebuilding an open four the AI cannot break (a capture off
-the END of a line re-opens the line and loses; only a middle capture is
-safe). Port the regression test testDefendsFourByCapturingInsteadOfBlocking
-from GameAITests too. See defenseMove/allowsUndefusableOpenFour in
-`TEWGO/Game/GameAI.swift`.
+## AI parity (2026-08-10): full port of GameAI.swift @ c6c8c11
+`play/engine/ai.js` now mirrors the iOS AI completely, in one pass:
+- The 2026-08-04 ladder: Easy = random of top-8 scored, Medium = pure
+  greedy (the old Hard), Hard = 2-ply veto lookahead, Expert = threat
+  search. Expert is a NEW web tier (both difficulty selects + saved-value
+  whitelist in game.js updated); saved easy/medium/hard values still load
+  but now mean the new ladder rungs.
+- iOS 99f8139 capture-defense: defenseMove gathers blocks PLUS captures,
+  keeps only defenses leaving no immediate opponent win, and Hard/Expert
+  rank safe captures above safe blocks (allowsUndefusableOpenFour is the
+  load-bearing safety check; end-captures that re-open the line lose).
+- iOS c6c8c11 capture economy: captureValue [400,550,800,1200,20000] by
+  taker's banked pairs, vulnerablePairPenalty [1000,1400,2000,3200,30000]
+  by opponent's banked pairs, threat weights derived from those tables,
+  capturedShapeLoss added to capture replies in all three search paths.
+  Tables pinned by the 'capture economy tables' test on both sides; any
+  retune must change GameAI.swift + ai.js + both pinning tests together.
+tests/ai.test.js is the full 15-test port of GameAITests.swift (suite 44).
 
 ## Tech decisions (2026-07-31)
 - **No build step, on purpose.** Plain ES modules served as-is by GitHub Pages
@@ -40,7 +46,7 @@ from GameAITests too. See defenseMove/allowsUndefusableOpenFour in
 - Plain JavaScript, not TypeScript, so the browser and Node run the same files.
 - Tests use Node's built-in runner: `npm test` (ports of the iOS
   GameBoardTests/GameStateTests/GameAITests plus progression tests,
-  28 total). Run them before every commit that touches `play/engine/`.
+  44 total). Run them before every commit that touches `play/engine/`.
 - Game auto-saves to localStorage via the same JSON state shape as the iOS
   multiplayer codec (`tewgo.web.game`, `tewgo.web.difficulty`).
 

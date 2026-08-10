@@ -1,4 +1,4 @@
-// Port of TEWGOTests/GameAITests.swift (iOS repo).
+// Port of TEWGOTests/GameAITests.swift (iOS repo) at commit c6c8c11.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,6 +6,7 @@ import { GameBoard, ONE, TWO } from '../play/engine/board.js';
 import { GameAI } from '../play/engine/ai.js';
 
 const ai = new GameAI('hard');
+const expert = new GameAI('expert');
 
 // Build a board by placing stones; positions chosen so no captures fire.
 function board({ one = [], two = [] } = {}) {
@@ -74,6 +75,195 @@ test('avoids creating free capture', () => {
   assert.ok(move);
   const [r, c] = move;
   assert.ok(!(r === 10 && c === 6), 'AI created a free capture for the opponent');
+});
+
+// ----- Expert (2-ply) -----
+
+test('expert takes immediate line win', () => {
+  const b = board({
+    one: [[2, 2], [3, 3], [4, 4]],
+    two: [[10, 5], [10, 6], [10, 7], [10, 8]],
+  });
+  const move = expert.bestMove(b, TWO);
+  assert.ok(move);
+  const [r, c] = move;
+  assert.ok(r === 10 && (c === 9 || c === 4), `expected winning move, got (${r},${c})`);
+});
+
+test('expert blocks immediate line win', () => {
+  const b = board({
+    one: [[10, 5], [10, 6], [10, 7], [10, 8]],
+    two: [[2, 2], [3, 3], [4, 4]],
+  });
+  const move = expert.bestMove(b, TWO);
+  assert.ok(move);
+  const [r, c] = move;
+  assert.ok(r === 10 && (c === 4 || c === 9), `expected block at an end, got (${r},${c})`);
+});
+
+test('expert avoids capture-win trap', () => {
+  // Human (ONE) sits at 4 captured pairs. AI (TWO) has a three at
+  // (10,5)-(10,7); extending to (10,8) makes an open four (the greedy
+  // dream move) BUT pairs the new stone with (11,8) under the human
+  // stone at (12,8) - the human reply (9,8) captures the pair for the
+  // 5th pair and wins on the spot. Until 2026-08-10 the one-ply eval
+  // took the bait (open four 20000 minus flat penalty 5000 topped the
+  // list) and only the 2-ply tiers could refuse; the scaled
+  // vulnerablePairPenalty (30000 at four opponent pairs) now makes
+  // every scoring tier refuse the game-losing pair outright.
+  const b = new GameBoard();
+  for (const [r, c] of [[10, 5], [10, 6], [10, 7], [11, 8]]) b.place(TWO, r, c);
+  for (const [r, c] of [[10, 3], [12, 8]]) b.place(ONE, r, c);
+  // Manufacture 4 prior pairs for the human by replaying real captures
+  // far from the trap rows.
+  for (let i = 0; i < 4; i += 1) {
+    const r = i * 2;
+    b.place(ONE, r, 14);
+    b.place(TWO, r, 15);
+    b.place(TWO, r, 16);
+    b.place(ONE, r, 17); // captures the pair
+  }
+  assert.equal(b.captureCount[ONE], 4);
+
+  for (const difficulty of ['medium', 'hard', 'expert']) {
+    const move = new GameAI(difficulty).bestMove(b, TWO);
+    assert.ok(move);
+    assert.ok(!(move[0] === 10 && move[1] === 8),
+      `${difficulty} played into the capture-win trap`);
+  }
+});
+
+// ----- Capture economy (2026-08-10 pair-gifting fix) -----
+
+test('capture economy tables', () => {
+  // Pins the scaled weight tables so they mirror GameAI.swift exactly
+  // and any retune on either side is loud.
+  assert.deepEqual([0, 1, 2, 3, 4].map((n) => ai.captureValue(n)),
+    [400, 550, 800, 1200, 20000]);
+  assert.deepEqual([0, 1, 2, 3, 4].map((n) => ai.vulnerablePairPenalty(n)),
+    [1000, 1400, 2000, 3200, 30000]);
+  // The penalty must always exceed a closed three (500) so shape
+  // hunting never parks a pair for free, and at four opponent pairs it
+  // must exceed even an open four (20000) - the capture wins the game.
+  assert.ok(ai.vulnerablePairPenalty(0) > 500);
+  assert.ok(ai.vulnerablePairPenalty(4) > 20000);
+});
+
+test('all tiers avoid gifting a pair while blocking', () => {
+  // Field report 2026-08-10: Expert placed pairs directly into
+  // capturable positions. Both ends of the human open three at
+  // (10,5)-(10,7) block it equally, but blocking at (10,8) pairs the
+  // new stone with the AI stone at (11,8) over the human stone at
+  // (12,8) - a free capture at (9,8). Every tier that scores moves
+  // must pick the safe end at (10,4) instead.
+  const b = board({
+    one: [[10, 5], [10, 6], [10, 7], [12, 8]],
+    two: [[11, 8], [2, 2]],
+  });
+  for (const difficulty of ['medium', 'hard', 'expert']) {
+    const move = new GameAI(difficulty).bestMove(b, TWO);
+    assert.ok(move);
+    assert.ok(!(move[0] === 10 && move[1] === 8),
+      `${difficulty}: blocked into a free capture at (10,8)`);
+  }
+
+  // Stronger position: under the old flat 350 penalty greedy Medium
+  // provably gifted a pair here (shape bonuses at (10,8) and (11,7)
+  // both outweighed the safe block at (10,4) by hundreds of points);
+  // the scaled penalty makes the safe block win outright.
+  const b2 = board({
+    one: [[10, 5], [10, 6], [10, 7], [12, 10], [13, 8]],
+    two: [[11, 8], [12, 8], [11, 9]],
+  });
+  const mediumMove = new GameAI('medium').bestMove(b2, TWO);
+  assert.ok(mediumMove);
+  assert.ok(mediumMove[0] === 10 && mediumMove[1] === 4,
+    `Medium: expected the safe block at (10,4), got (${mediumMove[0]},${mediumMove[1]})`);
+});
+
+test('expert blocks open three despite distractions', () => {
+  // Human open three at (10,6)-(10,8), both ends free with room: one
+  // more human stone makes an open four (a won game). The AI gets four
+  // separate open pairs, so a dozen of ITS moves outscore the humble
+  // block at 1-ply - exactly the pruning hole that made the first
+  // Expert "ignore" open threes. The only non-losing answers sit on
+  // row 10 next to the three.
+  const b = board({
+    one: [[10, 6], [10, 7], [10, 8]],
+    two: [[3, 3], [3, 4], [5, 15], [5, 16], [16, 4], [16, 5], [14, 14], [14, 15]],
+  });
+  const move = expert.bestMove(b, TWO);
+  assert.ok(move);
+  const answers = [[10, 4], [10, 5], [10, 9], [10, 10]];
+  assert.ok(answers.some(([r, c]) => r === move[0] && c === move[1]),
+    `expected a block on row 10, got (${move[0]},${move[1]})`);
+});
+
+test('expert completes open three to open four', () => {
+  // AI open three at (10,5)-(10,7) with both ends and the squares
+  // beyond them free; the human has only quiet stones. Extending to
+  // (10,4) or (10,8) makes an open four: two winning ends, no capture
+  // available to break it - a won game Expert must recognize and take.
+  const b = board({
+    one: [[2, 2], [2, 15]],
+    two: [[10, 5], [10, 6], [10, 7]],
+  });
+  const move = expert.bestMove(b, TWO);
+  assert.ok(move);
+  assert.ok(move[0] === 10 && (move[1] === 4 || move[1] === 8),
+    `expected the open four at (10,4)/(10,8), got (${move[0]},${move[1]})`);
+});
+
+test('expert beats medium head to head', () => {
+  // Regression guard for the ladder itself: Expert must beat Medium (the
+  // old Hard, pure greedy) in deterministic head-to-head play from both
+  // seats. If a future tuning pass breaks this, the ladder has collapsed.
+  function playGame(first, second) {
+    const b = new GameBoard();
+    let current = ONE;
+    const ais = { [ONE]: first, [TWO]: second };
+    for (let i = 0; i < 22 * 22; i += 1) {
+      const mv = ais[current].bestMove(b, current);
+      if (!mv) return null;
+      b.place(current, mv[0], mv[1]);
+      if (b.checkWin(current, mv[0], mv[1])) return current;
+      current = current === ONE ? TWO : ONE;
+    }
+    return null;
+  }
+  const expertAI = new GameAI('expert');
+  const mediumAI = new GameAI('medium');
+  assert.equal(playGame(expertAI, mediumAI), ONE,
+    'Expert (moving first) failed to beat Medium');
+  assert.equal(playGame(mediumAI, expertAI), TWO,
+    'Expert (moving second) failed to beat Medium');
+});
+
+test('defends four by capturing instead of blocking', () => {
+  // Field report 2026-08-04: Expert answered a human four with the bare
+  // end block even though a capture would break the line AND bank a
+  // pair. Human (ONE) four at (10,5)-(10,8), left end already blocked
+  // by AI at (10,4), so (10,9) completes five. Human also has (9,6);
+  // AI has (11,6): playing (8,6) captures the (9,6)/(10,6) pair, which
+  // rips (10,6) out of the MIDDLE of the four (safe - the line cannot
+  // re-form through an occupied end). Hard and Expert must take the
+  // capture; Easy and Medium keep the simple block.
+  const b = board({
+    one: [[10, 5], [10, 6], [10, 7], [10, 8], [9, 6]],
+    two: [[10, 4], [11, 6]],
+  });
+  for (const difficulty of ['hard', 'expert']) {
+    const move = new GameAI(difficulty).bestMove(b, TWO);
+    assert.ok(move);
+    assert.ok(move[0] === 8 && move[1] === 6,
+      `${difficulty}: expected defusing capture at (8,6), got (${move[0]},${move[1]})`);
+  }
+  for (const difficulty of ['easy', 'medium']) {
+    const move = new GameAI(difficulty).bestMove(b, TWO);
+    assert.ok(move);
+    assert.ok(move[0] === 10 && move[1] === 9,
+      `${difficulty}: expected the plain block at (10,9), got (${move[0]},${move[1]})`);
+  }
 });
 
 test('capture win is taken', () => {
