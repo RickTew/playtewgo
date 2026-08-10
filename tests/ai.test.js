@@ -269,30 +269,50 @@ test('medium beats easy over a batch', () => {
     `Medium won only ${mediumWins}/10 vs Easy - the bottom of the ladder has collapsed`);
 });
 
-test('defends four by capturing instead of blocking', () => {
-  // Field report 2026-08-04: Expert answered a human four with the bare
-  // end block even though a capture would break the line AND bank a
-  // pair. Human (ONE) four at (10,5)-(10,8), left end already blocked
-  // by AI at (10,4), so (10,9) completes five. Human also has (9,6);
-  // AI has (11,6): playing (8,6) captures the (9,6)/(10,6) pair, which
-  // rips (10,6) out of the MIDDLE of the four (safe - the line cannot
-  // re-form through an occupied end). Hard and Expert must take the
-  // capture; Easy and Medium keep the simple block.
+test('blocks four instead of delaying capture', () => {
+  // Field report 2026-08-10 (supersedes the 2026-08-04 capture-first
+  // rule): Human (ONE) four at (10,5)-(10,8), left end blocked by AI
+  // at (10,4), so (10,9) completes five. Capturing the (9,6)/(10,6)
+  // pair via (8,6) rips (10,6) out of the four, but the human just
+  // replays (10,6) and the four re-forms with (10,9) still open - the
+  // capture bought one move and solved nothing ("this strategy is
+  // failure", Rick, after beating Expert with exactly this rebuild).
+  // The block at (10,9) kills the line forever. Every tier blocks.
   const b = board({
     one: [[10, 5], [10, 6], [10, 7], [10, 8], [9, 6]],
     two: [[10, 4], [11, 6]],
   });
+  for (const difficulty of ['easy', 'medium', 'hard', 'expert']) {
+    const move = new GameAI(difficulty).bestMove(b, TWO);
+    assert.ok(move);
+    assert.ok(move[0] === 10 && move[1] === 9,
+      `${difficulty}: expected the durable block at (10,9), got (${move[0]},${move[1]})`);
+  }
+});
+
+test('delaying capture is right when winning the pair race', () => {
+  // Same position as the block test, but the AI already banked 3
+  // pairs. Now the delaying capture is correct for Hard/Expert: it
+  // brings the AI to 4 pairs, so the rebuild exchange the human wants
+  // IS the AI's own win condition (the next capture ends the game).
+  const b = new GameBoard();
+  for (const [r, c] of [[10, 5], [10, 6], [10, 7], [10, 8], [9, 6]]) b.place(ONE, r, c);
+  for (const [r, c] of [[10, 4], [11, 6]]) b.place(TWO, r, c);
+  // Manufacture 3 prior pairs for the AI by replaying real captures
+  // far from the trap rows.
+  for (let i = 0; i < 3; i += 1) {
+    const r = i * 2;
+    b.place(TWO, r, 14);
+    b.place(ONE, r, 15);
+    b.place(ONE, r, 16);
+    b.place(TWO, r, 17); // captures the pair
+  }
+  assert.equal(b.captureCount[TWO], 3);
   for (const difficulty of ['hard', 'expert']) {
     const move = new GameAI(difficulty).bestMove(b, TWO);
     assert.ok(move);
     assert.ok(move[0] === 8 && move[1] === 6,
-      `${difficulty}: expected defusing capture at (8,6), got (${move[0]},${move[1]})`);
-  }
-  for (const difficulty of ['easy', 'medium']) {
-    const move = new GameAI(difficulty).bestMove(b, TWO);
-    assert.ok(move);
-    assert.ok(move[0] === 10 && move[1] === 9,
-      `${difficulty}: expected the plain block at (10,9), got (${move[0]},${move[1]})`);
+      `${difficulty}: expected the race capture at (8,6), got (${move[0]},${move[1]})`);
   }
 });
 

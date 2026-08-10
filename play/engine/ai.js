@@ -75,11 +75,17 @@ export class GameAI {
   // winning square is one defense; capturing a pair out of the threatened
   // line is the other classic Pente answer, and banks a pair on top.
   // Easy/Medium keep the simple block. Hard/Expert weigh every defense
-  // that actually defuses the threat with the 2-ply value: a capture
-  // through the middle of the line is taken (same defense plus a pair),
-  // but a capture off the END of the line is refused when it re-opens
-  // the line into an unstoppable open four (field games proved both
-  // cases: 2026-08-04 report + the Expert-vs-Medium ladder replay).
+  // that actually defuses the threat: a capture off the END of the line
+  // is refused when it re-opens the line into an unstoppable open four
+  // (2026-08-04), and since the 2026-08-10 field report a capture is
+  // preferred over a block ONLY when it is durable or wins the pair
+  // race. Rick's rebuild proof: capture two stones out of a four and
+  // the opponent just replaces one, four again, the "defense" bought
+  // one move and solved nothing. A block occupies the winning square
+  // forever. So a DELAYING capture (opponent can re-threaten an
+  // immediate win with a single reply) outranks a block only when it
+  // brings the AI to 4+ banked pairs, where the forced capture
+  // exchange IS the AI's own win condition.
   #defenseMove(oppWinSquares, candidates, board, aiPlayer, opponent) {
     const bestBlock = this.#scored(oppWinSquares, board, aiPlayer)[0]?.[0] ?? null;
     if (this.difficulty !== 'hard' && this.difficulty !== 'expert') return bestBlock;
@@ -89,27 +95,73 @@ export class GameAI {
       if (!defenses.some(([r, c]) => r === m[0] && c === m[1])) defenses.push(m);
     }
 
+    // Evaluate each defense once; durability is only computed when a
+    // safe capture exists, because that is the only comparison it can
+    // change (it is the expensive check).
+    const evaluated = [];
+    for (const [r, c] of defenses) {
+      const b = board.clone();
+      const caps = b.place(aiPlayer, r, c);
+      if (this.#winningSquares(opponent, b, this.#candidateMoves(b)).length > 0) continue;
+      // A defense is only "safe" if the opponent cannot answer it by
+      // building an open four we have no reply to.
+      const safe = !this.#allowsUndefusableOpenFour(b, aiPlayer, opponent);
+      evaluated.push({
+        move: [r, c],
+        isCapture: caps.length > 0,
+        postCapturePairs: b.captureCount[aiPlayer],
+        safe,
+        score: this.#score(board, r, c, aiPlayer),
+        boardAfter: b,
+      });
+    }
+
+    const needDurability = evaluated.some((d) => d.safe && d.isCapture);
+
     let best = null;
     let bestRank = -Infinity;
     let bestScore = -Infinity;
-    for (const [r, c] of defenses) {
-      const b = board.clone();
-      const isCapture = b.place(aiPlayer, r, c).length > 0;
-      if (this.#winningSquares(opponent, b, this.#candidateMoves(b)).length > 0) continue;
-      // A defense is only "safe" if the opponent cannot answer it by
-      // building an open four we have no reply to. That is what
-      // separates the good capture (through the middle of the line)
-      // from the fatal one (off the end, re-opening the line).
-      const safe = !this.#allowsUndefusableOpenFour(b, aiPlayer, opponent);
-      const rank = (safe ? 2 : 0) + (safe && isCapture ? 1 : 0);
-      const s = this.#score(board, r, c, aiPlayer);
-      if (rank > bestRank || (rank === bestRank && s > bestScore)) {
-        bestRank = rank; bestScore = s; best = [r, c];
+    for (const d of evaluated) {
+      let rank = 0;
+      if (d.safe) {
+        const durable = needDurability
+          ? !this.#opponentRethreatens(d.boardAfter, aiPlayer, opponent)
+          : true;
+        if (d.isCapture) {
+          // A durable capture (or one that puts the AI at 4+ pairs,
+          // where the exchange is its own win condition) is the best
+          // defense there is. A delaying capture drops BELOW a durable
+          // block (Rick's rebuild proof) but stays above a delaying
+          // block: if every defense is temporary, the one that banks a
+          // pair is better.
+          rank = (durable || d.postCapturePairs >= 4) ? 4 : 2;
+        } else {
+          rank = durable ? 3 : 1;
+        }
+      }
+      if (rank > bestRank || (rank === bestRank && d.score > bestScore)) {
+        bestRank = rank; bestScore = d.score; best = d.move;
       }
     }
     // Nothing fully defuses it (e.g. an unbreakable open four): take the
     // best-scoring block and hope the opponent misses it.
     return best ?? bestBlock;
+  }
+
+  // After a defense (already placed on `b`), true if the opponent can
+  // re-establish an immediate winning threat with a single reply - the
+  // defense only delayed the threat. The classic case: two stones
+  // captured out of a four are replaced by one stone and the four
+  // re-forms with its winning square still open.
+  #opponentRethreatens(b, aiPlayer, opponent) {
+    for (const [r, c] of this.#candidateMoves(b)) {
+      const b2 = b.clone();
+      b2.place(opponent, r, c);
+      if (this.#winningSquares(opponent, b2, this.#candidateMoves(b2)).length > 0) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // True when some opponent reply on this board creates an open four the
