@@ -87,11 +87,24 @@ alternating seats, opening variety ON as players get it:
 | Expert vs Medium | Expert 68% (fine) | Expert 2.3, Medium 4.0 |
 | Medium vs Easy | Medium 90% (fine) | Medium 1.1, Easy 0.5 |
 
-So **Hard is currently the weakest rung**, worse than Easy, and a player
-choosing it gets a softer opponent. Expert and Medium are healthy. The
-cause is the pair leak Frank found, concentrated in the LOOKAHEAD tier:
-Hard hangs pairs (4.3 a game against Easy, which now takes free
-captures) in a way Medium's plain greedy scoring does not.
+So **Hard is the weakest rung IN AI VS AI PLAY** and is farmable by a
+capture-aware opponent. Expert and Medium are healthy. The cause is the
+pair leak Frank found, concentrated in the LOOKAHEAD tier: Hard hangs
+pairs (4.3 a game against Easy, which now takes free captures) in a way
+Medium's plain greedy scoring does not.
+
+**Say the farmable claim, not the human one.** Every number above is AI
+vs AI. It does NOT follow that a human picking Hard meets a softer
+opponent than one picking Easy: the human is not Easy, and against a
+human Hard still brings its 2-ply blocking. Nobody has measured human vs
+AI. I asserted the stronger version to Rick on 2026-08-11 and it was an
+overreach; the iOS session caught it.
+
+Best lead for the fix, from the vs-Easy split: the misvaluation gets
+WORSE as the opponent's replies get weaker. `lookaheadMove` subtracts
+the opponent's raw best reply, which is a smaller number when the
+opponent is weak, so it penalises the AI's own good moves least against
+strong opposition and most against weak. Testable next session.
 
 **Our one-game ladder guards PASS while this is true**, so they are
 false confidence, not evidence. `hard beats medium head to head` proves
