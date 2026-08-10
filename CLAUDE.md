@@ -259,23 +259,30 @@ separate infrastructure, not a build step):
   actions: checkout, verify, restore. Talks to Stripe's REST API
   directly, so there is no SDK to keep current.
 
-**⚠️ PRICE CHANGED 2026-08-10, DEPLOY BEFORE OPENING THE STORE.** The
-repo source now charges 259 cents but the DEPLOYED function still has
-499: the redeploy was blocked by the permission classifier. Before (or
-with) setting the Stripe key, redeploy so label and charge match:
-```
-supabase functions deploy tewgo-unlock --project-ref guwquufbifuzmphcdsdt
-```
+**TEST REHEARSAL PASSED 2026-08-10.** Function redeployed at 259 cents,
+checkout page showed $2.59 (and adaptive THB), Rick paid with the 4242
+card, verify minted TEWGO-JJPP-CPDN into tewgo.unlocks (amount_total
+259), restore accepts it, wrong codes 404, re-verify returns the same
+code, and /play/?unlock=cs_... applied PRO with 8/8 worlds. Two fixes
+were needed and are DONE, remember them for the next schema:
+- The `tewgo` schema was not in PostgREST's exposed list and
+  service_role had no grants, so verify 500'd AFTER Stripe took the
+  money. Fixed by grants + `alter role authenticator set
+  pgrst.db_schemas = 'public, graphql_public, astro_hold, tewgo'` +
+  `notify pgrst, 'reload config'` AND `notify pgrst, 'reload schema'`
+  (config reload alone leaves a stale schema cache, PGRST205).
+- The key is a RESTRICTED Stripe key named TEWGO (Checkout Sessions:
+  Write only), matching Rick's per-project key pattern, currently the
+  rk_test_ one made in the sandbox on 2026-08-10.
 
-**THE REMAINING STEP, and only Rick can do it:**
+**GOING LIVE, the only remaining steps, Rick's alone:** create the same
+TEWGO restricted key in LIVE mode (Checkout Sessions: Write), then in
+his OWN Terminal (never in chat, never to Claude):
 ```
-supabase secrets set STRIPE_SECRET_KEY=sk_test_... --project-ref guwquufbifuzmphcdsdt
+supabase secrets set STRIPE_SECRET_KEY=rk_live_... --project-ref guwquufbifuzmphcdsdt
 ```
-Test key first to rehearse the whole flow with Stripe's 4242 test card,
-then the live key to actually sell. Never ask Claude to handle the live
-key. Until it is set, the function returns 503 `not_configured` and the
-button says "The store is not open yet", which is the intended honest
-failure.
+Then update the "not on sale yet" wording on updates.html. Until then
+the store sells test-mode only.
 
 **Rules that must not be softened:**
 - The browser is NEVER the authority on payment. `tewgo.web.pro` is a
