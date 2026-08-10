@@ -1,0 +1,10 @@
+
+# Internal working notes stay on this machine. GitHub Pages requires
+# this repo to be PUBLIC, so anything committed here is world-readable:
+# the playtest reports are candid critique of the product, and CLAUDE.md
+# is working notes about infrastructure and business decisions. Neither
+# belongs on a public site (2026-08-11).
+CLAUDE.md
+playtest/reports/
+THEME_CHECKLIST.md
+supabase/.temp/
