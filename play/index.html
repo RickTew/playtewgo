@@ -347,6 +347,11 @@
     animation: bannerpop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
   }
   @keyframes bannerpop { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .picker-toggle {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin: 4px 0 12px; font-size: 13px; color: var(--text); cursor: pointer;
+  }
+  .picker-toggle input { accent-color: var(--gold); width: 16px; height: 16px; }
   .capture-tip {
     display: none;
     position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -652,6 +657,10 @@
         <div><h3 class="picker-title">Scenes</h3><div id="sceneCol"></div></div>
         <div><h3 class="picker-title">Neutral</h3><div id="neutralCol"></div></div>
       </div>
+      <label class="picker-toggle">
+        <input type="checkbox" id="lastMoveToggle" checked>
+        <span>Highlight the piece that moved last</span>
+      </label>
       <button class="btn-gold" id="sceneDone">Done</button>
     </div>
   </div>

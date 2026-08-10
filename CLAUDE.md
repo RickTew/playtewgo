@@ -19,14 +19,16 @@ pushed. Ask Rick if it should get a GitHub remote. `play/engine/` is a direct Ja
 Any rule or AI change must land in BOTH engines with matching tests. The iOS
 repo is read-only reference from here; never edit it from this project.
 
-**Parity covers rules and AI, not every pixel.** One deliberate UI
-divergence exists: the web marks the LAST MOVE with a ring in the mover's
-colour; iOS draws no marker. Two of five personas (including the
-strategist) named the invisible AI reply their top ask, so this stays
-until Rick says otherwise. **Do not delete it in the name of parity** - if
-the platforms get matched, iOS gains the marker. An earlier web attempt
-was pulled for reading as a stray WHITE circle; the fix was the mover's
-colour on the intersection, not removal.
+**LAST-MOVE HIGHLIGHT (Rick approved 2026-08-10, both platforms).** The
+piece that just moved wears a soft glow in the MOVER'S colour, with a
+user toggle in the Board & Background picker (`tewgo.web.showLastMove`,
+default on). Two of five personas, including the strategist, named the
+invisible AI reply their top ask. Rick's conditions, both met: it must
+read as a highlight ON THE PIECE, never "an obvious annoying marker" on
+the board (an earlier ring version was pulled for exactly that), and it
+must be switchable off. iOS is gaining the same thing with the same
+toggle, so the platforms converge. **Never delete this for parity** - if
+they ever disagree again, iOS gains it rather than the web losing it.
 
 ## AI parity (2026-08-10): full port of GameAI.swift @ c6c8c11
 `play/engine/ai.js` now mirrors the iOS AI completely, in one pass:

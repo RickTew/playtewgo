@@ -144,7 +144,11 @@ function nameOf(player) {
   return FIGURES[pieceKind[player]].name;
 }
 let lastMove = null;
-let lastMover = null; // who played lastMove, for the "just played" marker
+let lastMover = null; // who played lastMove, for the "just played" glow
+// Rick, 2026-08-10: the highlight has to be switchable off, so it can
+// never become the obvious annoying marker its predecessor was.
+const LAST_MOVE_KEY = 'tewgo.web.showLastMove';
+let showLastMove = true;
 let winCells = null; // the winning five, shown until the next game starts
 let aiTimer = null;
 let hover = null; // [row, col] ghost-stone preview, mouse only
@@ -733,18 +737,25 @@ function draw() {
   // as a stray WHITE circle floating on the board, so this one is the
   // mover's own colour, sits on the intersection with the ground shadow,
   // and yields to the winning line at game over.
-  if (lastMove && lastMover !== null && !winCells) {
+  if (showLastMove && lastMove && lastMover !== null && !winCells) {
     const [lr, lc] = lastMove;
     const [x, y] = pointFor(lr, lc, m);
     const glow = styleFor(lastMover).glowRgb;
     ctx.save();
-    ctx.strokeStyle = `rgba(${glow}, 0.95)`;
-    ctx.lineWidth = Math.max(1.5, m.cell * 0.07);
+    // A glow that hugs the piece, not a ring drawn on the board: Rick's
+    // brief was "highlight that piece that moved last", and the version
+    // this replaced was pulled for reading as an obvious marker.
+    const halo = ctx.createRadialGradient(x, y, radius * 0.75, x, y, radius * 1.85);
+    halo.addColorStop(0, `rgba(${glow}, 0.55)`);
+    halo.addColorStop(1, `rgba(${glow}, 0)`);
+    ctx.fillStyle = halo;
     ctx.beginPath();
-    ctx.arc(x, y, radius * 1.2, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = `rgba(${glow}, 0.3)`;
-    ctx.lineWidth = Math.max(3, m.cell * 0.16);
+    ctx.arc(x, y, radius * 1.85, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(${glow}, 0.5)`;
+    ctx.lineWidth = Math.max(1, m.cell * 0.045);
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 1.06, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
   }
@@ -2047,6 +2058,16 @@ try {
   if (savedTheme && THEMES[savedTheme]) {
     theme = savedTheme;
     document.getElementById('theme').value = savedTheme;
+  }
+  if (localStorage.getItem(LAST_MOVE_KEY) === '0') showLastMove = false;
+  const toggleEl = document.getElementById('lastMoveToggle');
+  if (toggleEl) {
+    toggleEl.checked = showLastMove;
+    toggleEl.addEventListener('change', () => {
+      showLastMove = toggleEl.checked;
+      try { localStorage.setItem(LAST_MOVE_KEY, showLastMove ? '1' : '0'); } catch { /* ignore */ }
+      draw();
+    });
   }
   const savedVariant = localStorage.getItem(VARIANT_KEY);
   if (savedVariant && VARIANTS.some((v) => v.key === savedVariant)) variant = savedVariant;
