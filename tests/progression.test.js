@@ -37,6 +37,45 @@ test('records wins, losses, and completions independently', () => {
   assert.equal(p.winsInTheme('space'), 1);
 });
 
+test('records the result per difficulty as well as overall', () => {
+  // Persona round 2 (Priya): beating Easy and beating Expert were the
+  // same integer, so the ladder never wrote down which rung you reached.
+  const p = createProgression(fakeStorage());
+  p.recordWin('space', 'easy');
+  p.recordWin('space', 'expert');
+  p.recordLoss('expert');
+  p.recordLoss('expert');
+  assert.equal(p.winsAt('easy'), 1);
+  assert.equal(p.winsAt('expert'), 1);
+  assert.equal(p.lossesAt('expert'), 2);
+  assert.equal(p.lossesAt('hard'), 0, 'an untouched rung reads zero, not undefined');
+  // The overall totals still count everything.
+  assert.equal(p.wins(), 2);
+  assert.equal(p.losses(), 2);
+});
+
+test('the by-level row stays hidden until there is a result', () => {
+  const p = createProgression(fakeStorage());
+  assert.equal(p.hasDifficultyRecord(), false, 'a fresh profile must show no row');
+  // A recorded game with no difficulty (a shape the codec allows) still
+  // must not light the row up with zeros.
+  p.recordWin('space');
+  assert.equal(p.hasDifficultyRecord(), false);
+  p.recordLoss('medium');
+  assert.equal(p.hasDifficultyRecord(), true);
+});
+
+test('per-difficulty records survive a reload', () => {
+  const storage = fakeStorage();
+  const first = createProgression(storage);
+  first.recordWin('ocean', 'hard');
+  first.recordLoss('hard');
+  const second = createProgression(storage);
+  assert.equal(second.winsAt('hard'), 1);
+  assert.equal(second.lossesAt('hard'), 1);
+  assert.equal(second.hasDifficultyRecord(), true);
+});
+
 test('gold unlocks per theme at the threshold', () => {
   const p = createProgression(fakeStorage());
   for (let i = 0; i < GOLD_WIN_THRESHOLD - 1; i++) p.recordWin('ocean');

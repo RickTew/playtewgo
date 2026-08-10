@@ -147,6 +147,13 @@ let lastMove = null;
 let lastMover = null; // who played lastMove, for the "just played" glow
 // Rick, 2026-08-10: the highlight has to be switchable off, so it can
 // never become the obvious annoying marker its predecessor was.
+// The ladder, in rung order, for the profile's per-level record.
+const AI_LEVELS = [
+  { key: 'easy', label: 'EASY' },
+  { key: 'medium', label: 'MEDIUM' },
+  { key: 'hard', label: 'HARD' },
+  { key: 'expert', label: 'EXPERT' },
+];
 const LAST_MOVE_KEY = 'tewgo.web.showLastMove';
 let showLastMove = true;
 let winCells = null; // the winning five, shown until the next game starts
@@ -955,10 +962,10 @@ function recordFinishedGame() {
   const before = progression.nextLockedTheme(THEME_ORDER);
   progression.recordGameCompleted();
   if (winner === HUMAN) {
-    progression.recordWin(theme);
+    progression.recordWin(theme, difficultyEl.value);
     goldJustUnlocked = progression.winsInTheme(theme) === GOLD_WIN_THRESHOLD;
   } else if (winner !== null) {
-    progression.recordLoss();
+    progression.recordLoss(difficultyEl.value);
   }
   // This game may have crossed a world's threshold. Worth announcing on the
   // victory card, and it repaints the dock behind the overlay either way.
@@ -1765,6 +1772,24 @@ function openProfile() {
   document.getElementById('pfWon').textContent = won;
   document.getElementById('pfLost').textContent = progression.losses();
   document.getElementById('pfRate').textContent = games ? Math.round((won / games) * 100) : 0;
+
+  // Per-difficulty record. Persona round 2 (Priya): "the ladder asks me
+  // to climb it, then doesn't write down which rung I reached" - beating
+  // Easy and beating Expert were the same integer. Hidden until there is
+  // a result to show, because a row of four 0-0 tiles says less than no
+  // row at all.
+  const byLevelEl = document.getElementById('pfByLevel');
+  if (byLevelEl) {
+    const show = progression.hasDifficultyRecord();
+    byLevelEl.style.display = show ? '' : 'none';
+    if (show) {
+      document.getElementById('pfByLevelTiles').innerHTML = AI_LEVELS.map((lv) => {
+        const w = progression.winsAt(lv.key);
+        const l = progression.lossesAt(lv.key);
+        return `<div class="stat"><div class="v">${w}-${l}</div><div class="l">${lv.label}</div></div>`;
+      }).join('');
+    }
+  }
 
   const pfCv = document.getElementById('pfAvatarCv');
   paintScene(pfCv, sceneKey, 144, 144);

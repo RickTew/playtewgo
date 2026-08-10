@@ -39,7 +39,14 @@ const KEY = 'tewgo.web.progress';
 const PRO_KEY = 'tewgo.web.pro';
 
 export function createProgression(storage) {
-  let data = { gamesCompleted: 0, wins: 0, losses: 0, winsByTheme: {} };
+  let data = {
+    gamesCompleted: 0, wins: 0, losses: 0, winsByTheme: {},
+    // Wins and losses per AI difficulty. Persona round 2 (Priya): "the
+    // ladder asks me to climb it, then doesn't write down which rung I
+    // reached" - beating Easy and beating Expert were the same integer.
+    // Pass-and-play games have no difficulty and never record at all.
+    winsByDifficulty: {}, lossesByDifficulty: {},
+  };
   // The paid full unlock. Kept in its own key, and stored as the name of the
   // rail that granted it ('stripe', 'steam', ...) rather than a bare true, so
   // a second rail can be added later without a migration. This is a local
@@ -56,9 +63,11 @@ export function createProgression(storage) {
       data.gamesCompleted = Number.isInteger(saved.gamesCompleted) ? saved.gamesCompleted : 0;
       data.wins = Number.isInteger(saved.wins) ? saved.wins : 0;
       data.losses = Number.isInteger(saved.losses) ? saved.losses : 0;
-      if (saved.winsByTheme && typeof saved.winsByTheme === 'object') {
-        for (const [k, v] of Object.entries(saved.winsByTheme)) {
-          if (Number.isInteger(v) && v > 0) data.winsByTheme[k] = v;
+      for (const bucket of ['winsByTheme', 'winsByDifficulty', 'lossesByDifficulty']) {
+        if (saved[bucket] && typeof saved[bucket] === 'object') {
+          for (const [k, v] of Object.entries(saved[bucket])) {
+            if (Number.isInteger(v) && v > 0) data[bucket][k] = v;
+          }
         }
       }
     }
@@ -73,19 +82,32 @@ export function createProgression(storage) {
       data.gamesCompleted += 1;
       persist();
     },
-    recordWin(themeId) {
+    recordWin(themeId, difficulty) {
       data.wins += 1;
       if (themeId) data.winsByTheme[themeId] = (data.winsByTheme[themeId] || 0) + 1;
+      if (difficulty) {
+        data.winsByDifficulty[difficulty] = (data.winsByDifficulty[difficulty] || 0) + 1;
+      }
       persist();
     },
-    recordLoss() {
+    recordLoss(difficulty) {
       data.losses += 1;
+      if (difficulty) {
+        data.lossesByDifficulty[difficulty] = (data.lossesByDifficulty[difficulty] || 0) + 1;
+      }
       persist();
     },
     gamesCompleted() { return data.gamesCompleted; },
     wins() { return data.wins; },
     losses() { return data.losses; },
     winsInTheme(themeId) { return data.winsByTheme[themeId] || 0; },
+    winsAt(difficulty) { return data.winsByDifficulty[difficulty] || 0; },
+    lossesAt(difficulty) { return data.lossesByDifficulty[difficulty] || 0; },
+    /** True once any difficulty has a result, so an all-zero row can hide. */
+    hasDifficultyRecord() {
+      return Object.keys(data.winsByDifficulty).length > 0
+        || Object.keys(data.lossesByDifficulty).length > 0;
+    },
     isGoldUnlocked(themeId) { return this.winsInTheme(themeId) >= GOLD_WIN_THRESHOLD; },
     winsUntilGold(themeId) { return Math.max(0, GOLD_WIN_THRESHOLD - this.winsInTheme(themeId)); },
 

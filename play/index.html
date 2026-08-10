@@ -347,6 +347,12 @@
     animation: bannerpop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
   }
   @keyframes bannerpop { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  .by-level { margin-top: 10px; }
+  .bl-label {
+    font-size: 11px; font-weight: 800; letter-spacing: 1px;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .by-level .stat .v { font-size: 17px; }
   .picker-toggle {
     display: flex; align-items: center; justify-content: center; gap: 8px;
     margin: 4px 0 12px; font-size: 13px; color: var(--text); cursor: pointer;
@@ -699,6 +705,12 @@
         <div class="stat"><div class="v" id="pfWon">0</div><div class="l">WON</div></div>
         <div class="stat"><div class="v" id="pfLost">0</div><div class="l">LOST</div></div>
         <div class="stat"><div class="v" id="pfRate">0</div><div class="l">WIN %</div></div>
+      </div>
+      <!-- Hidden entirely until there is at least one AI result: a row of
+           four 0-0 tiles is worse than no row. -->
+      <div class="by-level" id="pfByLevel" style="display:none">
+        <div class="bl-label">VS AI, BY LEVEL</div>
+        <div class="stats" id="pfByLevelTiles"></div>
       </div>
       <div class="next" id="pfNext">
         <div class="next-top"><span class="lbl">NEXT UNLOCK</span><span class="togo" id="pfNextTogo"></span></div>
