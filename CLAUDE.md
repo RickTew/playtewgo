@@ -75,6 +75,35 @@ filing anything from a /playtest run.
   python3 -m http.server hangs audio (no Range support), use the live
   site.
 
+## ⚠️ THE LADDER IS BROKEN IN THE MIDDLE (measured 2026-08-11)
+The iOS sim harness (commit e8a30ed) found Hard losing to Medium at
+volume. I measured the web port independently, 60 games per pairing,
+alternating seats, opening variety ON as players get it:
+
+| pairing | result | pairs conceded per game |
+|---|---|---|
+| Hard vs Medium | Hard 45% (loses/level) | Hard 2.9, Medium 3.9 |
+| **Hard vs Easy** | **Hard 30% (LOSES badly)** | Hard 4.3, Easy 3.5 |
+| Expert vs Medium | Expert 68% (fine) | Expert 2.3, Medium 4.0 |
+| Medium vs Easy | Medium 90% (fine) | Medium 1.1, Easy 0.5 |
+
+So **Hard is currently the weakest rung**, worse than Easy, and a player
+choosing it gets a softer opponent. Expert and Medium are healthy. The
+cause is the pair leak Frank found, concentrated in the LOOKAHEAD tier:
+Hard hangs pairs (4.3 a game against Easy, which now takes free
+captures) in a way Medium's plain greedy scoring does not.
+
+**Our one-game ladder guards PASS while this is true**, so they are
+false confidence, not evidence. `hard beats medium head to head` proves
+one deterministic game, nothing about strength. They should become batch
+tests (~100 games per pairing; 12 is pure noise, and even 60 leaves a
+5-6 point error bar).
+
+**Do NOT blind-tune this.** Three attempts at raising
+vulnerablePairPenalty and one baseline-delta lookahead change were tried
+on iOS and discarded unvalidated. The fix belongs to the iOS
+sim-harness arc and arrives here as a measured port, not a guess.
+
 ## Tech decisions (2026-07-31)
 - **No build step, on purpose.** Plain ES modules served as-is by GitHub Pages
   (deploys from main branch root; CNAME = playtewgo.com). No bundler, no
