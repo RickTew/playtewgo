@@ -242,7 +242,8 @@ distribution channel. `grantPro(source)` stores the NAME of the granting
 rail ('stripe' / 'steam'), not a bare true, so adding Steam needs no
 migration.
 
-**Price: $4.99 one time**, matching iOS. Do not invent a different one;
+**Price: $2.50 one time** (Rick's call 2026-08-10: TEW = 2, GO = 5; a
+verified real Apple tier), matching iOS. Do not invent a different one;
 it is already published in ~/Dev/TEWGO/FEATURES.md and updates.html.
 
 **Backend** (this repo is still a no-build static site; the backend is
@@ -256,7 +257,15 @@ separate infrastructure, not a build step):
   actions: checkout, verify, restore. Talks to Stripe's REST API
   directly, so there is no SDK to keep current.
 
-**THE ONE REMAINING STEP, and only Rick can do it:**
+**⚠️ PRICE CHANGED 2026-08-10, DEPLOY BEFORE OPENING THE STORE.** The
+repo source now charges 250 cents but the DEPLOYED function still has
+499: the redeploy was blocked by the permission classifier. Before (or
+with) setting the Stripe key, redeploy so label and charge match:
+```
+supabase functions deploy tewgo-unlock --project-ref guwquufbifuzmphcdsdt
+```
+
+**THE REMAINING STEP, and only Rick can do it:**
 ```
 supabase secrets set STRIPE_SECRET_KEY=sk_test_... --project-ref guwquufbifuzmphcdsdt
 ```

@@ -10,7 +10,7 @@ const ENDPOINT = 'https://guwquufbifuzmphcdsdt.supabase.co/functions/v1/tewgo-un
 
 /** Where the restore code is kept so the profile can show it again. */
 export const CODE_KEY = 'tewgo.web.unlockCode';
-export const PRICE_LABEL = '$4.99';
+export const PRICE_LABEL = '$2.50';
 
 /** The query parameter Stripe sends players back with. */
 export const RETURN_PARAM = 'unlock';
