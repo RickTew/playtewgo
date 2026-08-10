@@ -58,6 +58,12 @@ function makeUnlockCode() {
   return `TEWGO-${body.slice(0, 4)}-${body.slice(4, 8)}`;
 }
 
+/** True when the configured Stripe key is a live-mode key (standard or
+ *  restricted). Test keys must never satisfy a live request. */
+function isLiveKey(key: string) {
+  return key.startsWith('sk_live_') || key.startsWith('rk_live_');
+}
+
 /** Stripe's REST API, form-encoded. No SDK, so nothing to keep updated. */
 async function stripe(path: string, key: string, form?: Record<string, string>) {
   const res = await fetch(`https://api.stripe.com/v1/${path}`, {
@@ -154,8 +160,17 @@ Deno.serve(async (req) => {
       if (!/^TEWGO-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code)) {
         return json({ ok: false, error: 'bad_code' }, 400, origin);
       }
+      // A code only restores in the mode that minted it. Without this a
+      // rehearsal code bought with a test key unlocked the real store,
+      // so any leaked test artifact was a free unlock (found 2026-08-10,
+      // after the rehearsal code went out in a public file). Same
+      // 'unknown_code' answer either way, so this never reveals that a
+      // code exists in the other mode.
       const { data } = await db()
-        .from('unlocks').select('id').eq('unlock_code', code).maybeSingle();
+        .from('unlocks').select('id')
+        .eq('unlock_code', code)
+        .eq('livemode', isLiveKey(key))
+        .maybeSingle();
       return data
         ? json({ ok: true }, 200, origin)
         : json({ ok: false, error: 'unknown_code' }, 404, origin);

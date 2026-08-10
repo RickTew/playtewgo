@@ -321,6 +321,12 @@ TEWGO-XXXX-XXXX.
 - The browser is NEVER the authority on payment. `tewgo.web.pro` is a
   convenience cache, exactly like the iOS local hasPro. Only Stripe
   confirming `payment_status == 'paid'` grants an unlock.
+- **A code only restores in the mode that minted it.** Restore filters
+  on `livemode == isLiveKey(STRIPE_SECRET_KEY)`. Until 2026-08-10 it
+  matched on the code alone, so the TEST rehearsal code unlocked the
+  LIVE store, and that code had gone out in a public file: a test
+  artifact could buy production. Test and live data share one table;
+  every lookup that grants something must pin the mode.
 - Restore is by the random `TEWGO-XXXX-XXXX` code minted at purchase,
   NOT by email: an email lookup would be enumerable. Rick can look up a
   code by email in Supabase for support.
