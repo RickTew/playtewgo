@@ -347,6 +347,18 @@
     animation: bannerpop 0.5s cubic-bezier(0.2, 1.6, 0.4, 1);
   }
   @keyframes bannerpop { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+  /* Only visible while zoomed, as the way back out: double-click, or tap
+     this. */
+  .zoom-badge {
+    display: none;
+    position: absolute; right: 10px; bottom: 10px;
+    background: rgba(10, 11, 28, 0.85); border: 1px solid #ffffff2a;
+    border-radius: 999px; padding: 4px 10px;
+    font-size: 12px; font-weight: 700; color: #fff;
+    z-index: 4; cursor: pointer;
+  }
+  .zoom-badge.show { display: block; }
+  .zoom-badge::after { content: " · reset"; font-weight: 500; opacity: 0.7; }
   .by-level { margin-top: 10px; }
   .bl-label {
     font-size: 11px; font-weight: 800; letter-spacing: 1px;
@@ -603,6 +615,7 @@
 <div class="board-wrap">
   <canvas id="board"></canvas>
   <div class="capture-tip" id="captureTip"></div>
+  <div class="zoom-badge" id="zoomBadge">100%</div>
   <div class="overlay" id="overlay">
     <div>
       <h2 id="overlayTitle"></h2>

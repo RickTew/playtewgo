@@ -431,10 +431,71 @@ function pointFor(row, col, m) {
 function cellAt(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const m = metrics();
-  const col = Math.round((clientX - rect.left - m.margin) / m.cell);
-  const row = Math.round((clientY - rect.top - m.margin) / m.cell);
+  // Undo the view transform first, so a zoomed board still puts stones
+  // where the player is pointing. Anything that skips this lands stones
+  // on the wrong intersections, which is why the zoom waited for a
+  // deliberate pass instead of a CSS scale.
+  const bx = (clientX - rect.left - view.x) / view.zoom;
+  const by = (clientY - rect.top - view.y) / view.zoom;
+  const col = Math.round((bx - m.margin) / m.cell);
+  const row = Math.round((by - m.margin) / m.cell);
   if (row < 0 || row >= SIZE || col < 0 || col >= SIZE) return null;
   return [row, col];
+}
+
+// ----- Board zoom and pan -----
+// The web board had no zoom while iOS has pinch, so at laptop size the
+// figures were "tiny overlapping specks on a sea of dots" (persona round
+// 2, Leo, whose whole reason for playing is the piece art). Scroll to
+// zoom, drag-with-space or two fingers to move around, double-click to
+// reset.
+
+const MAX_ZOOM = 3;
+const view = { zoom: 1, x: 0, y: 0 };
+
+/** Keeps the board covering the viewport: no zooming out past fit, no
+ *  panning the board off its own edges. */
+function clampView(size) {
+  view.zoom = Math.min(MAX_ZOOM, Math.max(1, view.zoom));
+  const min = size - size * view.zoom; // negative once zoomed in
+  view.x = Math.min(0, Math.max(min, view.x));
+  view.y = Math.min(0, Math.max(min, view.y));
+  if (view.zoom === 1) { view.x = 0; view.y = 0; }
+}
+
+/** Zooms toward a point in CLIENT coordinates, keeping whatever is under
+ *  that point exactly where it is. */
+function zoomAt(clientX, clientY, factor) {
+  const rect = canvas.getBoundingClientRect();
+  const px = clientX - rect.left;
+  const py = clientY - rect.top;
+  const before = view.zoom;
+  const next = Math.min(MAX_ZOOM, Math.max(1, before * factor));
+  if (next === before) return false;
+  // The board point under the cursor must not move.
+  view.x = px - ((px - view.x) / before) * next;
+  view.y = py - ((py - view.y) / before) * next;
+  view.zoom = next;
+  clampView(metrics().size);
+  updateZoomUi();
+  draw();
+  return true;
+}
+
+function resetZoom() {
+  if (view.zoom === 1) return;
+  view.zoom = 1;
+  view.x = 0;
+  view.y = 0;
+  updateZoomUi();
+  draw();
+}
+
+function updateZoomUi() {
+  const badge = document.getElementById('zoomBadge');
+  if (!badge) return;
+  badge.textContent = `${Math.round(view.zoom * 100)}%`;
+  badge.classList.toggle('show', view.zoom > 1);
 }
 
 // ----- Animations -----
@@ -579,8 +640,14 @@ function draw() {
     canvas.width = Math.round(m.size * dpr);
     canvas.height = Math.round(m.size * dpr);
   }
+  // The view transform is applied HERE and inverted in cellAt(), the only
+  // two places that convert between board space and the screen. Anything
+  // drawn in board coordinates (stones, grid, ghosts, the win line) scales
+  // and pans for free.
+  clampView(m.size);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, m.size, m.size);
+  ctx.setTransform(dpr * view.zoom, 0, 0, dpr * view.zoom, dpr * view.x, dpr * view.y);
 
   const now = performance.now();
   const radius = m.cell * 0.42;
@@ -1138,6 +1205,19 @@ function aimFromEvent(e) {
   return cell && board.isValid(cell[0], cell[1]) ? cell : null;
 }
 
+// Fingers currently on the board, so two of them can pinch.
+const activeTouches = new Map();
+let pinch = null; // {distance, cx, cy} of the live two-finger gesture
+
+function touchMidpoint() {
+  const pts = [...activeTouches.values()];
+  return {
+    cx: (pts[0].x + pts[1].x) / 2,
+    cy: (pts[0].y + pts[1].y) / 2,
+    distance: Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y),
+  };
+}
+
 canvas.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   ensureMusic();
@@ -1146,16 +1226,51 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
   try { canvas.setPointerCapture(e.pointerId); } catch { /* synthetic event */ }
+  activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (activeTouches.size === 2) {
+    // A second finger turns the gesture into a pinch, so the aim that
+    // the first finger started is abandoned rather than played.
+    pinch = touchMidpoint();
+    touchAim = null;
+    draw();
+    return;
+  }
   touchAim = aimFromEvent(e);
   draw();
 });
 
 canvas.addEventListener('pointerup', (e) => {
   if (e.pointerType === 'mouse') return;
+  activeTouches.delete(e.pointerId);
+  if (pinch) {
+    // Lifting out of a pinch must never place a stone.
+    if (activeTouches.size < 2) pinch = null;
+    touchAim = null;
+    draw();
+    return;
+  }
   if (touchAim) placeAt(touchAim[0], touchAim[1]);
   touchAim = null;
   draw();
 });
+
+// Scroll to zoom, anchored on the pointer (Rick's suggestion). The board
+// is the page's subject, so the wheel belongs to it while the pointer is
+// over it.
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+}, { passive: false });
+
+// Double-click backs all the way out, so nobody gets stranded zoomed in.
+canvas.addEventListener('dblclick', (e) => {
+  e.preventDefault();
+  resetZoom();
+});
+
+// The badge is the visible way back out, for anyone who does not think to
+// double-click (and for phones, where there is no double-click at all).
+document.getElementById('zoomBadge')?.addEventListener('click', resetZoom);
 
 canvas.addEventListener('pointercancel', () => {
   touchAim = null;
@@ -1179,6 +1294,26 @@ musicToggleEl.addEventListener('click', () => {
 canvas.addEventListener('pointermove', (e) => {
   if (e.pointerType !== 'mouse') {
     if (e.buttons === 0) return;
+    if (activeTouches.has(e.pointerId)) {
+      activeTouches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+    // Two fingers: pinch to zoom, and drag the pair to pan.
+    if (pinch && activeTouches.size >= 2) {
+      const cur = touchMidpoint();
+      const prev = pinch;
+      pinch = cur;
+      // Pan by however far the pair travelled...
+      view.x += cur.cx - prev.cx;
+      view.y += cur.cy - prev.cy;
+      // ...then zoom by how much they spread, anchored between them.
+      if (prev.distance > 0 && cur.distance > 0
+        && zoomAt(cur.cx, cur.cy, cur.distance / prev.distance)) {
+        return; // zoomAt clamped, updated the badge and redrew
+      }
+      clampView(metrics().size);
+      draw();
+      return;
+    }
     const next = aimFromEvent(e);
     const changed = (touchAim === null) !== (next === null)
       || (touchAim && next && (touchAim[0] !== next[0] || touchAim[1] !== next[1]));
