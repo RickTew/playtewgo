@@ -207,6 +207,29 @@ export class GameAI {
   // the heuristic and, for each, finds the opponent's best reply on the
   // resulting board. A move that hands the opponent an immediate win (a
   // five, or a capture reaching 5 pairs) is vetoed outright.
+  //
+  // ⚠️ THIS FUNCTION IS THE BROKEN RUNG (measured 2026-08-11, both
+  // engines). Batch play, 60 games per pairing on this engine,
+  // alternating seats: Hard 30% vs EASY (firm, well outside the ~6 point
+  // error bar) and 45% vs Medium (reads as loses-or-level). Expert 68%
+  // and Medium 90% are healthy, so the fault is HERE and not in the
+  // lookahead family generally. Hard concedes 4.3 pairs a game to Easy
+  // against Medium's 1.1.
+  //
+  // HYPOTHESIS, from the fact that the leak WIDENS against weaker
+  // opponents: this subtracts the opponent's raw best reply, which is a
+  // smaller number when the opponent is weak, so it penalises the AI's
+  // own good moves least against strong opposition and most against weak.
+  // A candidate fix, tried on iOS and discarded UNVALIDATED rather than
+  // disproven, is a baseline delta: charge a move only for the threat it
+  // ADDED, not the opponent's raw best reply. Worth re-testing.
+  //
+  // DO NOT FIX THIS BY FEEL. Single deterministic games cannot referee it
+  // (12 games swung a win rate 83% -> 41% with no relevant change), and
+  // the one-game ladder guards in tests/ai.test.js PASS while this is
+  // broken. Any change needs >= 100 games per pairing, and the same
+  // change must land on iOS. Everything above is AI vs AI: it does NOT
+  // establish anything about a human playing Hard.
   #lookaheadMove(candidates, board, aiPlayer, opponent) {
     const rootMoves = this.#scored(candidates, board, aiPlayer).slice(0, 12);
     const fallback = rootMoves[0]?.[0];
