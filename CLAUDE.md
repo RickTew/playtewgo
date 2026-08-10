@@ -242,8 +242,10 @@ distribution channel. `grantPro(source)` stores the NAME of the granting
 rail ('stripe' / 'steam'), not a bare true, so adding Steam needs no
 migration.
 
-**Price: $2.50 one time** (Rick's call 2026-08-10: TEW = 2, GO = 5; a
-verified real Apple tier), matching iOS. Do not invent a different one;
+**Price: $2.59 one time** (Rick's call 2026-08-10: the 2 and 5 are the
+name, TEW = 2, GO = 5. It is $2.59 not $2.50 because sub-$10 US App
+Store prices all end in 9; verified in the live ASC picker), matching
+iOS. Do not invent a different one;
 it is already published in ~/Dev/TEWGO/FEATURES.md and updates.html.
 
 **Backend** (this repo is still a no-build static site; the backend is
@@ -258,7 +260,7 @@ separate infrastructure, not a build step):
   directly, so there is no SDK to keep current.
 
 **⚠️ PRICE CHANGED 2026-08-10, DEPLOY BEFORE OPENING THE STORE.** The
-repo source now charges 250 cents but the DEPLOYED function still has
+repo source now charges 259 cents but the DEPLOYED function still has
 499: the redeploy was blocked by the permission classifier. Before (or
 with) setting the Stripe key, redeploy so label and charge match:
 ```

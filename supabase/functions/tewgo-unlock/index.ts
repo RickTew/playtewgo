@@ -18,7 +18,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const PRICE_CENTS = 250; // $2.50, matching the iOS Unlock All price (TEW = 2, GO = 5)
+const PRICE_CENTS = 259; // $2.59, matching the iOS price (2 and 5 for TEW = 2, GO = 5; sub-$10 Apple tiers end in 9, so $2.50 does not exist)
 const CURRENCY = 'usd';
 const PRODUCT_NAME = 'TEWGO: Unlock All Worlds';
 const PRODUCT_BLURB = 'Skip the grind. Every world, every figure, instantly.';
