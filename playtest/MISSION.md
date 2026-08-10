@@ -102,6 +102,17 @@ continued; **cosmetic** = noticed, no behavior change.
   a cell places a stone immediately (click-to-place path); useful for
   playing full games quickly. The persona still narrates as if playing
   normally.
+- **Keep the game tab visible.** Capture and placement animations are
+  rAF-driven; a hidden tab freezes them (a catch-up repaint now clears
+  the board state regardless, but the EFFECTS only play visibly). After
+  a capture, verify board state promptly rather than from stale
+  screenshots.
+- **Drag-to-aim exists only for `pointerType: 'touch'`.** Synthetic
+  mouse pointerdown takes the click-to-place path by design, so "no
+  drag-to-aim" under mouse automation is NOT a finding.
+- **The install button is beforeinstallprompt-gated** (Chrome decides
+  when to offer it) and rarely fires under automation. Its absence in an
+  automated session is NOT a finding.
 - For phone-persona sessions, resize the window to a phone-width viewport
   (about 390px wide) with the resize tool before starting, and prefer
   drag-to-aim touch behavior observations from the screen.
