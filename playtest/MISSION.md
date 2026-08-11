@@ -116,4 +116,11 @@ continued; **cosmetic** = noticed, no behavior change.
 - For phone-persona sessions, resize the window to a phone-width viewport
   (about 390px wide) with the resize tool before starting, and prefer
   drag-to-aim touch behavior observations from the screen.
-- When the session ends, close the tabs you opened.
+- When the session ends, close the tabs you opened **and the MCP tab
+  group itself**. Closing the tabs is not enough: the group survives as an
+  empty "Claude" chip in Rick's tab strip, and rounds 1 and 2 left dozens
+  of them stacked up in his real browser. Use `tabs_close_mcp` on the tab
+  group from `tabs_context_mcp`, then confirm with a fresh
+  `tabs_context_mcp` that the group is gone before you finish. If a group
+  cannot be closed, say so in your final message rather than leaving it
+  silently.
