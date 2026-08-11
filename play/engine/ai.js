@@ -11,6 +11,8 @@ import { GameBoard, SIZE, EMPTY, opponentOf } from './board.js';
 const LINE_DIRECTIONS = [[0, 1], [1, 0], [1, 1], [1, -1]];
 const CAPTURE_DIRECTIONS = [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [-1, -1], [1, -1], [-1, 1]];
 const CENTER = [Math.floor(SIZE / 2), Math.floor(SIZE / 2)];
+// How many opponent replies Expert carries into its third ply.
+const REPLY_BREADTH = 8;
 
 function inB(r, c) {
   return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
@@ -208,43 +210,37 @@ export class GameAI {
   // resulting board. A move that hands the opponent an immediate win (a
   // five, or a capture reaching 5 pairs) is vetoed outright.
   //
-  // ⚠️ THIS FUNCTION IS THE BROKEN RUNG. Measured with tools/sim.js,
-  // 100 games per pairing, alternating seats, opening variety on:
+  // ⚠️ THIS FUNCTION WAS THE BROKEN RUNG, and the repair is the
+  // `false` on the reply's #score call below. Keep it there.
   //
-  //   medium vs easy    89% / 11%      hard vs medium   42% / 58%
-  //   expert vs easy    63% / 37%      hard vs easy     39% / 61%
-  //   expert vs medium  62% / 38%      expert vs hard   58% / 42%
+  // Measured with tools/sim.js, 100 games per pairing, alternating seats,
+  // opening variety on. Before (2026-08-11): Hard lost to BOTH tiers
+  // under it, 42% vs Medium and 39% vs Easy, conceding 4.04 pairs a game
+  // to Easy. The tell was that across three pairings Hard won 122 games
+  // and NOT ONE was a five in a row, while Medium beat Easy by line 89
+  // times out of 89.
   //
-  // Hard loses to BOTH tiers below it. The mechanism is now measured, not
-  // guessed: across those three pairings Hard won 122 games and NOT ONE
-  // of them was a five in a row (Medium wins by line 89 times out of 89
-  // against Easy). Hard cannot attack at all.
+  // WHY: the reply being subtracted was scored with the opponent's own
+  // #score, and #score pays 3/4 of a line's worth for BLOCKING. So the
+  // better the shape Hard built, the more the opponent's block was
+  // worth, and 9/10 of that came back off Hard's own move. It penalised
+  // itself for making threats. It bit hardest against WEAK opponents,
+  // whose own offense is small, so the block term dominated - which is
+  // why Hard was farmable by Easy of all things.
   //
-  // WHY: the reply we subtract is scored with the opponent's own #score,
-  // and #score pays 3/4 of a line's worth for BLOCKING the other side.
-  // So the better the shape we build, the more the opponent's block is
-  // worth, and 9/10 of that is charged back against our own move. We
-  // penalise ourselves for making threats, and being blocked is not
-  // damage: the threat is simply answered. It hurts most against weak
-  // opponents because a weak opponent's own best reply is small, so the
-  // block term dominates the subtraction.
+  // Not counting blocking in the reply (and in Expert's #quietValue)
+  // takes Hard to 88%/92% vs Easy and 79%/65% vs Medium on two seeds.
+  // The baseline-delta candidate iOS discarded is genuinely no good:
+  // 34% vs Easy, worse than shipping. Fixing Hard alone inverts the top
+  // of the ladder (it beats the old Expert 81%), which is why Expert
+  // gained its third ply in the same change.
   //
-  // MEASURED FIX (candidate, 100 games per pairing): score the reply
-  // WITHOUT the block credit. Hard then goes 88% vs Easy and 79% vs
-  // Medium, and wins by line like Medium does. The same change on
-  // Expert's #quietValue takes Expert to 93% / 77%. The baseline-delta
-  // idea that iOS discarded is genuinely no good: 34% vs Easy, worse
-  // than shipping. NOT APPLIED YET, because fixing only Hard inverts the
-  // top (fixed Hard beats stock Expert 81%) and fixing both leaves Hard
-  // and Expert dead level at 50/50: what separates those two rungs is a
-  // design decision, and it has to land on iOS in the same shape.
-  //
-  // DO NOT FIX THIS BY FEEL. Single deterministic games cannot referee it
-  // (12 games swung a win rate 83% -> 41% with no relevant change), and
-  // the one-game ladder guards in tests/ai.test.js PASS while this is
-  // broken. Any change needs >= 100 games per pairing, and the same
-  // change must land on iOS. Everything above is AI vs AI: it does NOT
-  // establish anything about a human playing Hard.
+  // DO NOT TUNE THIS BY FEEL. Single deterministic games cannot referee
+  // it (12 games swung a win rate 83% -> 41% with no relevant change),
+  // and the one-game ladder guards in tests/ai.test.js passed all the
+  // way through the bug. Any change needs >= 100 games per pairing via
+  // tools/sim.js, and the same change must land on iOS. All of it is AI
+  // vs AI: it says nothing about a human playing Hard.
   #lookaheadMove(candidates, board, aiPlayer, opponent) {
     const rootMoves = this.#scored(candidates, board, aiPlayer).slice(0, 12);
     const fallback = rootMoves[0]?.[0];
@@ -262,7 +258,7 @@ export class GameAI {
         const b2 = b.clone();
         const caps = b2.place(opponent, r, c);
         if (b2.checkWin(opponent, r, c)) { oppWins = true; break; }
-        const reply = this.#score(b, r, c, opponent)
+        const reply = this.#score(b, r, c, opponent, false)
           + this.#capturedShapeLoss(caps, b, aiPlayer);
         bestReply = Math.max(bestReply, reply);
       }
@@ -339,7 +335,7 @@ export class GameAI {
       const caps = b2.place(opponent, r, c);
       const stillWinning = this.#winningSquares(aiPlayer, b2, this.#candidateMoves(b2)).length > 0;
       if (!stillWinning) {
-        const replyScore = this.#score(b, r, c, opponent)
+        const replyScore = this.#score(b, r, c, opponent, false)
           + this.#capturedShapeLoss(caps, b, aiPlayer);
         bestSurvivingReply = Math.max(bestSurvivingReply ?? -Infinity, replyScore);
       }
@@ -354,16 +350,41 @@ export class GameAI {
   // Value of a non-forcing move: the opponent may answer anywhere. An
   // answer that builds an open four we cannot defuse is a loss, not a
   // score - that exact gap is how the old Expert "fell for" open threes.
+  //
+  // This is Expert's THIRD PLY, and it is the whole difference between
+  // Expert and Hard (2026-08-11): a reply is judged not only by what it
+  // is worth to the opponent but by what WE get to do after it, so a
+  // reply that hands us the initiative is not one they would really
+  // play. Without it the two tiers measure dead level (50/50 over 100
+  // games) once the blocking leak is fixed, because Expert's threat
+  // search alone adds nothing. With it: Expert 57% and 62% over Hard on
+  // two seeds, 74% vs Medium, 95% vs Easy. It costs about 17ms a move
+  // in Node, so the browser stays instant.
   #quietValue(myScore, b, replies, aiPlayer, opponent) {
+    // The extra ply is the expensive one, so only plausible replies get
+    // it; below the top handful the opponent is not choosing anyway.
+    const ranked = replies
+      .map(([r, c]) => [[r, c], this.#score(b, r, c, opponent, false)])
+      .sort((x, y) => y[1] - x[1])
+      .slice(0, REPLY_BREADTH);
+
     let bestReply = 0;
-    for (const [r, c] of replies) {
+    for (const [[r, c], immediate] of ranked) {
       const b2 = b.clone();
       const caps = b2.place(opponent, r, c);
-      let replyScore = this.#score(b, r, c, opponent)
-        + this.#capturedShapeLoss(caps, b, aiPlayer);
+      let replyScore = immediate + this.#capturedShapeLoss(caps, b, aiPlayer);
       const four = this.#openFourCells(b2, opponent, r, c);
       if (four && !this.#canDefuse(four, b2, aiPlayer)) {
         replyScore = 300000;
+      } else {
+        // Our best answer to that reply, discounted at 4/5: it is two
+        // moves away, so it is worth less than the reply itself.
+        let ourFollowUp = 0;
+        for (const [r3, c3] of this.#candidateMoves(b2)) {
+          const v = this.#score(b2, r3, c3, aiPlayer, false);
+          if (v > ourFollowUp) ourFollowUp = v;
+        }
+        replyScore -= idiv(ourFollowUp * 4, 5);
       }
       bestReply = Math.max(bestReply, replyScore);
       if (bestReply >= 300000) break;
@@ -490,7 +511,19 @@ export class GameAI {
     return hasAny ? result : [CENTER];
   }
 
-  #score(board, row, col, aiPlayer) {
+  /**
+   * Worth of `aiPlayer` playing (row, col) on `board`.
+   *
+   * @param countBlocking Pass FALSE when scoring the OPPONENT'S reply
+   *   inside a lookahead. A reply that blocks our line is credited here
+   *   with 3/4 of that line's worth, and a search that subtracts the
+   *   reply would then charge us for the block our own threat invited.
+   *   Being blocked is not damage, it is the threat being answered, and
+   *   counting it cost Hard every attack it ever had (see the warning on
+   *   #lookaheadMove). Our OWN move always counts blocking: denying the
+   *   opponent a line is real value when it is our turn to choose.
+   */
+  #score(board, row, col, aiPlayer, countBlocking = true) {
     const opponent = opponentOf(aiPlayer);
     let s = 0;
 
@@ -513,7 +546,7 @@ export class GameAI {
 
     // Block opponent lines - weighted at 3/4 so denying an open three
     // (2250) beats building our own closed three (500)
-    s += idiv(this.#bestLineScore(board, opponent, row, col) * 3, 4);
+    if (countBlocking) s += idiv(this.#bestLineScore(board, opponent, row, col) * 3, 4);
 
     // Capture threats created - scaled like the capture itself (x3/8 of
     // its value, i.e. the historical 150 at zero pairs)

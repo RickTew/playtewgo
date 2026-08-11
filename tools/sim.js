@@ -16,6 +16,7 @@
 // because that is what a player meets; Math.random is replaced by a seeded
 // PRNG so a run is reproducible.
 
+import { pathToFileURL } from 'node:url';
 import { GameBoard, ONE, TWO, opponentOf } from '../play/engine/board.js';
 import { GameAI } from '../play/engine/ai.js';
 
@@ -92,17 +93,21 @@ function line(r) {
   ].join('');
 }
 
-const [, , argA, argB, argGames, argSeed] = process.argv;
-const games = Number(argGames ?? 100);
-const seed = Number(argSeed ?? 1);
+// Run the table only when invoked as a command; tests/ai.test.js imports
+// measure() so the ladder guards and the referee are the same code.
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const [, , argA, argB, argGames, argSeed] = process.argv;
+  const games = Number(argGames ?? 100);
+  const seed = Number(argSeed ?? 1);
 
-console.log('pairing'.padEnd(22) + 'win %'.padEnd(16) + 'pairs conceded'.padEnd(16) + 'wins by line+capture');
-if (argA && argB) {
-  console.log(line(measure(argA, argB, games, seed)));
-} else {
-  for (let i = 0; i < TIERS.length; i += 1) {
-    for (let j = i + 1; j < TIERS.length; j += 1) {
-      console.log(line(measure(TIERS[j], TIERS[i], games, seed)));
+  console.log('pairing'.padEnd(22) + 'win %'.padEnd(16) + 'pairs conceded'.padEnd(16) + 'wins by line+capture');
+  if (argA && argB) {
+    console.log(line(measure(argA, argB, games, seed)));
+  } else {
+    for (let i = 0; i < TIERS.length; i += 1) {
+      for (let j = i + 1; j < TIERS.length; j += 1) {
+        console.log(line(measure(TIERS[j], TIERS[i], games, seed)));
+      }
     }
   }
 }

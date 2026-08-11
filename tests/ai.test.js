@@ -290,60 +290,11 @@ test('expert completes open three to open four', () => {
     `expected the open four at (10,4)/(10,8), got (${move[0]},${move[1]})`);
 });
 
-// Plays one full game, first mover as ONE. Returns the winner, or null
-// on a draw (board full) or no legal move.
-function playGame(first, second) {
-  const b = new GameBoard();
-  let current = ONE;
-  const ais = { [ONE]: first, [TWO]: second };
-  for (let i = 0; i < 22 * 22; i += 1) {
-    const mv = ais[current].bestMove(b, current);
-    if (!mv) return null;
-    b.place(current, mv[0], mv[1]);
-    if (b.checkWin(current, mv[0], mv[1])) return current;
-    current = current === ONE ? TWO : ONE;
-  }
-  return null;
-}
-
-test('expert beats medium head to head', () => {
-  // Regression guard for the ladder itself: Expert must beat Medium (the
-  // old Hard, pure greedy) in deterministic head-to-head play from both
-  // seats. If a future tuning pass breaks this, the ladder has collapsed.
-  const expertAI = new GameAI('expert', false);
-  const mediumAI = new GameAI('medium', false);
-  assert.equal(playGame(expertAI, mediumAI), ONE,
-    'Expert (moving first) failed to beat Medium');
-  assert.equal(playGame(mediumAI, expertAI), TWO,
-    'Expert (moving second) failed to beat Medium');
-});
-
-test('hard beats medium head to head', () => {
-  // The whole ladder, adjacent rungs. Deterministic pairings (no Easy)
-  // must win from both seats.
-  const hardAI = new GameAI('hard', false);
-  const mediumAI = new GameAI('medium', false);
-  assert.equal(playGame(hardAI, mediumAI), ONE,
-    'Hard (moving first) failed to beat Medium');
-  assert.equal(playGame(mediumAI, hardAI), TWO,
-    'Hard (moving second) failed to beat Medium');
-});
-
-test('medium beats easy over a batch', () => {
-  // Easy is random-among-top-8, so Medium gets a batch and a win-rate
-  // floor instead of a single-game assertion.
-  const mediumAI = new GameAI('medium', false);
-  const easyAI = new GameAI('easy', false);
-  let mediumWins = 0;
-  for (let i = 0; i < 10; i += 1) {
-    const mediumFirst = i % 2 === 0;
-    const winner = playGame(mediumFirst ? mediumAI : easyAI,
-      mediumFirst ? easyAI : mediumAI);
-    if (winner === (mediumFirst ? ONE : TWO)) mediumWins += 1;
-  }
-  assert.ok(mediumWins >= 8,
-    `Medium won only ${mediumWins}/10 vs Easy - the bottom of the ladder has collapsed`);
-});
+// The ladder guards used to live here as single deterministic games.
+// They passed throughout the 2026-08-11 bug in which Hard lost to both
+// tiers under it, so they moved to tests/ladder.test.js and became batch
+// measurements over tools/sim.js. Do not add a one-game strength
+// assertion back: it cannot fail when the ladder is inverted.
 
 test('blocks four instead of delaying capture', () => {
   // Field report 2026-08-10 (supersedes the 2026-08-04 capture-first
