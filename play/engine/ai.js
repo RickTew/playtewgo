@@ -335,6 +335,11 @@ export class GameAI {
       const caps = b2.place(opponent, r, c);
       const stillWinning = this.#winningSquares(aiPlayer, b2, this.#candidateMoves(b2)).length > 0;
       if (!stillWinning) {
+        // The `false` here is load-bearing and it fails QUIETLY: the iOS
+        // port left blocking credit on in this loop alone and Expert
+        // dropped from 95% to 69% against Easy, reading as a mildly
+        // passive Expert rather than as a bug. Every reply scored inside
+        // a lookahead needs it, not just the quiet branch.
         const replyScore = this.#score(b, r, c, opponent, false)
           + this.#capturedShapeLoss(caps, b, aiPlayer);
         bestSurvivingReply = Math.max(bestSurvivingReply ?? -Infinity, replyScore);
@@ -355,11 +360,18 @@ export class GameAI {
   // Expert and Hard (2026-08-11): a reply is judged not only by what it
   // is worth to the opponent but by what WE get to do after it, so a
   // reply that hands us the initiative is not one they would really
-  // play. Without it the two tiers measure dead level (50/50 over 100
-  // games) once the blocking leak is fixed, because Expert's threat
-  // search alone adds nothing. With it: Expert 57% and 62% over Hard on
-  // two seeds, 74% vs Medium, 95% vs Easy. It costs about 17ms a move
-  // in Node, so the browser stays instant.
+  // play. Without it the two tiers measure dead level once the blocking
+  // leak is fixed - 50/50 here over 100 games, 47% and 48% from the two
+  // seats on iOS, the same finding on two engines - because Expert's
+  // threat search alone adds nothing. Without this ply the top of the
+  // ladder is one tier with two names. With it: Expert 57% and 62% over
+  // Hard on two seeds, 74% vs Medium, 95% vs Easy.
+  //
+  // Latency, 20 games per tier: Expert mean 17.4ms a move, p95 31.4ms,
+  // worst 54.7ms (Hard 4.5 / 7.3 / 54.8; Medium and Easy 0.4). The web
+  // runs this on the main thread inside the 350ms AI_DELAY_MS pause, so
+  // the worst case is about three dropped frames while nothing is
+  // animating. If it ever grows past this, move it to a Worker.
   #quietValue(myScore, b, replies, aiPlayer, opponent) {
     // The extra ply is the expensive one, so only plausible replies get
     // it; below the top handful the opponent is not choosing anyway.
