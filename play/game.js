@@ -526,12 +526,22 @@ function maybeShowCaptureTip(capturedPlayer) {
   } catch { return; }
   const tip = document.getElementById('captureTip');
   if (!tip) return;
-  tip.textContent = capturedPlayer === HUMAN
-    ? 'Your pair was captured! Flanked pairs get taken to the shelf above. Five pairs wins.'
-    : 'Captured! Flanked pairs get taken to the shelf above. Five pairs wins.';
+  // Round 3: this fired for Maya and she still never saw it - 8 seconds
+  // is exactly the window a baffled beginner spends re-reading the rules
+  // line. It now stays until the player MOVES (proof they are back in
+  // the game), with a long fallback for watching a 2-player friend.
+  tip.textContent = capturedPlayer === HUMAN && isAiGame()
+    ? 'Flanked! The AI captured your pair. It goes on the shelf above; five pairs wins.'
+    : 'Flanked! Captured pairs go to the shelf above. Five pairs wins.';
   tip.classList.add('show');
   if (captureTipTimer !== null) clearTimeout(captureTipTimer);
-  captureTipTimer = setTimeout(() => tip.classList.remove('show'), 8000);
+  captureTipTimer = setTimeout(() => tip.classList.remove('show'), 45000);
+}
+
+function hideCaptureTip() {
+  const tip = document.getElementById('captureTip');
+  if (tip) tip.classList.remove('show');
+  if (captureTipTimer !== null) { clearTimeout(captureTipTimer); captureTipTimer = null; }
 }
 
 function animTick() {
@@ -984,24 +994,35 @@ function announceOnOverlay(text) {
 }
 
 function showOverlay() {
+  // Round 3 (Priya): captures were half the story of every game and the
+  // overlay never mentioned the race. One short second line when any
+  // pairs were taken; skipped for a five-pairs win, which already says it.
+  const pairsLine = () => {
+    const one = board.captureCount[ONE];
+    const two = board.captureCount[TWO];
+    if (one + two === 0 || (winner !== null && board.winReason(winner) === 'fiveCaptures')) return '';
+    return isAiGame()
+      ? ` Pairs captured: you ${one}, AI ${two}.`
+      : ` Pairs captured: ${nameOf(ONE)} ${one}, ${nameOf(TWO)} ${two}.`;
+  };
   if (winner === null) {
     overlayTitleEl.textContent = 'Draw';
-    overlayReasonEl.textContent = 'The board is full.';
+    overlayReasonEl.textContent = 'The board is full.' + pairsLine();
   } else {
     const captured = board.winReason(winner) === 'fiveCaptures';
     if (isAiGame() && winner === HUMAN) {
       overlayTitleEl.textContent = 'You win!';
-      overlayReasonEl.textContent = captured ? 'You captured five pairs.' : 'Five in a row.';
+      overlayReasonEl.textContent = (captured ? 'You captured five pairs.' : 'Five in a row.') + pairsLine();
       if (goldJustUnlocked) {
         goldJustUnlocked = false;
         announceOnOverlay(`Gold colors unlocked for ${themeDef().name}!`);
       }
     } else if (isAiGame()) {
       overlayTitleEl.textContent = 'AI wins';
-      overlayReasonEl.textContent = captured ? 'The AI captured five pairs.' : 'The AI made five in a row.';
+      overlayReasonEl.textContent = (captured ? 'The AI captured five pairs.' : 'The AI made five in a row.') + pairsLine();
     } else {
       overlayTitleEl.textContent = `${nameOf(winner)} wins!`;
-      overlayReasonEl.textContent = captured ? 'Captured five pairs.' : 'Five in a row.';
+      overlayReasonEl.textContent = (captured ? 'Captured five pairs.' : 'Five in a row.') + pairsLine();
     }
   }
   if (themeJustUnlocked && THEMES[themeJustUnlocked]) {
@@ -1121,6 +1142,7 @@ function placeAt(row, col) {
     return;
   }
   const mover = current;
+  hideCaptureTip();
   const captures = board.place(mover, row, col);
   lastMove = [row, col];
   lastMover = mover;
@@ -1632,6 +1654,14 @@ function refreshThemeSelects() {
   const selects = [themeEl, document.getElementById('setupTheme')];
   for (const sel of selects) {
     if (!sel) continue;
+    // Round 3 (Maya): the list showed Ocean (6 more games) above Dungeon
+    // (2 more games), so she read the visual order as the unlock order
+    // and it was not. List worlds in THEME_ORDER so the game counts
+    // always ascend down the menu.
+    for (const key of THEME_ORDER) {
+      const opt = [...sel.options].find((o) => o.value === key);
+      if (opt) sel.appendChild(opt);
+    }
     for (const opt of sel.options) {
       const unlocked = progression.isThemeUnlocked(opt.value);
       const base = THEMES[opt.value]?.name ?? opt.value;
@@ -1770,8 +1800,20 @@ function worldCards(gal) {
       card.appendChild(lock);
     }
 
-    card.addEventListener('click', () => {
-      if (!progression.isThemeUnlocked(key)) return;
+    card.addEventListener('click', (e) => {
+      if (!progression.isThemeUnlocked(key)) {
+        // Round 3: a silent tap on a locked card read as a dead control
+        // (Priya, Maya), and the button's focus ring read as "selected".
+        // Pulse the answer that is already on the card instead.
+        e.currentTarget.blur();
+        const need = e.currentTarget.querySelector('.wneed');
+        if (need) {
+          need.classList.remove('pulse');
+          void need.offsetWidth; // restart the animation on repeat taps
+          need.classList.add('pulse');
+        }
+        return;
+      }
       applyTheme(key);
       openProfile();
     });
