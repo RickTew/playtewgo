@@ -7,6 +7,24 @@
 // to 41% with no relevant change. Nothing in play/engine/ai.js should be
 // retuned without a run of this at n >= 100 per pairing, on both engines.
 //
+// BUT WIN RATE IS THE WRONG TOOL FOR A SMALL EFFECT. When a candidate
+// change looks like a 1-2 SE difference, do not run more games - compare
+// DECISIONS instead. Put both variants on the SAME positions and count
+// how often the CHOSEN MOVE differs. That is what settled the open-four
+// veto on 2026-08-11: it fired on most root moves, yet changed the move
+// in 0.0-0.5% of midgame turns, so the win-rate "gains" on both engines
+// were noise being read as evidence. Seconds to run, no statistics.
+//
+// Two traps in that comparison, both hit for real:
+//  - Saving `Math.random` to a variable does NOT snapshot a PRNG: you
+//    copy the reference and the closure's state keeps advancing, so the
+//    second variant draws different numbers and picks a different
+//    OPENING. Reseed a fresh generator before each call, or better,
+//    construct both with openingVariety=false so neither touches the
+//    generator and each call is a pure function of the position.
+//  - Ignore the first few plies either way; opening variety is random by
+//    design and any difference there means nothing.
+//
 //   node tools/sim.js                     # every pairing, 100 games each
 //   node tools/sim.js hard easy           # one pairing
 //   node tools/sim.js hard easy 200 7     # 200 games, seed base 7
