@@ -76,9 +76,17 @@ export class GameAI {
         // them the game was plain five-in-a-row. Easy is the tier that
         // introduces the rules, so it has to demonstrate the signature
         // one; it still wanders everywhere else.
-        const captures = this.#captureMoves(aiPlayer, board, candidates);
-        const capture = this.#scored(captures, board, aiPlayer)[0]?.[0];
-        if (capture) return capture;
+        // Persona round 3 (Rick, 2026-08-11): ONE demo capture, not a
+        // mugging. Maya lost her first game to Easy 3 pairs down and
+        // called it "the bitey one", harder in her hands than Medium.
+        // So the shortcut runs only until Easy banks its first pair;
+        // after that, captures happen only when its normal top-8 move
+        // lands on one. Same rule in GameAI.swift; retune together.
+        if (board.captureCount[aiPlayer] === 0) {
+          const captures = this.#captureMoves(aiPlayer, board, candidates);
+          const capture = this.#scored(captures, board, aiPlayer)[0]?.[0];
+          if (capture) return capture;
+        }
         // Random among the top eight scored moves: wanders enough to be
         // beatable, but no longer plays outright nonsense.
         const top = this.#scored(candidates, board, aiPlayer).slice(0, 8).map((e) => e[0]);
