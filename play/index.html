@@ -395,6 +395,26 @@
     border-bottom: 7px solid var(--gold);
   }
   .capture-tip.show { display: block; }
+  .review-bar {
+    display: none;
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    align-items: center; gap: 6px;
+    background: rgba(10, 11, 28, 0.92);
+    border: 1px solid #ffffff2a; border-radius: 12px;
+    padding: 6px 10px;
+    z-index: 5;
+  }
+  .review-bar.show { display: flex; }
+  .review-bar button {
+    font: inherit; font-size: 14px; font-weight: 700; color: var(--text);
+    background: rgba(255,255,255,0.08); border: 1px solid #ffffff2a;
+    border-radius: 8px; padding: 5px 10px; cursor: pointer;
+  }
+  .review-bar button:disabled { opacity: 0.35; cursor: default; }
+  .review-bar .review-done { border-color: var(--gold); color: var(--gold); }
+  .review-counter {
+    font-size: 12.5px; font-weight: 700; min-width: 92px; text-align: center;
+  }
   .unlock-confirm { display: none; margin-top: 10px; }
   .unlock-confirm.show { display: block; }
   .unlock-confirm .btns { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
@@ -622,12 +642,21 @@
   <canvas id="board"></canvas>
   <div class="capture-tip" id="captureTip"></div>
   <div class="zoom-badge" id="zoomBadge">100%</div>
+  <div class="review-bar" id="reviewBar">
+    <button id="reviewFirst" title="Start of game">⏮</button>
+    <button id="reviewPrev" title="Previous move">◀</button>
+    <span class="review-counter" id="reviewCounter"></span>
+    <button id="reviewNext" title="Next move">▶</button>
+    <button id="reviewLast" title="End of game">⏭</button>
+    <button class="review-done" id="reviewDone">Done</button>
+  </div>
   <div class="overlay" id="overlay">
     <div>
       <h2 id="overlayTitle"></h2>
       <p id="overlayReason"></p>
       <div class="overlay-buttons">
         <button class="btn-gold" id="playAgain">Play again</button>
+        <button class="btn-ghost" id="reviewBtn">Review game</button>
         <button class="btn-ghost" id="shareBtn">Share</button>
         <button class="btn-ghost" id="overlaySetup">Change setup</button>
       </div>

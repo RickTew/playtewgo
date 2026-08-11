@@ -157,6 +157,15 @@ const AI_LEVELS = [
 const LAST_MOVE_KEY = 'tewgo.web.showLastMove';
 let showLastMove = true;
 let winCells = null; // the winning five, shown until the next game starts
+// Every move of the current game in order, [player, row, col]. Feeds the
+// post-game review (round 3, Frank: "the road to the loss evaporates").
+// Replaying the log through a fresh GameBoard reproduces captures and
+// shelves exactly, so the log is the only thing that needs storing.
+let moveLog = [];
+// False when a resumed game's log failed validation: the tail of moves we
+// see from here on is not the whole game, so review stays off for it.
+let moveLogComplete = true;
+const MOVES_KEY = 'tewgo.web.moves';
 let aiTimer = null;
 let hover = null; // [row, col] ghost-stone preview, mouse only
 let anims = []; // {type:'pop'|'fade', row, col, player, start}
@@ -395,6 +404,9 @@ function shareFeedback(text) {
 function save() {
   try {
     localStorage.setItem(SAVE_KEY, encodeState(board.toState(current, gameOver, winner)));
+    // Kept OUTSIDE the codec payload: tewgo.web.game must stay byte-
+    // compatible with the iOS multiplayer state shape.
+    localStorage.setItem(MOVES_KEY, JSON.stringify(moveLog));
   } catch { /* private browsing: play without saving */ }
 }
 
@@ -410,7 +422,30 @@ function restore() {
   current = state.currentPlayerRaw;
   gameOver = false;
   winner = null;
+  moveLog = restoredMoveLog(state);
+  moveLogComplete = moveLog.length > 0 || !state.cells.some((row) => row.some((v) => v !== 0));
   return true;
+}
+
+// The move log is only trusted when replaying it reproduces the restored
+// board exactly; a stale log from an older game silently disables review
+// instead of narrating the wrong game.
+function restoredMoveLog(state) {
+  let log;
+  try { log = JSON.parse(localStorage.getItem(MOVES_KEY)); } catch { return []; }
+  if (!Array.isArray(log)) return [];
+  const b = new GameBoard();
+  for (const m of log) {
+    if (!Array.isArray(m) || m.length !== 3 || (m[0] !== 1 && m[0] !== 2) || !b.isValid(m[1], m[2])) return [];
+    b.place(m[0], m[1], m[2]);
+  }
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (b.grid[r][c] !== state.cells[r][c]) return [];
+    }
+  }
+  if (b.captureCount[ONE] !== state.captureOne || b.captureCount[TWO] !== state.captureTwo) return [];
+  return log;
 }
 
 // ----- Layout -----
@@ -1030,8 +1065,87 @@ function showOverlay() {
     themeJustUnlocked = null;
   }
   shareBtnEl.style.display = winner !== null && (!isAiGame() || winner === HUMAN) ? '' : 'none';
+  const reviewBtn = document.getElementById('reviewBtn');
+  if (reviewBtn) reviewBtn.style.display = moveLogComplete && moveLog.length > 0 ? '' : 'none';
   presentOverlay(overlayEl);
 }
+
+// ----- Post-game review (round 3, Frank's one change) -----
+// Steps back through the finished game on the real board. Each position is
+// rebuilt by replaying the log from move one, so captures, shelves and the
+// last-move glow all retell the story; the win ring returns at the end.
+
+let reviewing = false;
+let reviewIndex = 0;
+let reviewFinal = null; // the live end-of-game state, restored on exit
+
+const reviewBarEl = document.getElementById('reviewBar');
+const reviewCounterEl = document.getElementById('reviewCounter');
+
+function enterReview() {
+  if (moveLog.length === 0 || !moveLogComplete || reviewing) return;
+  reviewing = true;
+  reviewFinal = { board, lastMove, lastMover, winCells };
+  overlayEl.classList.remove('show');
+  reviewBarEl?.classList.add('show');
+  // Open one move BEFORE the end: the final position is the one the
+  // player has been staring at; the question is how it got there.
+  stepReview(Math.max(0, moveLog.length - 1));
+}
+
+function stepReview(i) {
+  reviewIndex = Math.max(0, Math.min(moveLog.length, i));
+  const b = new GameBoard();
+  let lm = null;
+  let lmv = null;
+  for (let k = 0; k < reviewIndex; k++) {
+    const [p, r, c] = moveLog[k];
+    b.place(p, r, c);
+    lm = [r, c];
+    lmv = p;
+  }
+  board = b;
+  lastMove = lm;
+  lastMover = lmv;
+  winCells = reviewIndex === moveLog.length ? reviewFinal.winCells : null;
+  anims = [];
+  hover = null;
+  draw();
+  updateHud();
+  statusEl.textContent = reviewIndex === 0 ? 'Start of game'
+    : `Move ${reviewIndex} of ${moveLog.length}`;
+  if (reviewCounterEl) reviewCounterEl.textContent = `${reviewIndex} / ${moveLog.length}`;
+  const atStart = reviewIndex === 0;
+  const atEnd = reviewIndex === moveLog.length;
+  for (const [id, off] of [['reviewFirst', atStart], ['reviewPrev', atStart], ['reviewNext', atEnd], ['reviewLast', atEnd]]) {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = off;
+  }
+}
+
+function exitReview(showOverlayAgain = true) {
+  if (!reviewing) return;
+  reviewing = false;
+  ({ board, lastMove, lastMover, winCells } = reviewFinal);
+  reviewFinal = null;
+  reviewBarEl?.classList.remove('show');
+  draw();
+  updateHud();
+  if (showOverlayAgain) presentOverlay(overlayEl);
+}
+
+document.getElementById('reviewBtn')?.addEventListener('click', enterReview);
+document.getElementById('reviewFirst')?.addEventListener('click', () => stepReview(0));
+document.getElementById('reviewPrev')?.addEventListener('click', () => stepReview(reviewIndex - 1));
+document.getElementById('reviewNext')?.addEventListener('click', () => stepReview(reviewIndex + 1));
+document.getElementById('reviewLast')?.addEventListener('click', () => stepReview(moveLog.length));
+document.getElementById('reviewDone')?.addEventListener('click', () => exitReview());
+window.addEventListener('keydown', (e) => {
+  if (!reviewing) return;
+  if (e.key === 'ArrowLeft') { stepReview(reviewIndex - 1); e.preventDefault(); }
+  else if (e.key === 'ArrowRight') { stepReview(reviewIndex + 1); e.preventDefault(); }
+  else if (e.key === 'Escape') { exitReview(); e.preventDefault(); }
+});
 
 // ----- Game flow -----
 
@@ -1115,6 +1229,7 @@ function scheduleAiMove() {
       showOverlay();
     } else {
       const captures = board.place(AI_PLAYER, move[0], move[1]);
+      moveLog.push([AI_PLAYER, move[0], move[1]]);
       lastMove = move;
       lastMover = AI_PLAYER;
       pushPop(move[0], move[1]);
@@ -1144,6 +1259,7 @@ function placeAt(row, col) {
   const mover = current;
   hideCaptureTip();
   const captures = board.place(mover, row, col);
+  moveLog.push([mover, row, col]);
   lastMove = [row, col];
   lastMover = mover;
   hover = null;
@@ -1196,6 +1312,9 @@ function newGame() {
   lastMove = null;
   lastMover = null;
   winCells = null;
+  moveLog = [];
+  moveLogComplete = true;
+  if (reviewing) exitReview(false);
   shelfCanvases[ONE]?.classList.remove('winglow');
   shelfCanvases[TWO]?.classList.remove('winglow');
   hover = null;
