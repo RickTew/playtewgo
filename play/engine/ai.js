@@ -208,21 +208,36 @@ export class GameAI {
   // resulting board. A move that hands the opponent an immediate win (a
   // five, or a capture reaching 5 pairs) is vetoed outright.
   //
-  // ⚠️ THIS FUNCTION IS THE BROKEN RUNG (measured 2026-08-11, both
-  // engines). Batch play, 60 games per pairing on this engine,
-  // alternating seats: Hard 30% vs EASY (firm, well outside the ~6 point
-  // error bar) and 45% vs Medium (reads as loses-or-level). Expert 68%
-  // and Medium 90% are healthy, so the fault is HERE and not in the
-  // lookahead family generally. Hard concedes 4.3 pairs a game to Easy
-  // against Medium's 1.1.
+  // ⚠️ THIS FUNCTION IS THE BROKEN RUNG. Measured with tools/sim.js,
+  // 100 games per pairing, alternating seats, opening variety on:
   //
-  // HYPOTHESIS, from the fact that the leak WIDENS against weaker
-  // opponents: this subtracts the opponent's raw best reply, which is a
-  // smaller number when the opponent is weak, so it penalises the AI's
-  // own good moves least against strong opposition and most against weak.
-  // A candidate fix, tried on iOS and discarded UNVALIDATED rather than
-  // disproven, is a baseline delta: charge a move only for the threat it
-  // ADDED, not the opponent's raw best reply. Worth re-testing.
+  //   medium vs easy    89% / 11%      hard vs medium   42% / 58%
+  //   expert vs easy    63% / 37%      hard vs easy     39% / 61%
+  //   expert vs medium  62% / 38%      expert vs hard   58% / 42%
+  //
+  // Hard loses to BOTH tiers below it. The mechanism is now measured, not
+  // guessed: across those three pairings Hard won 122 games and NOT ONE
+  // of them was a five in a row (Medium wins by line 89 times out of 89
+  // against Easy). Hard cannot attack at all.
+  //
+  // WHY: the reply we subtract is scored with the opponent's own #score,
+  // and #score pays 3/4 of a line's worth for BLOCKING the other side.
+  // So the better the shape we build, the more the opponent's block is
+  // worth, and 9/10 of that is charged back against our own move. We
+  // penalise ourselves for making threats, and being blocked is not
+  // damage: the threat is simply answered. It hurts most against weak
+  // opponents because a weak opponent's own best reply is small, so the
+  // block term dominates the subtraction.
+  //
+  // MEASURED FIX (candidate, 100 games per pairing): score the reply
+  // WITHOUT the block credit. Hard then goes 88% vs Easy and 79% vs
+  // Medium, and wins by line like Medium does. The same change on
+  // Expert's #quietValue takes Expert to 93% / 77%. The baseline-delta
+  // idea that iOS discarded is genuinely no good: 34% vs Easy, worse
+  // than shipping. NOT APPLIED YET, because fixing only Hard inverts the
+  // top (fixed Hard beats stock Expert 81%) and fixing both leaves Hard
+  // and Expert dead level at 50/50: what separates those two rungs is a
+  // design decision, and it has to land on iOS in the same shape.
   //
   // DO NOT FIX THIS BY FEEL. Single deterministic games cannot referee it
   // (12 games swung a win rate 83% -> 41% with no relevant change), and

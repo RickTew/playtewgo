@@ -13,6 +13,7 @@ exclude:
   - CLAUDE.md       # working notes, infrastructure, decisions
   - THEME_CHECKLIST.md
   - tests           # engine tests
+  - tools           # the batch ladder referee (tools/sim.js)
   - supabase        # edge function source (no secrets, but not player-facing)
   - package.json
   - package-lock.json
