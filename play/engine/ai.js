@@ -568,6 +568,20 @@ export class GameAI {
     // (2250) beats building our own closed three (500)
     if (countBlocking) s += idiv(this.#bestLineScore(board, opponent, row, col) * 3, 4);
 
+    // A capture that tears stones OUT of an opponent line is a block that
+    // banks a pair on top, and until 2026-08-15 nothing scored it: the AI
+    // priced the opponent capturing ITS shape (#capturedShapeLoss on every
+    // reply inside the searches) but never the mirror image on its own
+    // move, so a pair stayed worth a flat 400 even when the two stones it
+    // removed were most of an open three. Field report: "expert doesn't
+    // take advantage of capturing a pair when available." Same 3/4
+    // discount as the block above, because it is the same kind of value,
+    // and gated on countBlocking for the same reason - the searches add
+    // #capturedShapeLoss to opponent replies themselves.
+    if (countBlocking && captures.length > 0) {
+      s += idiv(this.#capturedShapeLoss(captures, board, opponent) * 3, 4);
+    }
+
     // Capture threats created - scaled like the capture itself (x3/8 of
     // its value, i.e. the historical 150 at zero pairs)
     s += this.#captureThreatCount(board, row, col, aiPlayer)
@@ -591,16 +605,55 @@ export class GameAI {
 
   // ----- Capture economy (keep in sync with TEWGO/Game/GameAI.swift) -----
 
+  // How hard a tier plays the PAIR RACE, as a multiplier on the pair
+  // table below.
+  //
+  // Field report 2026-08-15: "expert doesn't take advantage of capturing
+  // a pair when available", after losing 5 pairs to 2. Measured, and it
+  // was worse than a missed capture here and there: with a capture on
+  // offer and nothing forced, every tier took it about 15-20% of the
+  // time, because a pair at 400 was worth less than a CLOSED THREE (500)
+  // - and five pairs is a whole win condition. Against an opponent that
+  // does play the race (the shipping engine with this table x4, i.e. how
+  // Rick plays), the shipping Expert won 17.5% of 40 games and conceded
+  // 3.95 pairs a game. That is the loss he reported, reproduced.
+  //
+  // The referee (tools/sim.js method: alternating seats, pinned seeds)
+  // says the race was underpriced all the way up: x2 beat x1 55%, x4 beat
+  // x2 72.5%, x8 beat x4 70%, x16 beat x8 82.5%, and it only flattens
+  // past x32 (x64 vs x32 = 47.5%). Rather than move every tier to the
+  // ceiling, appetite is now a rung of the ladder - which is also what
+  // keeps the ladder monotone. At 60 games a pairing: medium beats easy
+  // 95%, hard beats medium 91.7%, expert beats hard 78.3%; the new hard
+  // beats the shipping hard 91.7% and the new expert beats the shipping
+  // expert 85%. Against the pair farmer that used to beat Expert 82.5%,
+  // the new Expert wins 70%.
+  //
+  // Easy stays at 1: its capture behaviour is a teaching device (one
+  // demonstration capture, then it stops - persona round 3 found an
+  // Easy that keeps taking pairs FEELS harder than Medium), and pricing
+  // pairs up would have its random top-8 pick hunting them all game.
+  capturePairAppetite() {
+    switch (this.difficulty) {
+      case 'medium': return 2;
+      case 'hard': return 4;
+      case 'expert': return 8;
+      default: return 1;
+    }
+  }
+
   // Worth of taking one pair when the taker has already banked
   // `pairsHeld`. Five pairs win, so each pair matters more than the one
   // before; at 4 the capture IS the win (normally caught by checkWin
-  // before scoring, so 20000 is a search-path backstop).
+  // before scoring, so 20000 is a search-path backstop, and it is left
+  // unscaled - a win is a win at every tier).
   captureValue(pairsHeld) {
+    const appetite = this.capturePairAppetite();
     switch (pairsHeld) {
-      case 0: return 400;
-      case 1: return 550;
-      case 2: return 800;
-      case 3: return 1200;
+      case 0: return 400 * appetite;
+      case 1: return 550 * appetite;
+      case 2: return 800 * appetite;
+      case 3: return 1200 * appetite;
       default: return 20000;
     }
   }

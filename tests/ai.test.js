@@ -210,8 +210,21 @@ test('opening variety never overrides a tactic', () => {
 test('capture economy tables', () => {
   // Pins the scaled weight tables so they mirror GameAI.swift exactly
   // and any retune on either side is loud.
+  // Pair values are scaled per tier since 2026-08-15 (appetite for the
+  // capture race is a rung of the ladder); `ai` here is hard, x4.
   assert.deepEqual([0, 1, 2, 3, 4].map((n) => ai.captureValue(n)),
+    [1600, 2200, 3200, 4800, 20000]);
+  assert.deepEqual(['easy', 'medium', 'hard', 'expert']
+    .map((t) => new GameAI(t, false).capturePairAppetite()), [1, 2, 4, 8]);
+  // Easy's economy is untouched, so its one teaching capture stays a
+  // demonstration rather than a hunt.
+  assert.deepEqual([0, 1, 2, 3, 4].map((n) => new GameAI('easy', false).captureValue(n)),
     [400, 550, 800, 1200, 20000]);
+  // Every scoring tier must value a pair above a closed three (500), the
+  // shape that used to outbid it.
+  for (const t of ['medium', 'hard', 'expert']) {
+    assert.ok(new GameAI(t, false).captureValue(0) > 500, `${t} underprices a pair`);
+  }
   assert.deepEqual([0, 1, 2, 3, 4].map((n) => ai.vulnerablePairPenalty(n)),
     [1000, 1400, 2000, 3200, 30000]);
   assert.deepEqual([0, 1, 2, 3, 4].map((n) => ai.captureContestBonus(n)),
@@ -223,6 +236,23 @@ test('capture economy tables', () => {
   // see the tuning note on vulnerablePairPenalty.)
   assert.ok(ai.vulnerablePairPenalty(0) > 500);
   assert.ok(ai.vulnerablePairPenalty(4) > 20000);
+});
+
+test('every scoring tier takes a free pair when nothing is forced', () => {
+  // Field report 2026-08-15: "expert doesn't take advantage of capturing a
+  // pair when available". TWO at (10,7) already flanks ONE's pair at
+  // (10,8)-(10,9); (10,10) closes it. Nothing else on the board threatens
+  // anything, so a tier that declines this is playing for a shape worth
+  // less than a fifth of a win.
+  const b = board({
+    one: [[10, 8], [10, 9], [3, 15], [16, 4]],
+    two: [[10, 7], [4, 16], [15, 3]],
+  });
+  for (const difficulty of ['medium', 'hard', 'expert']) {
+    const move = new GameAI(difficulty, false).bestMove(b, TWO);
+    assert.deepEqual(move, [10, 10],
+      `${difficulty} passed up a free pair and played (${move})`);
+  }
 });
 
 test('all tiers avoid gifting a pair while blocking', () => {
