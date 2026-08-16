@@ -53,3 +53,17 @@ test('expert beats hard over a batch', () => {
   // is the one most worth watching.
   guard('expert', 'hard');
 });
+
+test('expert does not bleed pairs to hard', () => {
+  // Field report 2026-08-16: the AI would not answer a live capture threat
+  // against its own pair ("instead of protecting his pieces he places his
+  // yellow piece [elsewhere]"), because rescuing one paid a quarter of what
+  // hanging a fresh one costs. Win rate barely moved; pairs conceded is the
+  // measurement that did, and it is far less noisy. Same batch, same seed:
+  // 2.95 a game on the old weight, 1.8 on the new one, measured here and
+  // reproduced independently on the iOS engine (2.85 -> 1.91 at n=150).
+  const r = measure('expert', 'hard', GAMES, SEED);
+  assert.ok(r.pairsConceded.expert <= 2.4,
+    `expert conceded ${r.pairsConceded.expert} pairs a game to hard - `
+    + 'it has stopped answering capture threats against its own stones.');
+});

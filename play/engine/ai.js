@@ -587,12 +587,19 @@ export class GameAI {
     s += this.#captureThreatCount(board, row, col, aiPlayer)
       * idiv(this.captureValue(pairsHeldBefore) * 3, 8);
 
-    // Block opponent capture threats against our own pairs - a quarter
-    // of what losing the pair would cost us (the flat 80 this replaced
-    // meant a set-up capture was almost never answered)
+    // Block opponent capture threats against our own pairs.
+    //
+    // HALF of what losing the pair would cost us, raised from a quarter on
+    // 2026-08-16 (iOS GameAI.swift carries the full note and the numbers).
+    // Hanging a fresh pair cost the full penalty while rescuing one already
+    // under a one-move threat paid a quarter of it, so the AI let pairs go
+    // and blocked lines instead: "instead of protecting his pieces he places
+    // his yellow piece [elsewhere]". Measured on the iOS engine at 150 games
+    // a pairing against a fixed hard opponent: expert 79.3% -> 92.0%, pairs
+    // conceded 2.85 -> 1.91. Keep the two engines equal.
     const oppCaptures = b.captureCount[opponent];
     s += this.#captureThreatCount(board, row, col, opponent)
-      * idiv(this.vulnerablePairPenalty(oppCaptures), 4);
+      * idiv(this.vulnerablePairPenalty(oppCaptures), 2);
 
     // Don't hand the opponent free pairs: penalize every capturable pair
     // this move creates. With 5 pairs as a win condition this is the
