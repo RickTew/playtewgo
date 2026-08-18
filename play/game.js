@@ -157,6 +157,13 @@ const AI_LEVELS = [
 const LAST_MOVE_KEY = 'tewgo.web.showLastMove';
 let showLastMove = true;
 let winCells = null; // the winning five, shown until the next game starts
+// Midpoint of every pair each side has captured this game, per CAPTURER.
+// A capture win has no line of five to light up, so its finale is WHERE
+// the five pairs fell (2026-08-18, iOS parity): staggered glow bursts
+// loop over the sites. Memory-only, so a restored game skips the show.
+let captureSites = { [ONE]: [], [TWO]: [] };
+let winCelebrationStart = 0;
+let winCelebrationRaf = null;
 // Every move of the current game in order, [player, row, col]. Feeds the
 // post-game review (round 3, Frank: "the road to the loss evaporates").
 // Replaying the log through a fresh GameBoard reproduces captures and
@@ -541,9 +548,11 @@ function pushPop(row, col) {
 
 function pushFades(captures, capturedPlayer) {
   const start = performance.now();
+  const capturer = opponentOf(capturedPlayer);
   for (const cap of captures) {
     anims.push({ type: 'fade', row: cap.row1, col: cap.col1, player: capturedPlayer, start });
     anims.push({ type: 'fade', row: cap.row2, col: cap.col2, player: capturedPlayer, start });
+    captureSites[capturer].push([(cap.row1 + cap.row2) / 2, (cap.col1 + cap.col2) / 2]);
   }
   if (captures.length > 0) maybeShowCaptureTip(capturedPlayer);
 }
@@ -817,6 +826,38 @@ function draw() {
       ctx.arc(x, y, radius * 1.12, 0, Math.PI * 2);
       ctx.stroke();
     }
+    ctx.restore();
+  }
+
+  // Capture-win finale: glow bursts pop one after another at each spot
+  // the winner took a pair, looping until the next game. Layered soft
+  // gradient, never a hard-edged disc (the iOS glow rule).
+  if (winner !== null && !winCells && captureSites[winner].length > 0) {
+    const sites = captureSites[winner];
+    const stagger = 300;
+    const burstMs = 1300;
+    // Every site's cycle is the same length, so the ripple order the
+    // stagger sets up on the first lap holds on every following lap.
+    const cycle = burstMs + Math.max(800, sites.length * stagger);
+    const now = performance.now();
+    ctx.save();
+    sites.forEach(([r, c], i) => {
+      const dt = now - winCelebrationStart - i * stagger;
+      if (dt < 0) return;
+      const t = (dt % cycle) / burstMs;
+      if (t > 1) return;
+      const [x, y] = pointFor(r, c, m);
+      const grow = m.cell * (0.7 + 1.5 * t);
+      const alpha = t < 0.2 ? t / 0.2 : 1 - (t - 0.2) / 0.8;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, grow);
+      g.addColorStop(0, `rgba(${styleFor(winner).glowRgb}, ${0.55 * alpha})`);
+      g.addColorStop(0.6, `rgba(${styleFor(winner).glowRgb}, ${0.25 * alpha})`);
+      g.addColorStop(1, `rgba(${styleFor(winner).glowRgb}, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, grow, 0, Math.PI * 2);
+      ctx.fill();
+    });
     ctx.restore();
   }
 
@@ -1195,6 +1236,28 @@ function findWinLine(player, row, col) {
   return null;
 }
 
+// Keeps the capture-win bursts moving: draw() renders them off the clock,
+// this loop just keeps repainting while there is something to animate.
+function startWinCelebration() {
+  if (winner === null || winCells || captureSites[winner].length === 0) return;
+  winCelebrationStart = performance.now();
+  if (winCelebrationRaf !== null) cancelAnimationFrame(winCelebrationRaf);
+  const tick = () => {
+    winCelebrationRaf = null;
+    if (winner === null || winCells) return;
+    draw();
+    winCelebrationRaf = requestAnimationFrame(tick);
+  };
+  winCelebrationRaf = requestAnimationFrame(tick);
+}
+
+function stopWinCelebration() {
+  if (winCelebrationRaf !== null) {
+    cancelAnimationFrame(winCelebrationRaf);
+    winCelebrationRaf = null;
+  }
+}
+
 function endIfOver(player) {
   const [r, c] = lastMove;
   if (board.checkWin(player, r, c)) {
@@ -1202,8 +1265,12 @@ function endIfOver(player) {
     winner = player;
     winCells = board.winReason(player) === 'fiveInARow' ? findWinLine(player, r, c) : null;
     // A capture win has no line to show; the winner's shelf carries the
-    // story instead and gets a glow.
-    if (!winCells) shelfCanvases[player]?.classList.add('winglow');
+    // story and gets a glow, and the board replays WHERE the five pairs
+    // fell with looping glow bursts (drawn in draw(), animated here).
+    if (!winCells) {
+      shelfCanvases[player]?.classList.add('winglow');
+      startWinCelebration();
+    }
   } else if (board.isFull()) {
     gameOver = true;
     winner = null;
@@ -1312,6 +1379,8 @@ function newGame() {
   lastMove = null;
   lastMover = null;
   winCells = null;
+  captureSites = { [ONE]: [], [TWO]: [] };
+  stopWinCelebration();
   moveLog = [];
   moveLogComplete = true;
   if (reviewing) exitReview(false);
