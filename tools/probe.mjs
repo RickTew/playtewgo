@@ -133,5 +133,32 @@ observe(
    '  by 15 to 1. Tuning question for Rick, not a defect.'],
 );
 
+observe(
+  "The veteran's bait, 2026-08-20 round 4",
+  mk([[ONE, 10, 10], [ONE, 10, 12], [TWO, 4, 4], [TWO, 16, 16]]),
+  'expert',
+  ['A tournament Pente player, told NOTHING about the code, played three',
+   '  games and reported: "it will not leave a split-two gap alone, and',
+   '  that habit is exploitable" - "a stone-cold predictable habit a sharp',
+   '  opponent can and will build a game plan around, and I did."',
+   'He is describing the OBSERVE block above, from the other side. The',
+   '  mechanism: #lineInfo counts contiguous stones only, so the human\'s',
+   '  X _ X reads as a lone stone, but the GAP square converts it to a',
+   '  contiguous three - 3000 if open. The engine is not choosing to fill',
+   '  the gap, it is dragged there by a 15:1 then 300:1 gradient. That is',
+   '  why the habit is ABSOLUTE rather than frequent, and absolute is what',
+   '  makes it baitable.',
+   'Two blind methods agreeing - a code observation and a player who could',
+   '  not see the code - is stronger evidence than any win rate we can run.',
+   'STILL NOT A PASS/FAIL. Rick tunes, and two cautions stand: (1) the 150',
+   '  is load-bearing, the capture economy was tuned ON TOP of it and',
+   '  vulnerablePairPenalty partly compensates for the engine building',
+   '  capturable shapes, so both must move in ONE pass on BOTH engines with',
+   '  both pinning tests - the same trap as the fork reprice; (2) 15:1 is',
+   '  not wrong at every phase, contiguous is genuinely better late when',
+   '  there is no time left to be captured, so this may want to be',
+   '  phase-dependent rather than reweighted flat.'],
+);
+
 console.log(`\n${failures} of 5 pass/fail probes failing.`);
 process.exit(failures === 0 ? 0 : 1);
