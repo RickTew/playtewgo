@@ -77,5 +77,61 @@ probe(
   'Both squares look like a lone open three to the eval, so the fork does not stand out.',
 );
 
-console.log(`\n${failures} of 3 probes failing.`);
+// ---------------------------------------------------------------------
+// BROKEN (split) THREES. `#lineInfo` counts only CONTIGUOUS stones, so
+// `X X _ X` reads as a two. The gap square itself is still scored
+// correctly (placing there makes a contiguous four), which is why these
+// two may well pass - run them, do not assume. If they pass, the gap is
+// narrower than "the engine cannot see broken shapes" and the fix should
+// not be sold as if it were.
+// ---------------------------------------------------------------------
+
+probe(
+  'Expert blocks a broken three before it is an open four',
+  mk([
+    [ONE, 10, 10], [ONE, 10, 11], [ONE, 10, 13], // _ X X _ X _ , gap at (10,12)
+    [TWO, 4, 4], [TWO, 4, 5],
+  ]),
+  'expert', [10, 12],
+  'The human plays the gap next move for an OPEN four - two winning ends, one block. Must be taken now.',
+);
+
+probe(
+  'Expert plays the gap of its OWN broken three',
+  mk([
+    [TWO, 10, 10], [TWO, 10, 11], [TWO, 10, 13], // gap at (10,12) makes an open four
+    [ONE, 4, 4], [ONE, 4, 5], [ONE, 16, 16],
+  ]),
+  'expert', [10, 12],
+  'An open four wins next move two ways. Anything else throws away a won position.',
+);
+
+// ---------------------------------------------------------------------
+// KEYSTONE BUILDING - reported as an OBSERVATION, never a pass/fail.
+// This is Pente theory, not a rule: a contiguous pair can be captured, a
+// split pair (X _ X) cannot, so strong players build with gaps early.
+// `#lineScore` pays 150 for the capturable shape and 10 for the safe one,
+// which is a POLICY-LEVEL preference for the shape the opponent farms.
+// Whether that is wrong is a tuning call and Rick tunes, not the probe.
+// ---------------------------------------------------------------------
+
+function observe(label, board, tier, notes) {
+  const move = new GameAI(tier, false).bestMove(board, TWO);
+  console.log(`\nOBSERVE  ${label}`);
+  console.log(`         played [${move}]`);
+  for (const n of notes) console.log(`         ${n}`);
+}
+
+observe(
+  'Building shape: safe gap, or capturable pair?',
+  mk([[TWO, 10, 10], [ONE, 4, 4], [ONE, 16, 16]]),
+  'expert',
+  ['[10,11] or [10,9] = a CONTIGUOUS pair, worth 150 and capturable the',
+   '  moment the opponent takes either end.',
+   '[10,12] or [10,8] = a SPLIT pair, worth 10 and impossible to capture.',
+   'Pente theory says build with the gap early. The eval says the opposite',
+   '  by 15 to 1. Tuning question for Rick, not a defect.'],
+);
+
+console.log(`\n${failures} of 5 pass/fail probes failing.`);
 process.exit(failures === 0 ? 0 : 1);
