@@ -1039,16 +1039,16 @@ export const CHIP_EYES = {
   goblin: [[-0.16,-0.05,["c",0.06],["a",1]],[0.16,-0.05,["c",0.06],["a",1]]],
   knight: [[0,-0.1,["r",0.42,0.07,0.02],["a",1]]],
   kraken: [[-0.18,0.2,["c",0.1],["w",1]],[0.18,0.2,["c",0.1],["w",1]],[-0.18,0.2,["c",0.05],["a",1]],[0.18,0.2,["c",0.05],["a",1]]],
-  mermaid: [[-0.12,-0.02,['c',0.05],['a',1]],[0.12,-0.02,['c',0.05],['a',1]],[-0.22,0.14,['u',0.1892],['w',0.4]],[0.0,0.14,['u',0.1892],['w',0.4]],[0.22,0.14,['u',0.1892],['w',0.4]],[-0.33,0.28,['u',0.1892],['w',0.4]],[-0.11,0.28,['u',0.1892],['w',0.4]],[0.11,0.28,['u',0.1892],['w',0.4]],[0.33,0.28,['u',0.1892],['w',0.4]]],
+  mermaid: [[-0.12,-0.02,['c',0.05],['a',1]],[0.12,-0.02,['c',0.05],['a',1]]],
   mummy: [[0,-0.02,["r",0.5,0.13,0.03],["g",0.1,0.85]],[-0.13,-0.02,["c",0.04],["a",1]],[0.13,-0.02,["c",0.04],["a",1]]],
   ninja: [[0,-0.07,["r",0.4,0.08,0.04],["a",1]]],
   outlaw: [[0,0.14,["r",0.55,0.18,0.04],["a",1]],[-0.13,-0.05,["c",0.04],["g",0.05,1.0]],[0.13,-0.05,["c",0.04],["g",0.05,1.0]]],
   pharaoh: [[-0.13,0.05,["c",0.05],["a",1]],[0.13,0.05,["c",0.05],["a",1]]],
-  pirate: [[0.13,0.05,['c',0.05],['a',1]],[-0.235,-0.055,['r',0.32,0.045,0.02,0.79],['g',0.92,0.85]],[-0.13,0.05,['r',0.2,0.15,0.03],['g',0.05,1],['g',0.92,0.9]]],
+  pirate: [[0.13,0.05,['c',0.05],['a',1]],[-0.16,0.04,['r',0.3,0.24,0.05],['g',0.05,1],['g',0.95,0.95]]],
   robot: [[0,-0.05,["r",0.42,0.07,0.02],["a",1]]],
   samurai: [[-0.13,0.02,["c",0.06],["a",1]],[0.13,0.02,["c",0.06],["a",1]]],
   scarab: [[0,-0.05,["r",0.04,0.65,0],["g",0.05,0.85]],[-0.3,-0.2,["c",0.05],["g",0.05,1.0]],[0.3,-0.2,["c",0.05],["g",0.05,1.0]]],
-  shark: [[-0.18,-0.1,['c',0.05],['g',0.05,1]],[-0.2,0.12,['t',0.084,0.13],['g',0.97,0.95]],[-0.1,0.12,['t',0.084,0.13],['g',0.97,0.95]],[0.0,0.12,['t',0.084,0.13],['g',0.97,0.95]],[0.1,0.12,['t',0.084,0.13],['g',0.97,0.95]],[0.2,0.12,['t',0.084,0.13],['g',0.97,0.95]]],
+  shark: [[-0.18,-0.1,['c',0.05],['g',0.05,1]],[-0.19,0.1,['t',0.16,0.2],['g',0.97,0.95]],[0.0,0.1,['t',0.16,0.2],['g',0.97,0.95]],[0.19,0.1,['t',0.16,0.2],['g',0.97,0.95]]],
   sheriff: [[-0.13,0.05,["r",0.12,0.04,0.01],["a",1]],[0.13,0.05,["r",0.12,0.04,0.01],["a",1]]],
   skeleton: [[-0.16,-0.05,["c",0.07],["g",0.0,0.85]],[0.16,-0.05,["c",0.07],["g",0.0,0.85]],[0,0.05,["c",0.03],["g",0.0,0.85]]],
   snake: [[-0.16,-0.1,["r",0.04,0.13,0.01],["a",1]],[0.16,-0.1,["r",0.04,0.13,0.01],["a",1]]],
@@ -1124,7 +1124,7 @@ export function drawChipEyes(ctx, kind, cx, cy, r, accent) {
         ctx.fill();
         if (stroke) {
           ctx.strokeStyle = chipEyeColour(stroke, accent);
-          ctx.lineWidth = Math.max(0.5, r * 0.018);
+          ctx.lineWidth = Math.max(0.8, r * 0.055);
           ctx.stroke();
         }
         ctx.restore();
@@ -1135,7 +1135,7 @@ export function drawChipEyes(ctx, kind, cx, cy, r, accent) {
     ctx.fill();
     if (stroke) {
       ctx.strokeStyle = chipEyeColour(stroke, accent);
-      ctx.lineWidth = Math.max(0.5, r * 0.018);
+      ctx.lineWidth = Math.max(0.8, r * 0.055);
       ctx.stroke();
     }
   }
@@ -1172,13 +1172,20 @@ const chipFitCache = new Map();
 
 /**
  * Player choice from the picker's CHIP ART row (iOS ChipLogoFit).
- * 'fit' keeps every head inside its disc; 'breakout' restores the flat 1.30
- * the app shipped with, where wide heads deliberately hang over the rim -
+ * Defaults to BREAK OUT. Fit was the default for about an hour and was
+ * wrong: most people play on a phone, where a chip is 11-14px and the
+ * OUTLINE is nearly all you perceive, so clipping every head inside its disc
+ * turns every piece into the same circle. Break Out lets the pirate's brim,
+ * the mermaid's hair and the kraken's crown break that circle, which is what
+ * makes them tellable apart at a glance.
+ *
+ * 'fit' keeps every head inside its disc; 'breakout' is the flat 1.30 the
+ * app shipped with, where wide heads deliberately hang over the rim -
  * Rick, 2026-08-21: "having some of the characters jump off their pieces
  * actually made some of them Unique looking ... I like how the Kraken sticks
  * off the piece". Neither is wrong, so the player picks.
  */
-let chipLogoFit = 'fit';
+let chipLogoFit = 'breakout';
 
 export function setChipLogoFit(mode) {
   chipLogoFit = mode === 'breakout' ? 'breakout' : 'fit';

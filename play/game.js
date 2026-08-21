@@ -2813,6 +2813,7 @@ try {
   if (savedBoard && boardsForTheme(theme).some((b) => b.key === savedBoard)) boardKey = savedBoard;
   const savedFinish = localStorage.getItem(FINISH_KEY);
   if (savedFinish === 'classic' || savedFinish === 'dimensional') finish = savedFinish;
+  // Absent means break out, which is what pieces.js already defaults to.
   const savedChipFit = localStorage.getItem(CHIP_FIT_KEY);
   if (savedChipFit === 'fit' || savedChipFit === 'breakout') setChipLogoFit(savedChipFit);
   const savedColor = localStorage.getItem(COLOR_KEY);
