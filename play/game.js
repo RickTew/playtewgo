@@ -22,6 +22,12 @@ const THEME_KEY = 'tewgo.web.theme';
 const AI_DELAY_MS = 350;
 const POP_MS = 160;
 const FADE_MS = 320;
+// A captured pair is STRUCK, not faded: the recoil plus the knock outward
+// needs longer than the old quiet vanish. iOS parity (strikeCapture).
+const STRIKE_MS = 420;
+// How long the finale's first beat holds the proof on screen before the
+// camera pulls back and the overlay lands. iOS parity (evidenceHold).
+const EVIDENCE_HOLD_MS = 2800;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -508,6 +514,7 @@ function clampView(size) {
 /** Zooms toward a point in CLIENT coordinates, keeping whatever is under
  *  that point exactly where it is. */
 function zoomAt(clientX, clientY, factor) {
+  stopViewAnim();
   const rect = canvas.getBoundingClientRect();
   const px = clientX - rect.left;
   const py = clientY - rect.top;
@@ -525,12 +532,71 @@ function zoomAt(clientX, clientY, factor) {
 }
 
 function resetZoom() {
+  stopViewAnim();
   if (view.zoom === 1) return;
   view.zoom = 1;
   view.x = 0;
   view.y = 0;
   updateZoomUi();
   draw();
+}
+
+// The finale drives the view under animation while the player can still
+// grab it, so any manual zoom/pan wins immediately rather than fighting a
+// tween for the next half second.
+let viewAnimRaf = null;
+
+function stopViewAnim() {
+  if (viewAnimRaf !== null) {
+    cancelAnimationFrame(viewAnimRaf);
+    viewAnimRaf = null;
+  }
+}
+
+function animateView(target, ms) {
+  stopViewAnim();
+  const from = { zoom: view.zoom, x: view.x, y: view.y };
+  const start = performance.now();
+  const step = () => {
+    const t = Math.min(1, (performance.now() - start) / ms);
+    const e = t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2; // easeInOut
+    view.zoom = from.zoom + (target.zoom - from.zoom) * e;
+    view.x = from.x + (target.x - from.x) * e;
+    view.y = from.y + (target.y - from.y) * e;
+    updateZoomUi();
+    draw();
+    viewAnimRaf = t < 1 ? requestAnimationFrame(step) : null;
+  };
+  viewAnimRaf = requestAnimationFrame(step);
+}
+
+/** Glides the view so the given cells fill the board: zooms IN when the
+ *  proof is compact (a line of five spans about a fifth of a 22x22 board)
+ *  and only as far back out as it takes to fit when it is scattered,
+ *  which five capture sites usually are. */
+function frameViewOn(cells) {
+  if (cells.length === 0) return;
+  const m = metrics();
+  let minX = Infinity; let maxX = -Infinity;
+  let minY = Infinity; let maxY = -Infinity;
+  for (const [r, c] of cells) {
+    const [x, y] = pointFor(r, c, m);
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+  }
+  // Two cells of air so the outermost stones are never on the edge and
+  // the markers beside them stay on screen.
+  const pad = m.cell * 2.2;
+  const span = Math.max(maxX - minX, maxY - minY) + pad * 2;
+  const zoom = Math.min(MAX_ZOOM, Math.max(1, m.size / span));
+  // clampView's own bounds, applied to the DESTINATION so the glide lands
+  // where it is going instead of arriving and then jumping.
+  const min = m.size - m.size * zoom;
+  animateView({
+    zoom,
+    x: Math.min(0, Math.max(min, m.size / 2 - ((minX + maxX) / 2) * zoom)),
+    y: Math.min(0, Math.max(min, m.size / 2 - ((minY + maxY) / 2) * zoom)),
+  }, 550);
 }
 
 function updateZoomUi() {
@@ -546,13 +612,33 @@ function pushPop(row, col) {
   anims.push({ type: 'pop', row, col, player: null, start: performance.now() });
 }
 
+// The pair gets ATTACKED, not deleted: impact light blooms between the two
+// stones and each is knocked outward along the line it was sandwiched on,
+// tumbling as it goes. iOS parity (strikeCapture, 2026-08-21) - the old
+// exit was a quiet lift-and-shrink, which said "these two stopped
+// existing" rather than "these two were taken".
+//
+// Sites now record BOTH cells rather than the midpoint, because the
+// capture-win finale draws a bar THROUGH the pair and needs its axis.
 function pushFades(captures, capturedPlayer) {
   const start = performance.now();
   const capturer = opponentOf(capturedPlayer);
   for (const cap of captures) {
-    anims.push({ type: 'fade', row: cap.row1, col: cap.col1, player: capturedPlayer, start });
-    anims.push({ type: 'fade', row: cap.row2, col: cap.col2, player: capturedPlayer, start });
-    captureSites[capturer].push([(cap.row1 + cap.row2) / 2, (cap.col1 + cap.col2) / 2]);
+    const mr = (cap.row1 + cap.row2) / 2;
+    const mc = (cap.col1 + cap.col2) / 2;
+    for (const [r, c] of [[cap.row1, cap.col1], [cap.row2, cap.col2]]) {
+      // Unit vector out from the midpoint, so the two fly apart instead
+      // of both drifting the same way.
+      const dr = r - mr;
+      const dc = c - mc;
+      const len = Math.hypot(dr, dc) || 1;
+      anims.push({
+        type: 'fade', row: r, col: c, player: capturedPlayer, start, ms: STRIKE_MS,
+        dx: dc / len, dy: dr / len, spin: dc >= 0 ? -Math.PI * 0.9 : Math.PI * 0.9,
+      });
+    }
+    anims.push({ type: 'impact', row: mr, col: mc, player: capturer, start, ms: STRIKE_MS });
+    captureSites[capturer].push([cap.row1, cap.col1, cap.row2, cap.col2]);
   }
   if (captures.length > 0) maybeShowCaptureTip(capturedPlayer);
 }
@@ -592,7 +678,7 @@ function animTick() {
   rafId = null;
   draw();
   const now = performance.now();
-  anims = anims.filter((a) => now - a.start < (a.type === 'pop' ? POP_MS : FADE_MS));
+  anims = anims.filter((a) => now - a.start < (a.ms ?? (a.type === 'pop' ? POP_MS : FADE_MS)));
   if (anims.length > 0) rafId = requestAnimationFrame(animTick);
 }
 
@@ -606,7 +692,7 @@ function kickAnims() {
   // playtest, Leo). One guaranteed catch-up repaint clears the board
   // even when no animation frame ever ran.
   if (animCatchup !== null) clearTimeout(animCatchup);
-  animCatchup = setTimeout(() => { animCatchup = null; draw(); }, FADE_MS + 80);
+  animCatchup = setTimeout(() => { animCatchup = null; draw(); }, STRIKE_MS + 80);
 }
 
 // Coming back to a hidden tab: repaint immediately rather than showing
@@ -752,15 +838,39 @@ function draw() {
     }
   }
 
-  // Captured stones beaming away (already removed from the grid): the
-  // stone lifts and shrinks while a bright ring expands from the spot,
-  // so the capture reads as an EVENT, not a quiet disappearance
-  // (round-1 playtest: "no flash, no pop, no beam-up").
+  // Impact light between the pair, in the CAPTURER's colour, blooming and
+  // spreading. Layered gradient, never a hard-edged disc (the iOS glow rule).
+  for (const a of anims) {
+    if (a.type !== 'impact') continue;
+    const t = Math.min(1, (now - a.start) / STRIKE_MS);
+    const [x, y] = pointFor(a.row, a.col, m);
+    const grow = m.cell * (0.6 + 1.8 * t);
+    const alpha = t < 0.18 ? t / 0.18 : 1 - (t - 0.18) / 0.82;
+    const glow = styleFor(a.player).glowRgb;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, grow);
+    g.addColorStop(0, `rgba(${glow}, ${0.6 * alpha})`);
+    g.addColorStop(0.55, `rgba(${glow}, ${0.28 * alpha})`);
+    g.addColorStop(1, `rgba(${glow}, 0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, grow, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // The struck stones (already removed from the grid): each recoils into
+  // the hit, then is knocked outward along the line it was sandwiched on,
+  // tumbling and shrinking, with a bright ring left at the spot it stood.
   for (const a of anims) {
     if (a.type !== 'fade') continue;
-    const t = Math.min(1, (now - a.start) / FADE_MS);
+    const t = Math.min(1, (now - a.start) / (a.ms ?? FADE_MS));
     const [x, y] = pointFor(a.row, a.col, m);
-    drawStone(x, y - m.cell * 0.55 * t, radius * (1 - 0.45 * t), a.player, 1 - t);
+    // Recoil for the first sliver of the animation, then away.
+    const push = t < 0.18 ? -(t / 0.18) * 0.2 : ((t - 0.18) / 0.82) * 1.7;
+    ctx.save();
+    ctx.translate(x + (a.dx ?? 0) * m.cell * push, y + (a.dy ?? 0) * m.cell * push);
+    ctx.rotate((a.spin ?? 0) * t);
+    drawStone(0, 0, radius * (1 - 0.6 * t), a.player, 1 - t);
+    ctx.restore();
     ctx.save();
     ctx.globalAlpha = 0.85 * (1 - t);
     ctx.strokeStyle = `rgba(${styleFor(a.player).glowRgb}, 1)`;
@@ -819,34 +929,89 @@ function draw() {
     ctx.restore();
   }
 
-  // Capture-win finale: glow bursts pop one after another at each spot
-  // the winner took a pair, looping until the next game. Layered soft
-  // gradient, never a hard-edged disc (the iOS glow rule).
-  if (winner !== null && !winCells && captureSites[winner].length > 0) {
+  // Capture-win finale: the five captures REPLAY IN THE ORDER THEY
+  // HAPPENED. Each site gets a bar drawn through the pair that was taken,
+  // a numbered marker beside it, and a looping glow burst.
+  //
+  // The number is the point. Five simultaneous blobs of light said only
+  // "something happened in five places"; 1 through 5 arriving a third of
+  // a second apart says how the game was won and in what order (field
+  // report 2026-08-21: "it highlights weird ... various sections - maybe
+  // pairs?"). iOS parity, celebrateCaptureSites.
+  //
+  // Hidden while REVIEWING: stepping back through the game move by move
+  // with all five final markers pinned to the board tells two stories at
+  // once.
+  // `winCelebrationStart > 0` is the gate, not just a clock: the winner is
+  // known the instant the game ends, but the replay does not begin until
+  // beat one. Without the gate a stale start time from the PREVIOUS game
+  // made every marker appear fully formed on the winning move, which threw
+  // away the staggered 1-to-5 reveal that is the whole point of them.
+  if (winner !== null && !winCells && !reviewing
+      && winCelebrationStart > 0 && captureSites[winner].length > 0) {
     const sites = captureSites[winner];
-    const stagger = 300;
+    const stagger = 340;
     const burstMs = 1300;
     // Every site's cycle is the same length, so the ripple order the
     // stagger sets up on the first lap holds on every following lap.
     const cycle = burstMs + Math.max(800, sites.length * stagger);
+    const glow = styleFor(winner).glowRgb;
     const now = performance.now();
     ctx.save();
-    sites.forEach(([r, c], i) => {
+    sites.forEach(([r1, c1, r2, c2], i) => {
       const dt = now - winCelebrationStart - i * stagger;
       if (dt < 0) return;
-      const t = (dt % cycle) / burstMs;
-      if (t > 1) return;
-      const [x, y] = pointFor(r, c, m);
-      const grow = m.cell * (0.7 + 1.5 * t);
-      const alpha = t < 0.2 ? t / 0.2 : 1 - (t - 0.2) / 0.8;
-      const g = ctx.createRadialGradient(x, y, 0, x, y, grow);
-      g.addColorStop(0, `rgba(${styleFor(winner).glowRgb}, ${0.55 * alpha})`);
-      g.addColorStop(0.6, `rgba(${styleFor(winner).glowRgb}, ${0.25 * alpha})`);
-      g.addColorStop(1, `rgba(${styleFor(winner).glowRgb}, 0)`);
-      ctx.fillStyle = g;
+      const [ax, ay] = pointFor(r1, c1, m);
+      const [bx, by] = pointFor(r2, c2, m);
+      const mx = (ax + bx) / 2;
+      const my = (ay + by) / 2;
+
+      // Burst under everything, on its own repeating cycle.
+      const bt = (dt % cycle) / burstMs;
+      if (bt <= 1) {
+        const grow = m.cell * (0.7 + 1.5 * bt);
+        const alpha = bt < 0.2 ? bt / 0.2 : 1 - (bt - 0.2) / 0.8;
+        const g = ctx.createRadialGradient(mx, my, 0, mx, my, grow);
+        g.addColorStop(0, `rgba(${glow}, ${0.55 * alpha})`);
+        g.addColorStop(0.6, `rgba(${glow}, ${0.25 * alpha})`);
+        g.addColorStop(1, `rgba(${glow}, 0)`);
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(mx, my, grow, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Bar and marker fade in once at their turn and then stay put.
+      const settle = Math.min(1, dt / 220);
+
+      ctx.globalAlpha = settle;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = `rgba(${glow}, 0.7)`;
+      ctx.lineWidth = m.cell * 0.34;
       ctx.beginPath();
-      ctx.arc(x, y, grow, 0, Math.PI * 2);
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+
+      // Marker sits off the bar's axis so it never covers the stones the
+      // bar is pointing between.
+      const len = Math.hypot(bx - ax, by - ay) || 1;
+      const px = mx + (-(by - ay) / len) * m.cell * 1.25;
+      const py = my + ((bx - ax) / len) * m.cell * 1.25;
+      const br = m.cell * 0.5;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
+      ctx.strokeStyle = `rgba(${glow}, 1)`;
+      ctx.lineWidth = Math.max(1.5, m.cell * 0.09);
+      ctx.beginPath();
+      ctx.arc(px, py, br, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = `700 ${Math.round(br * 1.25)}px ui-sans-serif, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(i + 1), px, py);
+      ctx.globalAlpha = 1;
     });
     ctx.restore();
   }
@@ -1279,22 +1444,78 @@ function endIfOver(player) {
     winCells = board.winReason(player) === 'fiveInARow' ? findWinLine(player, r, c) : null;
     // A capture win has no line to show; the winner's shelf carries the
     // story and gets a glow, and the board replays WHERE the five pairs
-    // fell with looping glow bursts (drawn in draw(), animated here).
-    if (!winCells) {
-      shelfCanvases[player]?.classList.add('winglow');
-      startWinCelebration();
-    }
+    // fell (drawn in draw(), animated by startWinCelebration in beat one).
+    if (!winCells) shelfCanvases[player]?.classList.add('winglow');
   } else if (board.isFull()) {
     gameOver = true;
     winner = null;
   }
   if (gameOver) {
+    winCelebrationStart = 0; // beat one sets it; nothing draws until then
     stopMusic();
     if (winner !== null) playVictory();
     recordFinishedGame();
-    showOverlay();
+    beginFinale();
   }
   return gameOver;
+}
+
+// ----- The finale, in two beats -----
+//
+// Beat one frames the PROOF - the winning five, or the five places the
+// winner took a pair - and lights it up with the board otherwise clear.
+// Beat two pulls the view back out and lands the overlay.
+//
+// They used to be one thing: `showOverlay()` fired on the same tick as the
+// winning move, so a modal dialog covered the board at the exact instant
+// the player wanted to look at it. iOS had the same fault in a milder form
+// and was fixed the same way on 2026-08-21 ("it goes too fast to the pop up
+// and zoom out ... have it first HIGHLIGHT the win zoomed in so the player
+// can see it first").
+
+let finaleTimer = null;
+
+/** The cells that prove the win, for the view to frame. */
+function evidenceCells() {
+  if (winner === null) return [];
+  if (winCells) return winCells;
+  return captureSites[winner].flatMap(([r1, c1, r2, c2]) => [[r1, c1], [r2, c2]]);
+}
+
+function finaleCaption() {
+  if (winner === null) return '';
+  if (winCells) return `Five in a row - ${nameOf(winner)}'s winning five is lit up`;
+  return `Five pairs taken - ${nameOf(winner)} flanked 1 to 5, in that order`;
+}
+
+function cancelFinale() {
+  if (finaleTimer !== null) {
+    clearTimeout(finaleTimer);
+    finaleTimer = null;
+  }
+}
+
+function beginFinale() {
+  cancelFinale();
+  const cells = evidenceCells();
+  // A draw has nothing to point at, so it just announces itself.
+  if (cells.length === 0) {
+    showOverlay();
+    return;
+  }
+  finaleTimer = setTimeout(() => {
+    frameViewOn(cells);
+    startWinCelebration();
+    statusEl.textContent = finaleCaption();
+    finaleTimer = setTimeout(() => {
+      animateView({ zoom: 1, x: 0, y: 0 }, 400);
+      finaleTimer = setTimeout(() => {
+        finaleTimer = null;
+        statusEl.textContent = 'Game over';
+        showOverlay();
+      }, 450);
+    }, EVIDENCE_HOLD_MS);
+  }, 350);
 }
 
 function scheduleAiMove() {
@@ -1393,6 +1614,8 @@ function newGame() {
   lastMover = null;
   winCells = null;
   captureSites = { [ONE]: [], [TWO]: [] };
+  winCelebrationStart = 0;
+  cancelFinale();
   stopWinCelebration();
   moveLog = [];
   moveLogComplete = true;
