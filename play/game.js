@@ -7,7 +7,7 @@ import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
 import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
-import { FIGURES, figureHeight, drawFigure, traceFigure, drawChipDisc, COLOR_SCHEMES, paletteFor, shadeHex, setChipLogoFit, getChipLogoFit } from './pieces.js';
+import { FIGURES, figureHeight, drawFigure, traceFigure, drawChipDisc, COLOR_SCHEMES, paletteFor, shadeHex, drawFlatDisc } from './pieces.js';
 import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
 import { createProgression, GOLD_WIN_THRESHOLD, THEME_ORDER, THEME_UNLOCK_AFTER } from './engine/progression.js';
 import { startCheckout, handleReturn, restoreWithCode, savedCode } from './unlock.js';
@@ -98,9 +98,6 @@ let gridStyle = 'dots';
 // Piece FINISH (iOS tewgo.pieceFinish): classic | dimensional faux-3D.
 const FINISH_KEY = 'tewgo.web.pieceFinish';
 let finish = 'classic';
-// Chip/flat head logo: fit inside the disc, or break out over the rim
-// (iOS tewgo.chipLogoFit). Only Flat and Chip wear a head logo.
-const CHIP_FIT_KEY = 'tewgo.web.chipLogoFit';
 
 // Color scheme (iOS tewgo.pieceColor): recolors both sides as a pair.
 const COLOR_KEY = 'tewgo.web.pieceColor';
@@ -749,17 +746,7 @@ function drawStone(x, y, radius, player, alpha = 1) {
   ctx.fill();
 
   if (variant === 'flat') {
-    ctx.fillStyle = f.primary;
-    ctx.strokeStyle = f.stroke;
-    ctx.lineWidth = Math.max(1, radius * 0.09);
-    ctx.beginPath();
-    ctx.arc(x, y, radius * 0.92, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = f.accent;
-    ctx.beginPath();
-    ctx.arc(x, y, radius * 0.22, 0, Math.PI * 2);
-    ctx.fill();
+    drawFlatDisc(ctx, kind, x, y, radius, f, alpha);
   } else {
     drawChipDisc(ctx, kind, x, y, radius, f, alpha);
   }
@@ -1979,27 +1966,6 @@ function buildVariantRow() {
     });
     finishRowEl.appendChild(btn);
   }
-  // CHIP ART row: only Flat and Chip wear a head logo, so on Half and Tall
-  // the control would be dead.
-  const chipFitRowEl = document.getElementById('chipFitRow');
-  if (chipFitRowEl) {
-    const wearsLogo = variant === 'flat' || variant === 'chip';
-    chipFitRowEl.previousElementSibling?.classList.toggle('hidden', !wearsLogo);
-    chipFitRowEl.classList.toggle('hidden', !wearsLogo);
-    chipFitRowEl.innerHTML = '';
-    for (const m of [['fit', 'Fit'], ['breakout', 'Break Out']]) {
-      const btn = document.createElement('button');
-      btn.className = `piece-option variant-btn${getChipLogoFit() === m[0] ? ' selected' : ''}`;
-      btn.textContent = m[1];
-      btn.addEventListener('click', () => {
-        setChipLogoFit(m[0]);
-        try { localStorage.setItem(CHIP_FIT_KEY, m[0]); } catch { /* ignore */ }
-        buildPicker();
-        draw();
-      });
-      chipFitRowEl.appendChild(btn);
-    }
-  }
   const colorRowEl = document.getElementById('colorRow');
   colorRowEl.innerHTML = '';
   // Gold is per-theme: 10 wins in the CURRENT theme unlock it there, like
@@ -2813,9 +2779,6 @@ try {
   if (savedBoard && boardsForTheme(theme).some((b) => b.key === savedBoard)) boardKey = savedBoard;
   const savedFinish = localStorage.getItem(FINISH_KEY);
   if (savedFinish === 'classic' || savedFinish === 'dimensional') finish = savedFinish;
-  // Absent means break out, which is what pieces.js already defaults to.
-  const savedChipFit = localStorage.getItem(CHIP_FIT_KEY);
-  if (savedChipFit === 'fit' || savedChipFit === 'breakout') setChipLogoFit(savedChipFit);
   const savedColor = localStorage.getItem(COLOR_KEY);
   if (savedColor && COLOR_SCHEMES.some((s) => s.key === savedColor)) colorScheme = savedColor;
   const savedGrid = localStorage.getItem(GRID_KEY);

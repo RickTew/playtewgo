@@ -1160,31 +1160,6 @@ const CHIP_LOGO_MAX = 1.30;
 const chipFitCache = new Map();
 
 /**
- * Player choice from the picker's CHIP ART row (iOS ChipLogoFit).
- * Defaults to BREAK OUT. Fit was the default for about an hour and was
- * wrong: most people play on a phone, where a chip is 11-14px and the
- * OUTLINE is nearly all you perceive, so clipping every head inside its disc
- * turns every piece into the same circle. Break Out lets the pirate's brim,
- * the mermaid's hair and the kraken's crown break that circle, which is what
- * makes them tellable apart at a glance.
- *
- * 'fit' keeps every head inside its disc; 'breakout' is the flat 1.30 the
- * app shipped with, where wide heads deliberately hang over the rim -
- * Rick, 2026-08-21: "having some of the characters jump off their pieces
- * actually made some of them Unique looking ... I like how the Kraken sticks
- * off the piece". Neither is wrong, so the player picks.
- */
-let chipLogoFit = 'breakout';
-
-export function setChipLogoFit(mode) {
-  chipLogoFit = mode === 'breakout' ? 'breakout' : 'fit';
-}
-
-export function getChipLogoFit() {
-  return chipLogoFit;
-}
-
-/**
  * Where each mode puts the head's outermost point, in units of the face
  * ELLIPSE. One target per mode rather than a per-kind clamp, because the look
  * has to be CONSISTENT - Rick, 2026-08-21: "the face can go off of the chip
@@ -1204,7 +1179,63 @@ function chipHeadReach(pts) {
   return Math.max(...pts.map(([x, y]) => Math.hypot(x / CHIP_FACE_RX, y / CHIP_FACE_RY)));
 }
 
-export function chipHeadScale(kind, mode = chipLogoFit) {
+const FLAT_FACE_R = 0.92;
+const flatFitCache = new Map();
+
+/** The head's outermost point in units of the flat disc's radius. */
+function flatHeadReach(pts) {
+  return Math.max(...pts.map(([x, y]) => Math.hypot(x, y) / FLAT_FACE_R));
+}
+
+export function flatLogoScale(kind) {
+  const key = CHIP_HEAD_ALIAS[kind] ?? kind;
+  if (flatFitCache.has(key)) return flatFitCache.get(key);
+  const pts = CHIP_HEADS[key];
+  const reach = pts && pts.length ? flatHeadReach(pts) : 0;
+  const scale = reach > 0 ? CHIP_TARGET.fit / reach : 1;
+  flatFitCache.set(key, scale);
+  return scale;
+}
+
+/**
+ * Flat is the CONTAINED look and Chip is the BREAK-OUT look, so the two
+ * variants are the two options and the old Fit/Break Out setting is gone
+ * (Rick, 2026-08-21: "should we make fit to disc just the flat? Option").
+ * Same head, same face marks; only the disc differs.
+ *
+ * Lives here rather than inline in game.js so the lab and the board cannot
+ * drift - they did, and the lab kept its own copy for a while.
+ */
+export function drawFlatDisc(c, kind, x, y, radius, f, alpha = 1) {
+  c.save();
+  c.globalAlpha = alpha;
+  c.fillStyle = shadeHex(f.primary, -0.52);
+  c.strokeStyle = f.stroke;
+  c.lineWidth = Math.max(1, radius * 0.09);
+  c.beginPath();
+  c.arc(x, y, radius * FLAT_FACE_R, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+
+  const hs = radius * flatLogoScale(kind);
+  if (traceChipHead(c, kind, x, y, hs)) {
+    c.fillStyle = f.primary;
+    c.strokeStyle = shadeHex(f.stroke, 0.25);
+    c.lineWidth = Math.max(0.6, radius * 0.05);
+    c.lineJoin = 'round';
+    c.fill();
+    c.stroke();
+    drawChipEyes(c, kind, x, y, hs, f.accent);
+  } else {
+    c.fillStyle = f.accent;
+    c.beginPath();
+    c.arc(x, y, radius * 0.22, 0, Math.PI * 2);
+    c.fill();
+  }
+  c.restore();
+}
+
+export function chipHeadScale(kind, mode = 'breakout') {
   const key = CHIP_HEAD_ALIAS[kind] ?? kind;
   const target = CHIP_TARGET[mode] ?? CHIP_TARGET.fit;
   const cacheKey = `${mode}|${key}`;

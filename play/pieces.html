@@ -95,12 +95,6 @@
       <input type="range" id="size" min="8" max="64" step="1" value="30">
       <span id="sizeOut">14px</span>
     </label>
-    <label class="ctl"><b>Logo</b>
-      <select id="logofit">
-        <option value="breakout" selected>Break out</option>
-        <option value="fit">Fit to disc</option>
-      </select>
-    </label>
     <button class="swap" id="swap">Swap side</button>
     <span class="ctl" id="count"></span>
   </div>
@@ -112,7 +106,7 @@
 </footer>
 
 <script type="module">
-import { FIGURES, drawChipDisc, chipHeadScale, drawFigure, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
+import { FIGURES, drawChipDisc, drawFlatDisc, chipHeadScale, drawFigure, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
 import { THEMES } from './themes.js';
 
 const out = document.getElementById('out');
@@ -197,23 +191,6 @@ const REFERENCE = {
   ivoryDie: '\u{1F3B2}', brassHourglass: '\u{23F3}',
 };
 
-// Flat is iOS makeFlatDisc: a pebble with an accent dot, no head. Repeated
-// here rather than imported because game.js draws it inline; if it ever
-// moves into pieces.js this should call that instead.
-function drawFlatDisc(c, x, y, radius, f) {
-  c.fillStyle = f.primary;
-  c.strokeStyle = f.stroke;
-  c.lineWidth = Math.max(1, radius * 0.09);
-  c.beginPath();
-  c.arc(x, y, radius * 0.92, 0, Math.PI * 2);
-  c.fill();
-  c.stroke();
-  c.fillStyle = f.accent;
-  c.beginPath();
-  c.arc(x, y, radius * 0.22, 0, Math.PI * 2);
-  c.fill();
-}
-
 function paint(cv, kind, radius, palette, variant) {
   // Wide enough for the WIDEST thing that can be drawn, which is a head at
   // iOS's flat 1.30 scale: the ufo saucer reaches 1.54 board radii from the
@@ -232,10 +209,9 @@ function paint(cv, kind, radius, palette, variant) {
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   const x = w / 2;
   if (variant === 'chip') {
-    const mode = document.getElementById('logofit').value;
-    drawChipDisc(c, kind, x, h - radius * 1.25, radius, palette, 1, chipHeadScale(kind, mode));
+    drawChipDisc(c, kind, x, h - radius * 1.25, radius, palette, 1, chipHeadScale(kind));
   }
-  else if (variant === 'flat') drawFlatDisc(c, x, h - radius * 1.05, radius, palette);
+  else if (variant === 'flat') drawFlatDisc(c, kind, x, h - radius * 1.05, radius, palette);
   else {
     const rf = variant === 'tall' ? radius : radius * 0.68;
     drawFigure(c, kind, x, h - 2, rf, 1, { palette, finish: 'classic' });
@@ -245,7 +221,6 @@ function paint(cv, kind, radius, palette, variant) {
 function build() {
   const scheme = schemeEl.value;
   const base = Number(sizeEl.value);
-  const mode = document.getElementById('logofit').value;
   sizeOut.textContent = base + 'px';
   out.innerHTML = '';
   let n = 0;
@@ -288,8 +263,7 @@ function build() {
       h3.appendChild(document.createTextNode(kind));
       const note = document.createElement('span');
       note.className = 'note';
-      note.textContent = (mode === 'breakout' ? 'chip breaks out \u00b7 ' : 'chip inside disc \u00b7 ')
-        + chipHeadScale(kind, mode).toFixed(2) + 'x';
+      note.textContent = 'flat inside \u00b7 chip breaks out';
       h3.appendChild(note);
       card.appendChild(h3);
 
@@ -324,7 +298,6 @@ function build() {
 }
 
 themeEl.addEventListener('change', build);
-document.getElementById('logofit').addEventListener('change', build);
 schemeEl.addEventListener('change', build);
 sizeEl.addEventListener('input', build);
 document.getElementById('swap').addEventListener('click', () => { side = side ? 0 : 1; build(); });
