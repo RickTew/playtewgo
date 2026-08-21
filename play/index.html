@@ -578,10 +578,19 @@
      and the dock is simply not there while you are choosing. */
   #setup {
     position: fixed; inset: 0; z-index: 30; border-radius: 0;
-    background: rgba(6, 6, 22, 0.97); backdrop-filter: blur(8px);
+    background: rgba(6, 6, 22, 0.62); backdrop-filter: blur(3px);
     padding: 24px 18px; text-align: left;
   }
-  body.light #setup { background: rgba(238, 240, 246, 0.98); }
+  body.light #setup { background: rgba(238, 240, 246, 0.72); }
+  /* Rather than dimming the page to opacity, HIDE it. A heavy scrim still
+     let the dock ghost through, which is the thing Rick objected to in the
+     first place. With the chrome hidden the scrim can be light, so what sits
+     behind the card is the painted world instead of a flat dark rectangle. */
+  body.setup-open header,
+  body.setup-open .hud,
+  body.setup-open .board-wrap,
+  body.setup-open .dock,
+  body.setup-open footer { visibility: hidden; }
   /* Two columns: the world you are picking on the left, the controls on the
      right. Centred text wasted the width and left the select boxes on a
      ragged edge, because each label was a different length (Rick). */
@@ -618,7 +627,8 @@
   #setup .setup-note { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
   #setup .setup-note.dim { opacity: 0.75; }
   #setup .setup-note a { color: var(--gold); }
-  .setup-card .overlay-buttons { justify-content: flex-start; margin-top: 16px; }
+  .setup-card .overlay-buttons { justify-content: flex-start; margin-top: 16px; flex-wrap: wrap; }
+  .setup-card .overlay-buttons button { white-space: nowrap; }
   @media (max-width: 700px) {
     .setup-card { grid-template-columns: 1fr; gap: 16px; }
     .setup-card .overlay-buttons { justify-content: stretch; }

@@ -645,8 +645,14 @@ function drawStone(x, y, radius, player, alpha = 1) {
   }
   ctx.save();
   ctx.globalAlpha = alpha;
+  // iOS puts a glow behind makeFlat (the non-figure themes) but NOT behind
+  // makeFlatDisc or makeChipDisc. On a chip it actively fights the effect:
+  // a lit halo reads as a glowing button, and the whole point of the stacked
+  // ellipses is a solid object sitting on the board. Kept at a fraction for
+  // readability on the busier painted scenes rather than dropped outright.
+  const haloA = variant === 'chip' ? 0.06 : 0.18;
   const halo = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 1.5);
-  halo.addColorStop(0, `rgba(${f.glowRgb}, 0.18)`);
+  halo.addColorStop(0, `rgba(${f.glowRgb}, ${haloA})`);
   halo.addColorStop(1, `rgba(${f.glowRgb}, 0)`);
   ctx.fillStyle = halo;
   ctx.beginPath();
@@ -1079,6 +1085,8 @@ function anyOverlayOpen() {
  * whether setup is open.
  */
 function syncDockToSetup() {
+  const open = !!document.getElementById('setup')?.classList.contains('show');
+  document.body.classList.toggle('setup-open', open);
   updateHud();
 }
 
@@ -2424,12 +2432,16 @@ function drawSetupPreview() {
   const H = 200;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.style.width = '100%';
-  cv.width = Math.round(W * dpr);
-  cv.height = Math.round(H * dpr);
 
   const live = pick === theme;
   const key = live ? sceneKey : def.defaultScene;
-  paintScene(cv, key, W, H);
+  // paintScene SETS canvas.width/height itself and, when given an explicit
+  // w/h, uses dpr 1 and leaves an identity transform. Sizing the canvas
+  // before calling it is pointless (it is overwritten) and setting a dpr
+  // transform after it drew the figures at 2x into a 1x buffer, i.e. off
+  // the canvas entirely. Ask it for the retina-sized buffer instead, then
+  // scale once so everything below can use plain W/H coordinates.
+  paintScene(cv, key, Math.round(W * dpr), Math.round(H * dpr));
 
   const c = cv.getContext('2d');
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -2452,12 +2464,19 @@ function drawSetupPreview() {
       { palette: paletteFor(kind, i, colorScheme), finish });
   });
 
+  // Between the HEADS, not the bodies. A figure is about 3.2r tall, so
+  // anything under ~2.6r reads as a mark sitting on top of a piece.
+  const vsY = feetY - r * 2.5;
   c.save();
-  c.font = '800 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  c.beginPath();
+  c.arc(W / 2, vsY, r * 0.52, 0, Math.PI * 2);
+  c.fillStyle = light ? 'rgba(255,255,255,0.78)' : 'rgba(8,8,20,0.62)';
+  c.fill();
+  c.font = '800 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   c.textAlign = 'center';
   c.textBaseline = 'middle';
-  c.fillStyle = light ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.85)';
-  c.fillText('VS', W / 2, feetY - r * 1.35);
+  c.fillStyle = '#ffd60a';
+  c.fillText('VS', W / 2, vsY + 0.5);
   c.restore();
 
   const nameEl = document.getElementById('setupWorldName');
