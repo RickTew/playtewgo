@@ -1195,29 +1195,37 @@ export function getChipLogoFit() {
   return chipLogoFit;
 }
 
+/**
+ * Where each mode puts the head's outermost point, in units of the face
+ * ELLIPSE. One target per mode rather than a per-kind clamp, because the look
+ * has to be CONSISTENT - Rick, 2026-08-21: "the face can go off of the chip
+ * or not but not some off the chip and some inside". A clamp only moves the
+ * heads that breach it and leaves the rest wherever they fell, which is the
+ * mix he was looking at.
+ */
+const CHIP_TARGET = { fit: 0.98, breakout: 1.15 };
+
+/**
+ * The head's outermost point in units of the face ellipse: 1.0 touches the
+ * rim, above 1.0 breaches it. Every POINT is measured, not the bounding box,
+ * because a box's corners lie outside the ellipse it encloses - which is how
+ * 19 of 38 heads passed the old "fitted" test and hung over the rim anyway.
+ */
+function chipHeadReach(pts) {
+  return Math.max(...pts.map(([x, y]) => Math.hypot(x / CHIP_FACE_RX, y / CHIP_FACE_RY)));
+}
+
 export function chipHeadScale(kind, mode = chipLogoFit) {
-  // Break Out is deliberately unmeasured: the whole point is the silhouettes
-  // that do NOT fit, so it is the original flat scale for every kind.
-  if (mode === 'breakout') return CHIP_LOGO_MAX;
   const key = CHIP_HEAD_ALIAS[kind] ?? kind;
-  if (chipFitCache.has(key)) return chipFitCache.get(key);
+  const target = CHIP_TARGET[mode] ?? CHIP_TARGET.fit;
+  const cacheKey = `${mode}|${key}`;
+  if (chipFitCache.has(cacheKey)) return chipFitCache.get(cacheKey);
   const pts = CHIP_HEADS[key];
-  let scale = CHIP_LOGO_MAX;
-  if (pts && pts.length) {
-    // 0.98, not a comfortable margin. The goal is to change as LITTLE as
-    // possible from iOS: shrink only what genuinely spills off the rim, and
-    // leave everything that already fits exactly where iOS puts it. A looser
-    // margin quietly resized nearly every head, which is divergence for
-    // nothing.
-    const mx = Math.max(...pts.map((q) => Math.abs(q[0])));
-    const my = Math.max(...pts.map((q) => Math.abs(q[1])));
-    const fit = Math.min(
-      mx > 0 ? (CHIP_FACE_RX * 0.98) / mx : CHIP_LOGO_MAX,
-      my > 0 ? (CHIP_FACE_RY * 0.98) / my : CHIP_LOGO_MAX,
-    );
-    scale = Math.min(CHIP_LOGO_MAX, fit);
-  }
-  chipFitCache.set(key, scale);
+  // A kind with no head falls back to the accent dot and has nothing to
+  // measure, so it keeps the historical scale.
+  const reach = pts && pts.length ? chipHeadReach(pts) : 0;
+  const scale = reach > 0 ? target / reach : CHIP_LOGO_MAX;
+  chipFitCache.set(cacheKey, scale);
   return scale;
 }
 

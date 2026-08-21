@@ -78,8 +78,8 @@
     </label>
     <label class="ctl"><b>Logo</b>
       <select id="logofit">
-        <option value="fit" selected>Fit to disc</option>
-        <option value="breakout">Break out</option>
+        <option value="breakout" selected>Break out</option>
+        <option value="fit">Fit to disc</option>
       </select>
     </label>
     <button class="swap" id="swap">Swap side</button>
@@ -147,8 +147,8 @@ function paint(cv, kind, radius, palette, variant) {
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   const x = w / 2;
   if (variant === 'chip') {
-    const ls = document.getElementById('logofit').value === 'breakout' ? 1.30 : null;
-    drawChipDisc(c, kind, x, h - radius * 1.25, radius, palette, 1, ls);
+    const mode = document.getElementById('logofit').value;
+    drawChipDisc(c, kind, x, h - radius * 1.25, radius, palette, 1, chipHeadScale(kind, mode));
   }
   else if (variant === 'flat') drawFlatDisc(c, x, h - radius * 1.05, radius, palette);
   else {
@@ -198,13 +198,16 @@ function build() {
         // 1.30 and only the web fitted them; iOS ported chipLogoScale on
         // 2026-08-21, so both platforms now compute this same number and the
         // note would be stating something untrue.
-        const fs = chipHeadScale(kind, 'fit');
-        if (fs < 1.299) {
-          const w = document.createElement('div');
-          w.className = 'noeyes';
-          w.textContent = 'fitted to disc · ' + fs.toFixed(2) + 'x';
-          cell.appendChild(w);
-        }
+        // Every head now gets a scale, because both modes place every head
+        // at the SAME reach relative to the disc. The number is the means,
+        // not the thing - what matters is that no piece sits differently
+        // from its neighbours.
+        const mode2 = document.getElementById('logofit').value;
+        const w = document.createElement('div');
+        w.className = 'noeyes';
+        w.textContent = (mode2 === 'breakout' ? 'breaks out · ' : 'inside disc · ')
+          + chipHeadScale(kind, mode2).toFixed(2) + 'x';
+        cell.appendChild(w);
       }
       grid.appendChild(cell);
     }
