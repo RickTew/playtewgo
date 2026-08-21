@@ -29,6 +29,7 @@
     padding-left: 6px;
   }
   .piece h3 .ref { font-size: 22px; line-height: 1; }
+  .piece h3 .icon { color: #9fb0c8; display: inline-flex; }
   .piece h3 .note { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: auto; padding-right: 6px; }
   /* Four across, always. That IS the phone reality, and squeezing them is
      the point: if a variant stops reading at this width it will not read on
@@ -80,8 +81,8 @@
 </head>
 <body>
 <header>
-  <h1><a href="/play/">TEW<span class="go">GO</span></a> Piece lab</h1>
-  <p class="lede">Every figure in every world, drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. One world at a time, every piece with every variant a player can pick, in the order the game offers them. Each variant is drawn twice: enlarged, and beneath it at <b>real board size</b>, which is the only one that decides anything. The glyph beside each name is a reference to aim at, not art \u2013 if the piece is harder to recognise than the glyph, the piece needs work. Open this on a phone to judge it properly.</p>
+  <h1><a href="/play/">TEW<span class="go">GO</span></a> <span id="worldName">Space</span> lab</h1>
+  <p class="lede">One world at a time: every piece, with every variant a player can pick, in the order the game offers them. Drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. The slider is real board size &ndash; a phone board draws at about 14px, so anything that stops reading there will not read in play. Beside each name is a reference <b>icon and emoji</b>: not art, just a target. If the piece is harder to recognise than the icon, the piece needs work.</p>
 </header>
 
 <main>
@@ -91,7 +92,7 @@
     </label>
     <label class="ctl"><b>Colours</b><select id="scheme"></select></label>
     <label class="ctl"><b>Board size</b>
-      <input type="range" id="size" min="8" max="26" step="1" value="14">
+      <input type="range" id="size" min="8" max="64" step="1" value="30">
       <span id="sizeOut">14px</span>
     </label>
     <label class="ctl"><b>Logo</b>
@@ -157,6 +158,30 @@ const VARIANT_ORDER = [
  * as a foundation"). If a piece is less recognisable than the glyph next
  * to it, the piece needs work.
  */
+/**
+ * Line ICONS, drawn here rather than fetched: stroke-only, no fill, the same
+ * few marks our own art gets. Rick, 2026-08-21: "an icon will be more of the
+ * lines and so it will be easier to grasp when making our type of art as it
+ * has less to work with. So both icon and emoji as inspiration."
+ *
+ * An emoji shows what a character IS; an icon shows the minimum number of
+ * marks that still says so, which is the actual problem a 14px chip has.
+ * Added per world as we work through them - Space first.
+ */
+const ICONS = {
+  robot: '<path d="M12 2v3"/><rect x="4" y="6" width="16" height="12" rx="3"/>'
+       + '<circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/>',
+  astronaut: '<circle cx="12" cy="12" r="9"/>'
+       + '<path d="M6.5 11.5a5.5 5.5 0 0 1 11 0v2a1.5 1.5 0 0 1-1.5 1.5H8a1.5 1.5 0 0 1-1.5-1.5z"/>'
+       + '<path d="M9 9.5a4 4 0 0 1 3-1.2"/>',
+  alien: '<path d="M12 3c5 0 8 3.4 8 7.4 0 4.6-4 10.6-8 10.6S4 15 4 10.4C4 6.4 7 3 12 3z"/>'
+       + '<path d="M8.2 10.6c1.6.2 2.6 1 2.6 1.9 0 .8-1 1.2-2.2.8-1.3-.4-2.2-1.5-2.2-2.3 0-.6.7-.6 1.8-.4z"/>'
+       + '<path d="M15.8 10.6c-1.6.2-2.6 1-2.6 1.9 0 .8 1 1.2 2.2.8 1.3-.4 2.2-1.5 2.2-2.3 0-.6-.7-.6-1.8-.4z"/>',
+  ufo: '<path d="M8.5 11a3.5 3.5 0 0 1 7 0"/>'
+       + '<path d="M3 12.4c0-1.3 4-2.4 9-2.4s9 1.1 9 2.4-4 2.6-9 2.6-9-1.3-9-2.6z"/>'
+       + '<path d="M7.5 17.5v1M12 18.5v1.5M16.5 17.5v1"/>',
+};
+
 const REFERENCE = {
   robot: '\u{1F916}', astronaut: '\u{1F468}\u{200D}\u{1F680}', alien: '\u{1F47D}', ufo: '\u{1F6F8}',
   pirate: '\u{1F3F4}\u{200D}\u{2620}\u{FE0F}', mermaid: '\u{1F9DC}', fish: '\u{1F41F}',
@@ -232,7 +257,7 @@ function build() {
 
   for (const [, def] of worlds) {
     const h2 = document.createElement('h2');
-    h2.textContent = def.name + ' \u00b7 ' + def.figures.length + ' figures';
+    h2.textContent = def.name + ' \u00b7 pieces \u00b7 ' + def.figures.length + ' figures';
     out.appendChild(h2);
 
     // One card per PIECE, holding every variant a player can choose, in the
@@ -246,10 +271,19 @@ function build() {
       card.className = 'piece';
 
       const h3 = document.createElement('h3');
+      if (ICONS[kind]) {
+        const ic = document.createElement('span');
+        ic.className = 'icon';
+        ic.title = 'reference icon, not art';
+        ic.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" '
+          + 'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" '
+          + 'stroke-linejoin="round">' + ICONS[kind] + '</svg>';
+        h3.appendChild(ic);
+      }
       const ref = document.createElement('span');
       ref.className = 'ref';
       ref.textContent = REFERENCE[kind] ?? '';
-      ref.title = 'reference glyph, not art';
+      ref.title = 'reference emoji, not art';
       h3.appendChild(ref);
       h3.appendChild(document.createTextNode(kind));
       const note = document.createElement('span');
@@ -268,21 +302,25 @@ function build() {
         lab.className = 'vlabel';
         lab.textContent = v.name;
         vc.appendChild(lab);
-        for (const [cls, r] of [['big', base * 2.4], ['small', base]]) {
-          const holder = document.createElement('div');
-          holder.className = cls;
-          const cv = document.createElement('canvas');
-          paint(cv, kind, r, palette, v.key);
-          holder.appendChild(cv);
-          vc.appendChild(holder);
-        }
+        // ONE render per cell. Showing the same piece twice at two sizes
+        // made the page a puzzle - "can we not have two images per image?
+        // Makes it confusing. Just allow the slider to make them smaller"
+        // (2026-08-21). The slider IS the size control now.
+        const holder = document.createElement('div');
+        holder.className = 'big';
+        const cv = document.createElement('canvas');
+        paint(cv, kind, base, palette, v.key);
+        holder.appendChild(cv);
+        vc.appendChild(holder);
         row.appendChild(vc);
       }
       card.appendChild(row);
       out.appendChild(card);
     }
   }
-  countEl.textContent = n + ' figures \u00b7 every variant, board size under 2.4x';
+  const wn = document.getElementById('worldName');
+  if (wn) wn.textContent = picked === '*' ? 'every world' : THEMES[picked].name;
+  countEl.textContent = n + ' figures \u00b7 a phone board draws at about 14px';
 }
 
 themeEl.addEventListener('change', build);
