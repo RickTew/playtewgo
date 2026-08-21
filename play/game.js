@@ -1072,17 +1072,13 @@ function anyOverlayOpen() {
 }
 
 /**
- * The dock is a permanent strip, so while the setup card floats over the
- * board both were live and BOTH showed a start button. Setup owns the screen
- * while it is open: the dock dims out and stops taking clicks, leaving one
- * primary action at a time. Only setup does this; the pickers are reached
- * FROM the dock, so dimming it under them would be nonsense.
+ * Setup now covers the whole viewport, so the dock is genuinely not on
+ * screen while you are choosing and there is nothing to dim. Dimming it was
+ * the previous fix and it made the only colourful part of the page look
+ * ghostly (Rick). Kept as a hook because the status line still depends on
+ * whether setup is open.
  */
 function syncDockToSetup() {
-  const dock = document.querySelector('.dock');
-  if (!dock) return;
-  const setupOpen = !!document.getElementById('setup')?.classList.contains('show');
-  dock.classList.toggle('behind-setup', setupOpen);
   updateHud();
 }
 
@@ -2407,6 +2403,70 @@ document.getElementById('fighterAi')?.addEventListener('click', () => openPieceP
 
 const setupEl = document.getElementById('setup');
 
+/**
+ * The setup screen's picture: the world you are about to play, with its two
+ * figures standing in it. Rick asked for the theme art and the characters to
+ * show when the world changes, and it doubles as the reason the layout is no
+ * longer centred, since a preview needs a column of its own.
+ *
+ * It previews the SELECTED world, which is not necessarily the active one,
+ * so a world you have customised shows your saved scene and figures while
+ * any other shows that world's defaults.
+ */
+function drawSetupPreview() {
+  const cv = document.getElementById('setupPreview');
+  if (!cv) return;
+  const pick = document.getElementById('setupTheme')?.value || theme;
+  const def = THEMES[pick];
+  if (!def) return;
+
+  const W = 300;
+  const H = 200;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.style.width = '100%';
+  cv.width = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+
+  const live = pick === theme;
+  const key = live ? sceneKey : def.defaultScene;
+  paintScene(cv, key, W, H);
+
+  const c = cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const kinds = live ? [pieceKind[ONE], pieceKind[TWO]] : def.defaults;
+  const r = H * 0.115;
+  const feetY = H * 0.90;
+  const light = sceneByKey(key)?.light;
+
+  kinds.forEach((kind, i) => {
+    const cx = W * (i === 0 ? 0.34 : 0.66);
+    c.save();
+    c.globalAlpha = 0.32;
+    c.fillStyle = '#000';
+    c.beginPath();
+    c.ellipse(cx, feetY, r * 0.75, r * 0.26, 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+    drawFigure(c, kind, cx, feetY, r, 1,
+      { palette: paletteFor(kind, i, colorScheme), finish });
+  });
+
+  c.save();
+  c.font = '800 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillStyle = light ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.85)';
+  c.fillText('VS', W / 2, feetY - r * 1.35);
+  c.restore();
+
+  const nameEl = document.getElementById('setupWorldName');
+  if (nameEl) {
+    nameEl.textContent = def.name;
+    nameEl.style.color = light ? '#16161c' : '#f2f2f7';
+  }
+}
+
 function openSetup() {
   if (!setupEl) {
     showIntro();
@@ -2439,6 +2499,8 @@ function openSetup() {
   const startEl = document.getElementById('startGame');
   if (startEl) startEl.className = hasLiveGame ? 'btn-ghost' : 'btn-gold';
   presentOverlay(setupEl);
+  // After presentOverlay, because the canvas has no size until it is shown.
+  drawSetupPreview();
 }
 
 document.getElementById('setupCancel')?.addEventListener('click', () => {
@@ -2452,6 +2514,8 @@ document.getElementById('setupProfileLink')?.addEventListener('click', (e) => {
   e.preventDefault();
   openProfile();
 });
+
+document.getElementById('setupTheme')?.addEventListener('change', drawSetupPreview);
 
 document.getElementById('setupMode')?.addEventListener('change', () => {
   document.getElementById('setupDiffRow').style.display =
