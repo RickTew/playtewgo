@@ -4,49 +4,215 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TEWGO - Privacy Policy</title>
+<meta name="description" content="What TEWGO stores, what it does not, and the two places where real information exists: when you send a message and when you buy the unlock.">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <meta name="theme-color" content="#05051a">
 <style>
-  body {
-    background: #0a0a14; color: #f2f2f7;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.7; max-width: 720px; margin: 0 auto; padding: 48px 24px 80px;
+  :root {
+    --bg: #0a0a14;
+    --gold: #ffd60a;
+    --text: #f2f2f7;
+    --muted: #9a9ab0;
+    --card: rgba(255,255,255,0.05);
   }
-  h1 { font-size: 32px; margin-bottom: 4px; }
-  h1 .go { color: #ffd60a; }
-  h2 { font-size: 20px; margin: 32px 0 8px; color: #ffd60a; }
-  p, li { color: #c7c7d1; }
-  ul { padding-left: 22px; }
-  a { color: #ffd60a; }
-  .updated { color: #9a9ab0; font-size: 14px; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65; overflow-x: hidden;
+  }
+  .stars {
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(1px 1px at 20% 30%, #fff8, transparent 40%),
+      radial-gradient(1px 1px at 70% 15%, #fff6, transparent 40%),
+      radial-gradient(1.5px 1.5px at 40% 70%, #fff7, transparent 40%),
+      radial-gradient(1px 1px at 85% 55%, #fff5, transparent 40%),
+      radial-gradient(1px 1px at 10% 85%, #fff6, transparent 40%),
+      radial-gradient(ellipse 80% 50% at 50% -10%, #1c1c4a 0%, transparent 60%),
+      var(--bg);
+  }
+  header { text-align: center; padding: 56px 24px 8px; }
+  .logo {
+    font-size: clamp(40px, 8vw, 64px); font-weight: 900; letter-spacing: 2px;
+    text-shadow: 0 0 40px rgba(255,214,10,0.25);
+    text-decoration: none; color: var(--text); display: inline-block;
+  }
+  .logo .go { color: var(--gold); }
+  .pagetitle { font-size: clamp(17px, 3vw, 22px); color: var(--muted); margin-top: 2px; }
+  .updated { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 24px 80px; }
+  section { margin-top: 40px; }
+  h2 {
+    margin-bottom: 14px; color: var(--gold);
+    letter-spacing: 1px; text-transform: uppercase; font-size: 15px;
+  }
+  .card { background: var(--card); border: 1px solid #ffffff14; border-radius: 18px; padding: 22px; }
+  .card + .card { margin-top: 14px; }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
+  p { color: var(--muted); font-size: 15px; }
+  p + p { margin-top: 12px; }
+  strong { color: var(--text); }
+  ul { margin: 12px 0 0 20px; color: var(--muted); font-size: 15px; }
+  li { margin-top: 7px; }
+  li b { color: var(--text); font-weight: 700; }
+  a { color: var(--gold); }
+  .lede {
+    background: rgba(255,214,10,0.07); border: 1px solid rgba(255,214,10,0.28);
+    border-radius: 18px; padding: 22px;
+  }
+  .lede p { color: var(--text); font-size: 16px; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; color: var(--text);
+    background: rgba(255,255,255,0.07); padding: 1px 6px; border-radius: 5px;
+  }
+  footer {
+    border-top: 1px solid #ffffff14; text-align: center;
+    padding: 32px 24px 48px; color: var(--muted); font-size: 14px;
+  }
+  footer a { color: var(--text); }
 </style>
 </head>
 <body>
-  <h1>TEW<span class="go">GO</span> Privacy Policy</h1>
-  <p class="updated">Last updated: July 11, 2026</p>
+<div class="stars"></div>
 
-  <h2>The short version</h2>
-  <p>TEWGO does not collect, store, or share any personal data. There are no accounts, no analytics, no ads, and no tracking.</p>
+<header>
+  <a class="logo" href="/">TEW<span class="go">GO</span></a>
+  <p class="pagetitle">Privacy Policy</p>
+  <p class="updated">Last updated: August 21, 2026</p>
+</header>
 
-  <h2>What stays on your device</h2>
-  <p>Your game settings and progress (chosen themes, pieces, unlocks, win counts) are stored only on your device using Apple's standard app storage. They are never sent to us or to anyone else.</p>
+<main>
+  <section>
+    <div class="lede">
+      <p><strong>No accounts. No analytics. No advertising. No tracking of any kind, and nothing sold to anyone, ever.</strong></p>
+      <p style="margin-top:12px">TEWGO does not want your data and mostly does not have any. Your settings and your saved game sit in your own browser or on your own phone. There are exactly two moments when real information about you exists: when you <a href="/contact.html">send a message</a>, and when you buy the one paid unlock. Both are described in full below.</p>
+    </div>
+  </section>
 
-  <h2>Game Center</h2>
-  <p>Online multiplayer uses Apple's Game Center. When you play online, Apple handles matchmaking and player identity under Apple's own privacy policy. TEWGO only sees the Game Center display name and moves needed to run the match, and does not store them anywhere outside the match itself.</p>
+  <section>
+    <h2>Who this is</h2>
+    <div class="card">
+      <p>TEWGO is made and run by Rick Tew, working alone. "I" and "me" below mean that one person. This policy covers the website and browser game at playtewgo.com and the TEWGO app for iPhone and iPad.</p>
+      <p>There is no company data team, no CRM and no mailing list behind this. If you ask me a question, the person who reads it is the person who wrote the game.</p>
+    </div>
+  </section>
 
-  <h2>In-app purchases</h2>
-  <p>Purchases are processed entirely by Apple's App Store. We never see your payment details.</p>
+  <section>
+    <h2>What the browser game keeps on your device</h2>
+    <div class="card">
+      <p>The browser game stores your settings and your game in your browser's <strong>local storage</strong>. That is not a cookie, it is never sent anywhere, and I cannot read it. It never leaves your device unless you copy it there yourself.</p>
+      <p>All of it lives under keys beginning <code>tewgo.web.</code> and it holds:</p>
+      <ul>
+        <li><b>Your game in progress</b>, so closing the tab does not lose it, plus the move list that powers the post-game review.</li>
+        <li><b>Your choices</b>: world, board, background, figures, piece type, finish, colour scheme, difficulty and mode.</li>
+        <li><b>Your record</b>: games completed, wins, losses and wins per world, which is what opens new worlds and the Gold colours.</li>
+        <li><b>The display name you type</b> on the setup screen, which is shown only to you and to anyone sitting next to you.</li>
+        <li><b>Whether sound and music are on</b>, and whether you have seen the capture tip.</li>
+        <li><b>Whether the full unlock has been applied</b>, and your unlock code if you bought one.</li>
+      </ul>
+      <p>Because there are no accounts, this is the only copy. Clearing your browser data, using a private window, or switching browser or device will lose your progress. Keep your unlock code somewhere safe if you bought one, because that is what puts the unlock back.</p>
+      <p>No consent banner appears for this and none is required: it is strictly functional storage that you asked for by playing the game, it is not analytics, and it is not advertising.</p>
+    </div>
+  </section>
 
-  <h2>Children</h2>
-  <p>TEWGO collects no data from anyone, including children.</p>
+  <section>
+    <h2>When you send me a message</h2>
+    <div class="card">
+      <p>The <a href="/contact.html">contact form</a> asks for your name, an email address to reply to, a subject from a short list, and your message. Nothing else, and there is no hidden field collecting anything more.</p>
+      <p>That message is delivered to my own inbox as an ordinary email, with your address set as the reply-to so I can answer you. The delivery is handled by Resend, an email service acting on my behalf. I keep the message in my inbox for as long as it is useful to answer you and to remember a bug you reported. It is never added to a mailing list, never used for marketing and never given to anyone else.</p>
+      <p>The form quietly drops obvious spam without telling the sender, because telling a bot why it failed teaches its operator how to get through. So that a real person is never lost silently, every dropped message is written to my server log where I can find it and answer it. Those logs are held briefly by the hosting provider and then deleted on their normal schedule.</p>
+      <p>My email address does not appear anywhere on this site on purpose. That protects it from the crawlers that harvest addresses, and the form is what replaces it.</p>
+    </div>
+  </section>
 
-  <h2>Changes</h2>
-  <p>If this policy ever changes, the new version will be posted at this address with an updated date.</p>
+  <section>
+    <h2>When you buy the full unlock</h2>
+    <div class="card">
+      <p>The browser game has one optional purchase: <strong>Unlock All Worlds, $2.59 once</strong>. It is cosmetic. Everything it opens can also be earned by playing.</p>
+      <p><strong>Payment is handled entirely by Stripe on Stripe's own pages.</strong> Your card number, expiry and security code are typed on Stripe's site, never on mine. I never see them, they never touch my server, and I could not store them if I wanted to.</p>
+      <p>When Stripe confirms a payment, I store one row about it so the unlock can be restored later:</p>
+      <ul>
+        <li>The random unlock code generated for you, in the form <code>TEWGO-XXXX-XXXX</code>.</li>
+        <li>Stripe's own reference numbers for the checkout and the payment.</li>
+        <li>The email address Stripe collected for the receipt.</li>
+        <li>The amount, the currency, and whether it was a real or a test payment.</li>
+        <li>The date and time.</li>
+      </ul>
+      <p>That row exists for two reasons only: to put your unlock back when you ask, and to let me find your purchase if you contact me about it. It is not used for marketing, it is not profiled, and it is not shared. Restoring an unlock is done with the code rather than with your email, deliberately, so that nobody can go fishing for other people's purchases by guessing addresses.</p>
+      <p>Purchases inside the iPhone and iPad app go through Apple instead, under Apple's terms, and I never see those payment details either.</p>
+    </div>
+  </section>
 
-  <h2>Contact</h2>
-  <p>Questions? <a href="/contact.html">Send us a message</a>.</p>
+  <section>
+    <h2>Server logs</h2>
+    <div class="card">
+      <p>Two ordinary pieces of internet plumbing keep standard technical logs, as every website does. The site itself is served by GitHub Pages, and the two small server functions behind the contact form and the unlock run on Supabase. Their logs can include an IP address, a timestamp and which address was requested. They exist for security and for keeping the service running, they are kept only for the provider's normal short retention period, and they are never used to build a profile of you or combined with anything else.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The services I rely on</h2>
+    <div class="card">
+      <p>These are the only outside services involved, and each one only ever sees the part described above:</p>
+      <ul>
+        <li><b>GitHub Pages</b> serves the website and the browser game.</li>
+        <li><b>Supabase</b> runs the contact and unlock functions and stores the purchase rows.</li>
+        <li><b>Stripe</b> takes the payment for the browser unlock.</li>
+        <li><b>Resend</b> delivers the message you send me to my inbox.</li>
+        <li><b>Apple</b> handles the App Store, in-app purchases and Game Center for the iPhone and iPad app.</li>
+      </ul>
+      <p>The browser game itself loads nothing from anywhere else. No fonts from a font service, no scripts from a content network, no embedded videos, no social buttons. Open the network tab and check; that is the honest way to verify a claim like this one.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The iPhone and iPad app</h2>
+    <div class="card">
+      <p>The app collects nothing. Your settings and progress are stored on your device using Apple's standard app storage and are never sent to me.</p>
+      <p>Online multiplayer uses Apple's Game Center, so Apple handles matchmaking and player identity under Apple's own privacy policy. The game sees only the Game Center display name and the moves needed to run the match, and stores neither outside the match itself.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Children</h2>
+    <div class="card">
+      <p>TEWGO is a board game and it is fine for children. No data is collected from anyone, of any age, by playing it. There is no chat, no profile that anyone else can see, no advertising and no way for one player to contact another.</p>
+      <p>The only way to send me anything at all is the contact form, which a child would have to fill in deliberately. If a child has sent me a message and you would like it deleted, ask me and it is gone.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Your choices</h2>
+    <div class="card">
+      <p><strong>Everything on your device is yours to delete.</strong> Clearing site data for playtewgo.com in your browser settings removes every one of the keys listed above. On iPhone and iPad, deleting the app removes its stored data.</p>
+      <p><strong>Anything I hold, you can ask about.</strong> If you have bought the unlock or sent me a message, write to me through the <a href="/contact.html">contact form</a> and I will tell you exactly what I have and delete it if you want. Please include your unlock code or the email address you used, so I can find the right record and not somebody else's.</p>
+      <p>Deleting a purchase record means the unlock can no longer be restored from it, so I will say so before doing it.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Changes</h2>
+    <div class="card">
+      <p>If this policy changes, the new version is posted here with a new date at the top. Nothing in a future version will quietly start collecting something this one says is not collected. If that ever changed, it would be said plainly and up front.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <div class="card">
+      <p>Questions about any of this go to the same place as everything else: <a href="/contact.html">send me a message</a> and I will answer.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p><a href="/">Home</a> &middot; <a href="/play/">Play in your browser</a> &middot; <a href="/updates.html">Features &amp; Updates</a> &middot; <a href="/terms.html">Terms</a> &middot; <a href="/contact.html">Contact</a></p>
+  <p style="margin-top:8px;">&copy; 2026 Rick Tew</p>
+</footer>
 </body>
 </html>
