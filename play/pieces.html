@@ -20,6 +20,29 @@
   h1 .go { color: var(--gold); }
   .lede { color: var(--muted); font-size: 14px; margin-top: 6px; max-width: 70ch; }
   main { max-width: 1180px; margin: 0 auto; }
+  .piece {
+    background: #14141a; border: 1px solid #ffffff12; border-radius: 14px;
+    padding: 10px 8px 12px; margin-bottom: 14px;
+  }
+  .piece h3 {
+    margin: 0 0 8px; font-size: 15px; display: flex; align-items: center; gap: 8px;
+    padding-left: 6px;
+  }
+  .piece h3 .ref { font-size: 22px; line-height: 1; }
+  .piece h3 .note { color: var(--muted); font-weight: 400; font-size: 12px; margin-left: auto; padding-right: 6px; }
+  /* Four across, always. That IS the phone reality, and squeezing them is
+     the point: if a variant stops reading at this width it will not read on
+     a board either. */
+  .variants { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .vcell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .vcell .vlabel { font-size: 10px; letter-spacing: 1px; color: var(--muted); }
+  .vcell .big, .vcell .small { display: flex; align-items: flex-end; justify-content: center; }
+  .vcell .small { opacity: 0.95; }
+  @media (max-width: 560px) {
+    body { padding: 10px; }
+    .piece h3 { font-size: 14px; }
+    .piece h3 .note { display: none; }
+  }
   .controls {
     display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
     background: var(--card); border: 1px solid #ffffff14; border-radius: 14px;
@@ -58,18 +81,13 @@
 <body>
 <header>
   <h1><a href="/play/">TEW<span class="go">GO</span></a> Piece lab</h1>
-  <p class="lede">Every figure in every world, drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. Each cell renders the piece twice: at real board size on the left, and enlarged on the right, because the only question that matters for a chip is whether it still reads when it is small.</p>
+  <p class="lede">Every figure in every world, drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. One world at a time, every piece with every variant a player can pick, in the order the game offers them. Each variant is drawn twice: enlarged, and beneath it at <b>real board size</b>, which is the only one that decides anything. The glyph beside each name is a reference to aim at, not art \u2013 if the piece is harder to recognise than the glyph, the piece needs work. Open this on a phone to judge it properly.</p>
 </header>
 
 <main>
   <div class="controls">
-    <label class="ctl"><b>Variant</b>
-      <select id="variant">
-        <option value="flat">Flat</option>
-        <option value="chip" selected>Chip</option>
-        <option value="half">Half</option>
-        <option value="tall">Tall</option>
-      </select>
+    <label class="ctl"><b>World</b>
+      <select id="theme"></select>
     </label>
     <label class="ctl"><b>Colours</b><select id="scheme"></select></label>
     <label class="ctl"><b>Board size</b>
@@ -97,7 +115,7 @@ import { FIGURES, drawChipDisc, chipHeadScale, drawFigure, figureHeight, COLOR_S
 import { THEMES } from './themes.js';
 
 const out = document.getElementById('out');
-const variantEl = document.getElementById('variant');
+const themeEl = document.getElementById('theme');
 const schemeEl = document.getElementById('scheme');
 const sizeEl = document.getElementById('size');
 const sizeOut = document.getElementById('sizeOut');
@@ -111,6 +129,48 @@ for (const s of COLOR_SCHEMES) {
   schemeEl.appendChild(o);
 }
 schemeEl.value = 'original';
+
+for (const [key, def] of Object.entries(THEMES)) {
+  const o = document.createElement('option');
+  o.value = key;
+  o.textContent = def.name;
+  themeEl.appendChild(o);
+}
+const all = document.createElement('option');
+all.value = '*';
+all.textContent = 'All worlds';
+themeEl.appendChild(all);
+themeEl.value = 'space';
+
+const VARIANT_ORDER = [
+  { key: 'flat', name: 'FLAT' },
+  { key: 'chip', name: 'CHIP' },
+  { key: 'half', name: 'HALF' },
+  { key: 'tall', name: 'TALL' },
+];
+
+/**
+ * A reference glyph per figure, shown beside the name. NOT art and never
+ * drawn on a board - it is a target to aim at while judging, because an
+ * emoji is a character read at 20px, which is the exact problem these
+ * pieces have to solve (Rick, 2026-08-21: "icons are likely easier to use
+ * as a foundation"). If a piece is less recognisable than the glyph next
+ * to it, the piece needs work.
+ */
+const REFERENCE = {
+  robot: '\u{1F916}', astronaut: '\u{1F468}\u{200D}\u{1F680}', alien: '\u{1F47D}', ufo: '\u{1F6F8}',
+  pirate: '\u{1F3F4}\u{200D}\u{2620}\u{FE0F}', mermaid: '\u{1F9DC}', fish: '\u{1F41F}',
+  kraken: '\u{1F419}', shark: '\u{1F988}', frog: '\u{1F438}',
+  ninja: '\u{1F977}', samurai: '\u{2694}\u{FE0F}', geisha: '\u{1F458}', daimyo: '\u{1F3EF}',
+  dragon: '\u{1F409}', wizard: '\u{1F9D9}', knight: '\u{1F6E1}\u{FE0F}', goblin: '\u{1F47A}',
+  zombie: '\u{1F9DF}', skeleton: '\u{1F480}', ghost: '\u{1F47B}', vampire: '\u{1F9DB}',
+  cowboy: '\u{1F920}', sheriff: '\u{2B50}', outlaw: '\u{1F3AD}', bandit: '\u{1F576}\u{FE0F}',
+  pharaoh: '\u{1F451}', anubis: '\u{1F415}', snake: '\u{1F40D}', mummy: '\u{1FAA6}',
+  scarab: '\u{1FAB2}', turtle: '\u{1F422}',
+  onyxPawn: '\u{265F}\u{FE0F}', ivoryPawn: '\u{265F}\u{FE0F}', onyxStone: '\u{26AB}',
+  ivoryStone: '\u{26AA}', onyxRook: '\u{265C}', walnutMeeple: '\u{1F9CD}',
+  ivoryDie: '\u{1F3B2}', brassHourglass: '\u{23F3}',
+};
 
 // Flat is iOS makeFlatDisc: a pebble with an accent dot, no head. Repeated
 // here rather than imported because game.js draws it inline; if it ever
@@ -158,65 +218,74 @@ function paint(cv, kind, radius, palette, variant) {
 }
 
 function build() {
-  const variant = variantEl.value;
   const scheme = schemeEl.value;
   const base = Number(sizeEl.value);
+  const mode = document.getElementById('logofit').value;
   sizeOut.textContent = base + 'px';
   out.innerHTML = '';
   let n = 0;
 
-  for (const [key, def] of Object.entries(THEMES)) {
+  const picked = themeEl.value;
+  const worlds = picked === '*'
+    ? Object.entries(THEMES)
+    : [[picked, THEMES[picked]]];
+
+  for (const [, def] of worlds) {
     const h2 = document.createElement('h2');
-    h2.textContent = def.name + ' · ' + def.figures.length + ' figures';
+    h2.textContent = def.name + ' \u00b7 ' + def.figures.length + ' figures';
     out.appendChild(h2);
-    const grid = document.createElement('div');
-    grid.className = 'grid';
+
+    // One card per PIECE, holding every variant a player can choose, in the
+    // order the in-game row shows them. Rick, 2026-08-21: "let's have all of
+    // the pieces for each THEME in one place so we don't have to jump all
+    // over the place to look."
     for (const kind of def.figures) {
       n += 1;
       const palette = paletteFor(kind, side, scheme);
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      const pair = document.createElement('div');
-      pair.className = 'pair';
-      for (const r of [base, base * 2.4]) {
-        const cv = document.createElement('canvas');
-        paint(cv, kind, r, palette, variant);
-        pair.appendChild(cv);
+      const card = document.createElement('div');
+      card.className = 'piece';
+
+      const h3 = document.createElement('h3');
+      const ref = document.createElement('span');
+      ref.className = 'ref';
+      ref.textContent = REFERENCE[kind] ?? '';
+      ref.title = 'reference glyph, not art';
+      h3.appendChild(ref);
+      h3.appendChild(document.createTextNode(kind));
+      const note = document.createElement('span');
+      note.className = 'note';
+      note.textContent = (mode === 'breakout' ? 'chip breaks out \u00b7 ' : 'chip inside disc \u00b7 ')
+        + chipHeadScale(kind, mode).toFixed(2) + 'x';
+      h3.appendChild(note);
+      card.appendChild(h3);
+
+      const row = document.createElement('div');
+      row.className = 'variants';
+      for (const v of VARIANT_ORDER) {
+        const vc = document.createElement('div');
+        vc.className = 'vcell';
+        const lab = document.createElement('div');
+        lab.className = 'vlabel';
+        lab.textContent = v.name;
+        vc.appendChild(lab);
+        for (const [cls, r] of [['big', base * 2.4], ['small', base]]) {
+          const holder = document.createElement('div');
+          holder.className = cls;
+          const cv = document.createElement('canvas');
+          paint(cv, kind, r, palette, v.key);
+          holder.appendChild(cv);
+          vc.appendChild(holder);
+        }
+        row.appendChild(vc);
       }
-      cell.appendChild(pair);
-      const nm = document.createElement('div');
-      nm.className = 'nm';
-      nm.textContent = kind;
-      cell.appendChild(nm);
-      const sz = document.createElement('div');
-      sz.className = 'sz';
-      sz.textContent = 'board · 2.4x';
-      cell.appendChild(sz);
-      if (variant === 'chip') {
-        // Heads wider or taller than the chip face get shrunk to fit. This
-        // used to read "(iOS 1.30)" because iOS blew every head up by a flat
-        // 1.30 and only the web fitted them; iOS ported chipLogoScale on
-        // 2026-08-21, so both platforms now compute this same number and the
-        // note would be stating something untrue.
-        // Every head now gets a scale, because both modes place every head
-        // at the SAME reach relative to the disc. The number is the means,
-        // not the thing - what matters is that no piece sits differently
-        // from its neighbours.
-        const mode2 = document.getElementById('logofit').value;
-        const w = document.createElement('div');
-        w.className = 'noeyes';
-        w.textContent = (mode2 === 'breakout' ? 'breaks out · ' : 'inside disc · ')
-          + chipHeadScale(kind, mode2).toFixed(2) + 'x';
-        cell.appendChild(w);
-      }
-      grid.appendChild(cell);
+      card.appendChild(row);
+      out.appendChild(card);
     }
-    out.appendChild(grid);
   }
-  countEl.textContent = n + ' figures across ' + Object.keys(THEMES).length + ' worlds';
+  countEl.textContent = n + ' figures \u00b7 every variant, board size under 2.4x';
 }
 
-variantEl.addEventListener('change', build);
+themeEl.addEventListener('change', build);
 document.getElementById('logofit').addEventListener('change', build);
 schemeEl.addEventListener('change', build);
 sizeEl.addEventListener('input', build);
