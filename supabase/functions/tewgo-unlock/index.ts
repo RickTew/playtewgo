@@ -6,10 +6,11 @@
 // devtools, so the ONLY thing that grants an unlock is Stripe confirming a
 // session is paid, checked here.
 //
-// Three actions, one function:
+// Four actions, one function:
 //   POST {action:"checkout"}            -> {url}   Stripe Checkout page
 //   POST {action:"verify", sessionId}   -> {ok, code}
 //   POST {action:"restore", code}       -> {ok}
+//   POST {action:"tip", amount}         -> {url}   a tip, buys nothing
 //
 // Secrets required (set by Rick, never by the assistant):
 //   STRIPE_SECRET_KEY   sk_test_... to rehearse, sk_live_... to sell
@@ -22,6 +23,18 @@ const PRICE_CENTS = 259; // $2.59, matching the iOS price (2 and 5 for TEW = 2, 
 const CURRENCY = 'usd';
 const PRODUCT_NAME = 'TEWGO: Unlock All Worlds';
 const PRODUCT_BLURB = 'Skip the grind. Every world, every figure, instantly.';
+
+// A tip buys NOTHING. It mints no code, writes no row, and grants no unlock,
+// which is exactly what makes it a tip rather than a purchase wearing a
+// friendlier word. Keep those two paths separate for good.
+//
+// The amounts are an ALLOWLIST, and that is the load-bearing part: the
+// browser sends which tier it wants, never a number to charge. Trusting a
+// client-supplied amount would let anyone open a session for any sum,
+// including one cent or ten thousand dollars, against the live account.
+const TIP_AMOUNTS = [200, 500, 1000];
+const TIP_NAME = 'Tip for TEWGO';
+const TIP_BLURB = 'A thank you to the person who makes TEWGO. It unlocks nothing.';
 
 // Only these origins may call the function, so the checkout cannot be
 // driven from someone else's page.
@@ -101,7 +114,7 @@ Deno.serve(async (req) => {
     return json({ error: 'not_configured' }, 503, origin);
   }
 
-  let payload: { action?: string; sessionId?: string; code?: string; returnTo?: string };
+  let payload: { action?: string; sessionId?: string; code?: string; returnTo?: string; amount?: number };
   try {
     payload = await req.json();
   } catch {
@@ -122,6 +135,25 @@ Deno.serve(async (req) => {
         success_url: `${base}/play/?unlock={CHECKOUT_SESSION_ID}`,
         cancel_url: `${base}/play/?unlock=cancelled`,
       });
+      return json({ url: session.url }, 200, origin);
+    }
+
+    if (payload.action === 'tip') {
+      const amount = typeof payload.amount === 'number' ? payload.amount : -1;
+      if (!TIP_AMOUNTS.includes(amount)) return json({ error: 'bad_amount' }, 400, origin);
+      const base = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+      const session = await stripe('checkout/sessions', key, {
+        mode: 'payment',
+        'line_items[0][quantity]': '1',
+        'line_items[0][price_data][currency]': CURRENCY,
+        'line_items[0][price_data][unit_amount]': String(amount),
+        'line_items[0][price_data][product_data][name]': TIP_NAME,
+        'line_items[0][price_data][product_data][description]': TIP_BLURB,
+        success_url: `${base}/?tip=thanks`,
+        cancel_url: `${base}/?tip=cancelled`,
+      });
+      // Deliberately no verify step and no stored row. There is nothing to
+      // restore later, so there is nothing worth keeping about who tipped.
       return json({ url: session.url }, 200, origin);
     }
 

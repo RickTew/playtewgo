@@ -77,6 +77,17 @@
   .card { background: var(--card); border: 1px solid #ffffff14; border-radius: 18px; padding: 22px; }
   .card h3 { font-size: 18px; margin-bottom: 8px; }
   .card p { color: var(--muted); font-size: 15px; }
+  button.btn { font-family: inherit; cursor: pointer; border: 0; }
+  button.btn-ghost { background: transparent; }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .tip-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+  .tip-row .btn { padding: 12px 22px; font-size: 16px; }
+  .tip-note { margin-top: 14px; font-size: 14px; }
+  .tip-thanks {
+    background: rgba(255,214,10,0.09); border: 1px solid rgba(255,214,10,0.35);
+    border-radius: 14px; padding: 16px; margin-top: 4px;
+  }
+  .tip-thanks p { color: var(--text); }
   #maker .card .sig {
     margin-top: 18px; color: var(--gold); font-weight: 700;
     letter-spacing: 1px; text-transform: uppercase; font-size: 13px;
@@ -157,6 +168,23 @@
     </div>
   </section>
 
+  <section id="tip">
+    <h2>Buy me a coffee</h2>
+    <div class="card">
+      <div class="tip-thanks" id="tipThanks" style="display:none">
+        <p><strong>Thank you.</strong> That genuinely made my day, and it goes straight into making TEWGO better. TEW ;)</p>
+      </div>
+      <p>TEWGO is free and it stays free. If you have had some fun with it and feel like buying me a coffee, this is that button.</p>
+      <p><strong>It unlocks nothing and buys nothing.</strong> It is a thank you, not a purchase, and like anything paid it is not refundable. If what you actually want is every world opened at once, that is the <a href="/play/" style="color:var(--gold)">unlock inside the game</a>, which is a different thing entirely.</p>
+      <div class="tip-row">
+        <button class="btn btn-ghost tip-btn" data-amount="200">$2 &nbsp;<span style="color:var(--gold)">TEW</span></button>
+        <button class="btn btn-gold tip-btn" data-amount="500">$5 &nbsp;GO</button>
+        <button class="btn btn-ghost tip-btn" data-amount="1000">$10</button>
+      </div>
+      <p class="tip-note" id="tipNote" style="display:none; color:#ff8f8f"></p>
+    </div>
+  </section>
+
   <section id="support">
     <h2>Support</h2>
     <div class="card">
@@ -202,6 +230,58 @@
     // Two gold buttons compete, so the new game becomes the quieter one.
     play.className = 'btn btn-ghost';
     play.textContent = 'Start a new game';
+  }());
+
+  // The coffee jar. It is a plain Stripe Checkout with no unlock attached,
+  // and the browser only ever says WHICH tier it wants: the amount to charge
+  // is chosen server side from an allowlist, so nothing here can be edited
+  // in devtools into a charge of its own choosing.
+  (function () {
+    var ENDPOINT = 'https://guwquufbifuzmphcdsdt.supabase.co/functions/v1/tewgo-unlock';
+    var note = document.getElementById('tipNote');
+    var buttons = document.querySelectorAll('.tip-btn');
+
+    var params = new URLSearchParams(window.location.search);
+    var tip = params.get('tip');
+    if (tip) {
+      if (tip === 'thanks') {
+        var thanks = document.getElementById('tipThanks');
+        if (thanks) thanks.style.display = '';
+      }
+      // Strip it so a refresh does not replay the thank you forever.
+      params.delete('tip');
+      var q = params.toString();
+      history.replaceState(null, '', window.location.pathname + (q ? '?' + q : '') + '#tip');
+    }
+
+    function fail(text) {
+      if (!note) return;
+      note.textContent = text;
+      note.style.display = 'block';
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (note) note.style.display = 'none';
+        var label = b.innerHTML;
+        buttons.forEach(function (x) { x.disabled = true; });
+        b.textContent = 'Opening...';
+        fetch(ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'tip', amount: Number(b.dataset.amount) })
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; });
+        }).then(function (d) {
+          if (d && d.url) { window.location.assign(d.url); return; }
+          throw new Error('no url');
+        }).catch(function () {
+          buttons.forEach(function (x) { x.disabled = false; });
+          b.innerHTML = label;
+          fail('Could not open the payment page. Please try again in a moment.');
+        });
+      });
+    });
   }());
 </script>
 </body>
