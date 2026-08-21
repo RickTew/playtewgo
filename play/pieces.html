@@ -41,7 +41,7 @@
     color: var(--gold); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase;
     margin: 34px 0 12px; font-weight: 800;
   }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(205px, 1fr)); gap: 12px; }
   .cell {
     background: var(--card); border: 1px solid #ffffff14; border-radius: 14px;
     padding: 12px 8px 10px; text-align: center;
@@ -76,6 +76,12 @@
       <input type="range" id="size" min="8" max="26" step="1" value="14">
       <span id="sizeOut">14px</span>
     </label>
+    <label class="ctl"><b>Logo</b>
+      <select id="logofit">
+        <option value="fit" selected>Fit to disc</option>
+        <option value="ios">iOS flat 1.30</option>
+      </select>
+    </label>
     <button class="swap" id="swap">Swap side</button>
     <span class="ctl" id="count"></span>
   </div>
@@ -87,7 +93,7 @@
 </footer>
 
 <script type="module">
-import { FIGURES, drawChipDisc, drawFigure, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
+import { FIGURES, drawChipDisc, chipHeadScale, drawFigure, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
 import { THEMES } from './themes.js';
 
 const out = document.getElementById('out');
@@ -124,11 +130,13 @@ function drawFlatDisc(c, x, y, radius, f) {
 }
 
 function paint(cv, kind, radius, palette, variant) {
-  // A chip is about 2.06r wide (0.825 * 1.25 * 2) and a figure about 2r, so
-  // 3.2r of canvas overflowed the cell and pushed the small sample out of
-  // its card. Size the canvas to the piece, not to a guess.
-  const pad = variant === 'half' || variant === 'tall' ? 3.6 : 2.2;
-  const w = Math.ceil(radius * 2.5);
+  // Wide enough for the WIDEST thing that can be drawn, which is a head at
+  // iOS's flat 1.30 scale: the ufo saucer reaches 1.54 board radii from the
+  // centre. Sizing this to the disc alone silently guillotined every hat and
+  // horn on the page, which is what Rick saw as "many are cut off". A lab
+  // that crops the thing being judged is worse than no lab.
+  const pad = variant === 'half' || variant === 'tall' ? 3.6 : 2.4;
+  const w = Math.ceil(radius * 3.4);
   const h = Math.ceil(radius * pad);
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = Math.round(w * dpr);
@@ -138,7 +146,10 @@ function paint(cv, kind, radius, palette, variant) {
   const c = cv.getContext('2d');
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   const x = w / 2;
-  if (variant === 'chip') drawChipDisc(c, kind, x, h - radius * 1.05, radius, palette);
+  if (variant === 'chip') {
+    const ls = document.getElementById('logofit').value === 'ios' ? 1.30 : null;
+    drawChipDisc(c, kind, x, h - radius * 1.25, radius, palette, 1, ls);
+  }
   else if (variant === 'flat') drawFlatDisc(c, x, h - radius * 1.05, radius, palette);
   else {
     const rf = variant === 'tall' ? radius : radius * 0.68;
@@ -181,6 +192,15 @@ function build() {
       sz.className = 'sz';
       sz.textContent = 'board · 2.4x';
       cell.appendChild(sz);
+      if (variant === 'chip') {
+        const fs = chipHeadScale(kind);
+        if (fs < 1.299) {
+          const w = document.createElement('div');
+          w.className = 'noeyes';
+          w.textContent = 'fitted ' + fs.toFixed(2) + ' (iOS 1.30)';
+          cell.appendChild(w);
+        }
+      }
       grid.appendChild(cell);
     }
     out.appendChild(grid);
@@ -189,6 +209,7 @@ function build() {
 }
 
 variantEl.addEventListener('change', build);
+document.getElementById('logofit').addEventListener('change', build);
 schemeEl.addEventListener('change', build);
 sizeEl.addEventListener('input', build);
 document.getElementById('swap').addEventListener('click', () => { side = side ? 0 : 1; build(); });

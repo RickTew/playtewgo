@@ -1096,7 +1096,51 @@ export function drawChipEyes(ctx, kind, cx, cy, r, accent) {
  * f is a palette ({primary, stroke, accent}); radius is the BOARD radius,
  * and the chip sizes itself from that the way iOS does.
  */
-export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1) {
+/**
+ * How big the head can be on its chip.
+ *
+ * iOS scales every head by a flat 1.30, and by its own numbers that pushes
+ * 13 of the 38 heads WIDER THAN THE DISC THEY SIT ON: the ufo saucer reaches
+ * 1.5x the disc, and hats, horns and brims on cowboy, daimyo, pirate,
+ * sheriff, pharaoh, samurai and others all spill past the rim (Rick spotted
+ * it as "many are cut off ... UFO looks funny").
+ *
+ * Rather than clip them, which chops a hat in half, each head gets the
+ * LARGEST scale that still fits inside the face, capped at iOS's 1.30 so
+ * nothing is ever bigger than iOS draws it. Heads that already fit are
+ * untouched and stay pixel-identical to iOS; only the ones that would have
+ * overflowed shrink, and they shrink to exactly the point where they fit.
+ * Computed from the path data, so it cannot drift when a path is edited.
+ */
+const CHIP_FACE_RX = 0.775;
+const CHIP_FACE_RY = 0.675;
+const CHIP_LOGO_MAX = 1.30;
+const chipFitCache = new Map();
+
+export function chipHeadScale(kind) {
+  const key = CHIP_HEAD_ALIAS[kind] ?? kind;
+  if (chipFitCache.has(key)) return chipFitCache.get(key);
+  const pts = CHIP_HEADS[key];
+  let scale = CHIP_LOGO_MAX;
+  if (pts && pts.length) {
+    // 0.98, not a comfortable margin. The goal is to change as LITTLE as
+    // possible from iOS: shrink only what genuinely spills off the rim, and
+    // leave everything that already fits exactly where iOS puts it. A looser
+    // margin quietly resized nearly every head, which is divergence for
+    // nothing.
+    const mx = Math.max(...pts.map((q) => Math.abs(q[0])));
+    const my = Math.max(...pts.map((q) => Math.abs(q[1])));
+    const fit = Math.min(
+      mx > 0 ? (CHIP_FACE_RX * 0.98) / mx : CHIP_LOGO_MAX,
+      my > 0 ? (CHIP_FACE_RY * 0.98) / my : CHIP_LOGO_MAX,
+    );
+    scale = Math.min(CHIP_LOGO_MAX, fit);
+  }
+  chipFitCache.set(key, scale);
+  return scale;
+}
+
+export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = null) {
   // Chip: a direct port of PieceRenderer.makeChipDisc. The web had this as
   // a single flat circle with a white silhouette on it, so picking Chip on
   // iOS and Chip on the web gave two different-looking pieces (Rick,
@@ -1151,12 +1195,13 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1) {
   c.strokeStyle = shadeHex(f.stroke, 0.10);
   c.lineWidth = Math.max(0.6, radius * 0.05);
   c.lineJoin = 'round';
-  if (traceChipHead(c, kind, x, y - cr * 0.10, cr * 1.30)) {
+  const hs = cr * (logoScale ?? chipHeadScale(kind));
+  if (traceChipHead(c, kind, x, y - cr * 0.10, hs)) {
     c.fill();
     c.stroke();
     // The eyes are what turn the silhouette into a face. Without them the
     // head is just a dark hole punched in the chip.
-    drawChipEyes(c, kind, x, y - cr * 0.10, cr * 1.30, f.accent);
+    drawChipEyes(c, kind, x, y - cr * 0.10, hs, f.accent);
   } else {
     // No head for this kind: an accent dot, exactly as iOS falls back.
     c.fillStyle = f.accent;
