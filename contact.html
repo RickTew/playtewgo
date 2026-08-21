@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEWGO - Contact</title>
+<meta name="description" content="Send the TEWGO team a message: bug reports, ideas, questions about the game, or trouble with an unlock. We answer within a couple of days.">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#05051a">
+<style>
+  :root {
+    --bg: #0a0a14;
+    --gold: #ffd60a;
+    --text: #f2f2f7;
+    --muted: #9a9ab0;
+    --card: rgba(255,255,255,0.05);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .stars {
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(1px 1px at 20% 30%, #fff8, transparent 40%),
+      radial-gradient(1px 1px at 70% 15%, #fff6, transparent 40%),
+      radial-gradient(1.5px 1.5px at 40% 70%, #fff7, transparent 40%),
+      radial-gradient(1px 1px at 85% 55%, #fff5, transparent 40%),
+      radial-gradient(1px 1px at 10% 85%, #fff6, transparent 40%),
+      radial-gradient(ellipse 80% 50% at 50% -10%, #1c1c4a 0%, transparent 60%),
+      var(--bg);
+  }
+  header { text-align: center; padding: 56px 24px 8px; }
+  .logo {
+    font-size: clamp(40px, 8vw, 64px);
+    font-weight: 900; letter-spacing: 2px;
+    text-shadow: 0 0 40px rgba(255,214,10,0.25);
+    text-decoration: none; color: var(--text); display: inline-block;
+  }
+  .logo .go { color: var(--gold); }
+  .pagetitle { font-size: clamp(17px, 3vw, 22px); color: var(--muted); margin-top: 2px; }
+  main { max-width: 620px; margin: 0 auto; padding: 32px 24px 80px; }
+  .card { background: var(--card); border: 1px solid #ffffff14; border-radius: 18px; padding: 24px; }
+  .lede { color: var(--muted); font-size: 15px; margin-bottom: 20px; }
+  .field { margin-top: 18px; }
+  .field:first-of-type { margin-top: 0; }
+  label { display: block; font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .hint { font-weight: 400; color: var(--muted); }
+  input, select, textarea {
+    width: 100%; padding: 12px 14px; border-radius: 12px;
+    border: 1px solid #ffffff24; background: #ffffff0d; color: var(--text);
+    font-family: inherit; font-size: 16px; line-height: 1.5;
+  }
+  select { appearance: none; }
+  textarea { min-height: 150px; resize: vertical; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--gold); outline-offset: 2px;
+  }
+  /* The trap. A person can neither see it, tab to it, nor hear it read out;
+     a bot fills in every field it finds. Hidden by POSITION, not by
+     display:none, because a form control that is display:none is skipped by
+     some bots too, and the whole value of the trap is that it looks real. */
+  .trap {
+    position: absolute; left: -9999px; top: auto;
+    width: 1px; height: 1px; overflow: hidden;
+  }
+  .btn {
+    display: inline-block; margin-top: 22px; padding: 14px 28px; border-radius: 14px;
+    font-weight: 700; font-size: 17px; border: 0; cursor: pointer;
+    background: var(--gold); color: #000; font-family: inherit;
+  }
+  .btn[disabled] { opacity: 0.6; cursor: default; }
+  .btn-ghost {
+    background: transparent; border: 1px solid #ffffff40; color: var(--text);
+    text-decoration: none;
+  }
+  .sent { text-align: center; padding: 16px 0 8px; }
+  .tick {
+    font-size: 44px; line-height: 1; color: var(--gold);
+    display: block; margin-bottom: 12px;
+  }
+  .sent h2 { font-size: 22px; margin-bottom: 8px; }
+  .sent p { color: var(--muted); font-size: 15px; }
+  .sent .btn { margin: 22px 8px 0; }
+  .aside { color: var(--muted); font-size: 14px; margin-top: 22px; text-align: center; }
+  .aside a { color: var(--text); }
+  footer {
+    border-top: 1px solid #ffffff14; text-align: center;
+    padding: 32px 24px 48px; color: var(--muted); font-size: 14px;
+  }
+  footer a { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<header>
+  <a class="logo" href="/">TEW<span class="go">GO</span></a>
+  <p class="pagetitle">Contact</p>
+</header>
+
+<main>
+  <div class="card" id="card">
+    <p class="lede">Questions, bug reports, or ideas? Send them straight through and we'll get back to you within a couple of days.</p>
+
+    <form id="contact-form" novalidate>
+      <div class="field">
+        <label for="name">Your name</label>
+        <input id="name" name="name" type="text" maxlength="100" autocomplete="name" required>
+      </div>
+
+      <div class="field">
+        <label for="email">Email <span class="hint">(so we can reply)</span></label>
+        <input id="email" name="email" type="email" maxlength="200" autocomplete="email" required>
+      </div>
+
+      <div class="field">
+        <label for="subject">What's it about?</label>
+        <select id="subject" name="subject">
+          <option value="bug">Bug report</option>
+          <option value="idea">Idea or feature request</option>
+          <option value="question" selected>Question about the game</option>
+          <option value="unlock">Trouble with an unlock</option>
+          <option value="other">Something else</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="message">Message</label>
+        <textarea id="message" name="message" maxlength="5000" required></textarea>
+      </div>
+
+      <div class="trap" aria-hidden="true">
+        <label for="website">Leave this field empty</label>
+        <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+      </div>
+
+      <p id="formerror" role="alert" style="color:#ff8f8f;font-size:14px;margin-top:14px;display:none"></p>
+
+      <button class="btn" type="submit" id="send">Send message</button>
+    </form>
+  </div>
+
+  <p class="aside">Prefer to read first? <a href="/updates.html">Features &amp; Updates</a> lists what's live and what's coming.</p>
+</main>
+
+<footer>
+  <p><a href="/">Home</a> &middot; <a href="/play/">Play in your browser</a> &middot; <a href="/privacy.html">Privacy</a></p>
+  <p style="margin-top:8px;">&copy; 2026 Rick Tew</p>
+</footer>
+
+<script type="module">
+  // The destination address is NOT here, and must never be. This posts to an
+  // edge function that holds it in a server secret; that is the entire point
+  // of the form. Anything that prints an address into this page (or into a
+  // comment, a data attribute or an error string) is a defect, not a choice.
+  const ENDPOINT = 'https://guwquufbifuzmphcdsdt.supabase.co/functions/v1/tewgo-contact';
+
+  const form = document.getElementById('contact-form');
+  const card = document.getElementById('card');
+  const button = document.getElementById('send');
+  const errorLine = document.getElementById('formerror');
+
+  // When the form appeared. Sent as an elapsed time rather than a clock
+  // reading, so a device with the wrong date set cannot fail the check.
+  const shownAt = Date.now();
+
+  function fail(text) {
+    errorLine.textContent = text;
+    errorLine.style.display = 'block';
+  }
+
+  function confirmSent() {
+    // Replaced in place: no redirect to a dead-end thank-you URL, and no
+    // page load to make anyone wonder whether the press landed.
+    card.innerHTML =
+      '<div class="sent">' +
+      '<span class="tick" aria-hidden="true">&#10003;</span>' +
+      '<h2>Message sent</h2>' +
+      '<p>Thanks. It has landed, and you will get a reply within a couple of days.</p>' +
+      '<a class="btn" href="/play/">Play TEWGO</a>' +
+      '<a class="btn btn-ghost" href="/">Back to home</a>' +
+      '</div>';
+    card.setAttribute('tabindex', '-1');
+    card.focus();
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorLine.style.display = 'none';
+
+    // form.elements.X, never form.X: an HTMLFormElement has its own `name`
+    // property, so form.name is the form's name attribute and not the input.
+    const fields = form.elements;
+    const data = {
+      name: fields.name.value.trim(),
+      email: fields.email.value.trim(),
+      subject: fields.subject.value,
+      message: fields.message.value.trim(),
+      website: fields.website.value,
+      elapsedMs: Date.now() - shownAt,
+    };
+
+    if (!data.name || !data.email || !data.message) {
+      fail('Please fill in your name, your email and a message.');
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Sending...';
+    try {
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('endpoint ' + res.status);
+      confirmSent();
+    } catch {
+      button.disabled = false;
+      button.textContent = 'Send message';
+      fail('That did not go through. Please check your connection and try again.');
+    }
+  });
+</script>
+</body>
+</html>
