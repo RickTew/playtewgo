@@ -32,7 +32,9 @@ const PRODUCT_BLURB = 'Skip the grind. Every world, every figure, instantly.';
 // browser sends which tier it wants, never a number to charge. Trusting a
 // client-supplied amount would let anyone open a session for any sum,
 // including one cent or ten thousand dollars, against the live account.
-const TIP_AMOUNTS = [200, 500, 1000];
+// $2, $22, $222. Rick's tiers: the whole name is the number two, so the
+// jar counts in Tews and the choice is one, two or three of them.
+const TIP_AMOUNTS = [200, 2200, 22200];
 const TIP_NAME = 'Tip for TEWGO';
 const TIP_BLURB = 'A thank you to the person who makes TEWGO. It unlocks nothing.';
 
