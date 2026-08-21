@@ -1026,7 +1026,7 @@ export function traceChipHead(ctx, kind, cx, cy, r) {
 export const CHIP_EYES = {
   alien: [[0,-0.22,['e',0.55,0.22],['w',1]],[0,-0.22,['c',0.06],['a',1]]],
   anubis: [[-0.14,0.05,["c",0.04],["a",1]],[0.14,0.05,["c",0.04],["a",1]],[0,-0.3,["c",0.04],["g",0.05,1.0]]],
-  astronaut: [[0,-0.05,["r",0.55,0.2,0.06],["g",0.1,1.0]],[0.1,-0.1,["r",0.16,0.05,0.02],["a",1]]],
+  astronaut: [[0,-0.1,['e',0.72,0.56],['g',0.1,1]],[-0.14,-0.22,['e',0.22,0.14],['a',0.9]]],
   bandit: [[0,0.12,["r",0.55,0.15,0.04],["a",1]],[-0.13,-0.05,["c",0.04],["g",0.05,1.0]],[0.13,-0.05,["c",0.04],["g",0.05,1.0]]],
   cowboy: [[-0.13,0.05,["c",0.05],["a",1]],[0.13,0.05,["c",0.05],["a",1]]],
   daimyo: [[-0.14,-0,["r",0.13,0.05,0.02],["a",1]],[0.14,-0,["r",0.13,0.05,0.02],["a",1]]],
@@ -1044,11 +1044,11 @@ export const CHIP_EYES = {
   ninja: [[0,-0.07,["r",0.4,0.08,0.04],["a",1]]],
   outlaw: [[0,0.14,["r",0.55,0.18,0.04],["a",1]],[-0.13,-0.05,["c",0.04],["g",0.05,1.0]],[0.13,-0.05,["c",0.04],["g",0.05,1.0]]],
   pharaoh: [[-0.13,0.05,["c",0.05],["a",1]],[0.13,0.05,["c",0.05],["a",1]]],
-  pirate: [[0.13,0.05,['c',0.05],['a',1]],[-0.16,0.04,['r',0.3,0.24,0.05],['g',0.05,1],['g',0.95,0.95]]],
+  pirate: [[0.13,0.05,['c',0.05],['a',1]],[-0.16,0.04,['r',0.3,0.24,0.05],['g',0.04,1]]],
   robot: [[0,-0.05,["r",0.42,0.07,0.02],["a",1]]],
   samurai: [[-0.13,0.02,["c",0.06],["a",1]],[0.13,0.02,["c",0.06],["a",1]]],
   scarab: [[0,-0.05,["r",0.04,0.65,0],["g",0.05,0.85]],[-0.3,-0.2,["c",0.05],["g",0.05,1.0]],[0.3,-0.2,["c",0.05],["g",0.05,1.0]]],
-  shark: [[-0.18,-0.1,['c',0.05],['g',0.05,1]],[-0.19,0.1,['t',0.16,0.2],['g',0.97,0.95]],[0.0,0.1,['t',0.16,0.2],['g',0.97,0.95]],[0.19,0.1,['t',0.16,0.2],['g',0.97,0.95]]],
+  shark: [[-0.19,-0.14,['c',0.065],['g',0.04,1]],[0.19,-0.14,['c',0.065],['g',0.04,1]],[-0.19,0.1,['t',0.16,0.2],['g',0.97,0.95]],[0,0.1,['t',0.16,0.2],['g',0.97,0.95]],[0.19,0.1,['t',0.16,0.2],['g',0.97,0.95]]],
   sheriff: [[-0.13,0.05,["r",0.12,0.04,0.01],["a",1]],[0.13,0.05,["r",0.12,0.04,0.01],["a",1]]],
   skeleton: [[-0.16,-0.05,["c",0.07],["g",0.0,0.85]],[0.16,-0.05,["c",0.07],["g",0.0,0.85]],[0,0.05,["c",0.03],["g",0.0,0.85]]],
   snake: [[-0.16,-0.1,["r",0.04,0.13,0.01],["a",1]],[0.16,-0.1,["r",0.04,0.13,0.01],["a",1]]],
@@ -1058,17 +1058,6 @@ export const CHIP_EYES = {
   wizard: [[-0.11,0.05,["c",0.04],["a",1]],[0.11,0.05,["c",0.04],["a",1]],[0,0.2,["c",0.1],["g",0.92,0.9]]],
   zombie: [[-0.16,-0.05,["c",0.07],["g",0.0,0.7]],[0.16,-0.05,["c",0.07],["g",0.0,0.7]]],
 };
-
-/**
- * How far to darken the head silhouette against the chip face. 0.55 for
- * everyone was too much for the pirate: at that depth his dark red goes to
- * near-black, and a black eye patch on a black face is not an eye patch, it
- * is nothing (Rick, 2026-08-21: "the pirate should not have a dark face or
- * you can NOT see the eye patch"). Matches PieceRenderer.chipHeadDarkening.
- */
-function chipHeadDarkening(kind) {
-  return (CHIP_HEAD_ALIAS[kind] ?? kind) === 'pirate' ? 0.28 : 0.55;
-}
 
 function chipEyeColour(c, accent) {
   if (c[0] === 'a') return c[1] >= 1 ? accent : `rgba(${hexToRgbStr(accent)}, ${c[1]})`;
@@ -1250,7 +1239,7 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   c.fill();
 
   // Side band: the rim, darker and offset DOWN, which is the whole trick.
-  c.fillStyle = shadeHex(f.primary, -0.40);
+  c.fillStyle = shadeHex(f.primary, -0.68);
   c.strokeStyle = shadeHex(f.stroke, -0.40);
   c.lineWidth = lw;
   c.beginPath();
@@ -1258,8 +1247,8 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   c.fill();
   c.stroke();
 
-  // Top face: main colour, narrower, offset UP off the band.
-  c.fillStyle = f.primary;
+  // Top face: the dark GROUND the head sits on, narrower and offset UP.
+  c.fillStyle = shadeHex(f.primary, -0.52);
   c.strokeStyle = f.stroke;
   c.lineWidth = lw;
   c.beginPath();
@@ -1269,8 +1258,8 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
 
   // Curved highlight along the top edge.
   c.save();
-  c.globalAlpha = 0.55 * alpha;
-  c.fillStyle = shadeHex(f.primary, 0.40);
+  c.globalAlpha = 0.14 * alpha;
+  c.fillStyle = '#ffffff';
   c.beginPath();
   c.ellipse(x, y - cr * 0.50, cr * 0.475, cr * 0.15, 0, 0, Math.PI * 2);
   c.fill();
@@ -1280,8 +1269,14 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   // reads as a keyhole at board scale; a head reads as a face, which is why
   // iOS paints chipHeadPath here and never the figure (Rick, 2026-08-21).
   // Same 1.30 scale and same y offset as the iOS logo node.
-  c.fillStyle = shadeHex(f.primary, -chipHeadDarkening(kind));
-  c.strokeStyle = shadeHex(f.stroke, 0.10);
+  // The head carries the COLOUR now; the disc behind it is a dark ground.
+  // It used to be the other way round - a bright disc with a head darkened
+  // 55% - which is why a green alien vanished into its own green disc, a
+  // white astronaut came out grey, and the UFO read as a grey lump rather
+  // than something metal against space. Side identity survives the swap and
+  // is stronger for it: the head is the BIGGER element once it breaks out.
+  c.fillStyle = f.primary;
+  c.strokeStyle = shadeHex(f.stroke, 0.25);
   c.lineWidth = Math.max(0.6, radius * 0.05);
   c.lineJoin = 'round';
   const hs = cr * (logoScale ?? chipHeadScale(kind));
