@@ -379,6 +379,7 @@
     margin: 4px 0 12px; font-size: 13px; color: var(--text); cursor: pointer;
   }
   .picker-toggle input { accent-color: var(--gold); width: 16px; height: 16px; }
+  .hidden { display: none !important; }
   .capture-tip {
     display: none;
     position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -783,6 +784,8 @@
       <div class="variant-row" id="variantRow"></div>
       <h3 class="picker-title">Finish</h3>
       <div class="variant-row" id="finishRow"></div>
+      <h3 class="picker-title" id="chipFitTitle">Chip art</h3>
+      <div class="variant-row" id="chipFitRow"></div>
       <h3 class="picker-title">Color</h3>
       <div class="swatch-row" id="colorRow"></div>
       <button class="btn-gold" id="pickerDone">Done</button>

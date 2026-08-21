@@ -1032,23 +1032,23 @@ export const CHIP_EYES = {
   daimyo: [[-0.14,-0,["r",0.13,0.05,0.02],["a",1]],[0.14,-0,["r",0.13,0.05,0.02],["a",1]]],
   dice: [[-0.18,-0.22,["c",0.06],["a",1]],[0,-0.05,["c",0.06],["a",1]],[0.18,0.12,["c",0.06],["a",1]]],
   dragon: [[-0.13,-0.08,["c",0.1],["a",0.35]],[0.13,-0.08,["c",0.1],["a",0.35]],[-0.13,-0.08,["c",0.05],["a",1]],[0.13,-0.08,["c",0.05],["a",1]]],
-  fish: [[0.2,-0.18,["c",0.07],["a",1]]],
+  fish: [[0.2,-0.18,['c',0.07],['a',1]],[-0.22,0.08,['u',0.1892],['w',0.4]],[0.0,0.08,['u',0.1892],['w',0.4]],[0.22,0.08,['u',0.1892],['w',0.4]],[-0.33,0.22,['u',0.1892],['w',0.4]],[-0.11,0.22,['u',0.1892],['w',0.4]],[0.11,0.22,['u',0.1892],['w',0.4]],[0.33,0.22,['u',0.1892],['w',0.4]]],
   frog: [[-0.3,-0.4,["c",0.08],["a",1]],[0.3,-0.4,["c",0.08],["a",1]]],
   geisha: [[-0.12,-0.02,["c",0.04],["g",0.05,1.0]],[0.12,-0.02,["c",0.04],["g",0.05,1.0]],[0,0.1,["c",0.03],["a",1]]],
   ghost: [[-0.13,-0.1,["c",0.06],["a",1]],[0.13,-0.1,["c",0.06],["a",1]]],
   goblin: [[-0.16,-0.05,["c",0.06],["a",1]],[0.16,-0.05,["c",0.06],["a",1]]],
   knight: [[0,-0.1,["r",0.42,0.07,0.02],["a",1]]],
   kraken: [[-0.18,0.2,["c",0.1],["w",1]],[0.18,0.2,["c",0.1],["w",1]],[-0.18,0.2,["c",0.05],["a",1]],[0.18,0.2,["c",0.05],["a",1]]],
-  mermaid: [[-0.12,-0.02,["c",0.05],["a",1]],[0.12,-0.02,["c",0.05],["a",1]]],
+  mermaid: [[-0.12,-0.02,['c',0.05],['a',1]],[0.12,-0.02,['c',0.05],['a',1]],[-0.22,0.14,['u',0.1892],['w',0.4]],[0.0,0.14,['u',0.1892],['w',0.4]],[0.22,0.14,['u',0.1892],['w',0.4]],[-0.33,0.28,['u',0.1892],['w',0.4]],[-0.11,0.28,['u',0.1892],['w',0.4]],[0.11,0.28,['u',0.1892],['w',0.4]],[0.33,0.28,['u',0.1892],['w',0.4]]],
   mummy: [[0,-0.02,["r",0.5,0.13,0.03],["g",0.1,0.85]],[-0.13,-0.02,["c",0.04],["a",1]],[0.13,-0.02,["c",0.04],["a",1]]],
   ninja: [[0,-0.07,["r",0.4,0.08,0.04],["a",1]]],
   outlaw: [[0,0.14,["r",0.55,0.18,0.04],["a",1]],[-0.13,-0.05,["c",0.04],["g",0.05,1.0]],[0.13,-0.05,["c",0.04],["g",0.05,1.0]]],
   pharaoh: [[-0.13,0.05,["c",0.05],["a",1]],[0.13,0.05,["c",0.05],["a",1]]],
-  pirate: [[0.13,0.05,["c",0.05],["a",1]],[-0.13,0.05,["r",0.18,0.13,0.03],["g",0.05,1.0]]],
+  pirate: [[0.13,0.05,['c',0.05],['a',1]],[-0.235,-0.055,['r',0.32,0.045,0.02,0.79],['g',0.92,0.85]],[-0.13,0.05,['r',0.2,0.15,0.03],['g',0.05,1],['g',0.92,0.9]]],
   robot: [[0,-0.05,["r",0.42,0.07,0.02],["a",1]]],
   samurai: [[-0.13,0.02,["c",0.06],["a",1]],[0.13,0.02,["c",0.06],["a",1]]],
   scarab: [[0,-0.05,["r",0.04,0.65,0],["g",0.05,0.85]],[-0.3,-0.2,["c",0.05],["g",0.05,1.0]],[0.3,-0.2,["c",0.05],["g",0.05,1.0]]],
-  shark: [[-0.18,-0.1,["c",0.05],["g",0.05,1.0]]],
+  shark: [[-0.18,-0.1,['c',0.05],['g',0.05,1]],[-0.2,0.12,['t',0.084,0.13],['g',0.97,0.95]],[-0.1,0.12,['t',0.084,0.13],['g',0.97,0.95]],[0.0,0.12,['t',0.084,0.13],['g',0.97,0.95]],[0.1,0.12,['t',0.084,0.13],['g',0.97,0.95]],[0.2,0.12,['t',0.084,0.13],['g',0.97,0.95]]],
   sheriff: [[-0.13,0.05,["r",0.12,0.04,0.01],["a",1]],[0.13,0.05,["r",0.12,0.04,0.01],["a",1]]],
   skeleton: [[-0.16,-0.05,["c",0.07],["g",0.0,0.85]],[0.16,-0.05,["c",0.07],["g",0.0,0.85]],[0,0.05,["c",0.03],["g",0.0,0.85]]],
   snake: [[-0.16,-0.1,["r",0.04,0.13,0.01],["a",1]],[0.16,-0.1,["r",0.04,0.13,0.01],["a",1]]],
@@ -1058,6 +1058,17 @@ export const CHIP_EYES = {
   wizard: [[-0.11,0.05,["c",0.04],["a",1]],[0.11,0.05,["c",0.04],["a",1]],[0,0.2,["c",0.1],["g",0.92,0.9]]],
   zombie: [[-0.16,-0.05,["c",0.07],["g",0.0,0.7]],[0.16,-0.05,["c",0.07],["g",0.0,0.7]]],
 };
+
+/**
+ * How far to darken the head silhouette against the chip face. 0.55 for
+ * everyone was too much for the pirate: at that depth his dark red goes to
+ * near-black, and a black eye patch on a black face is not an eye patch, it
+ * is nothing (Rick, 2026-08-21: "the pirate should not have a dark face or
+ * you can NOT see the eye patch"). Matches PieceRenderer.chipHeadDarkening.
+ */
+function chipHeadDarkening(kind) {
+  return (CHIP_HEAD_ALIAS[kind] ?? kind) === 'pirate' ? 0.28 : 0.55;
+}
 
 function chipEyeColour(c, accent) {
   if (c[0] === 'a') return c[1] >= 1 ? accent : `rgba(${hexToRgbStr(accent)}, ${c[1]})`;
@@ -1070,21 +1081,63 @@ function chipEyeColour(c, accent) {
 export function drawChipEyes(ctx, kind, cx, cy, r, accent) {
   const list = CHIP_EYES[CHIP_HEAD_ALIAS[kind] ?? kind];
   if (!list) return;
-  for (const [x, y, shape, col] of list) {
+  for (const [x, y, shape, col, stroke] of list) {
     const px = cx + x * r;
     const py = cy + y * r;
     ctx.fillStyle = chipEyeColour(col, accent);
+    if (shape[0] === 'u') {
+      // Scale: a shallow arc opening upward, STROKED not filled. Rows of
+      // these read as scales at board size where individual plates mush.
+      const half = (shape[1] * r) / 2;
+      ctx.save();
+      ctx.strokeStyle = chipEyeColour(col, accent);
+      ctx.lineWidth = Math.max(0.5, r * 0.018);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(px - half, py);
+      ctx.quadraticCurveTo(px, py + half * 1.6, px + half, py);
+      ctx.stroke();
+      ctx.restore();
+      continue;
+    }
     ctx.beginPath();
     if (shape[0] === 'c') {
       ctx.arc(px, py, shape[1] * r, 0, Math.PI * 2);
     } else if (shape[0] === 'e') {
       ctx.ellipse(px, py, (shape[1] * r) / 2, (shape[2] * r) / 2, 0, 0, Math.PI * 2);
+    } else if (shape[0] === 't') {
+      // Tooth: a triangle pointing down from the jaw line.
+      const hw = (shape[1] * r) / 2;
+      ctx.moveTo(px - hw, py);
+      ctx.lineTo(px + hw, py);
+      ctx.lineTo(px, py + shape[2] * r);
+      ctx.closePath();
     } else {
       const w = shape[1] * r;
       const h = shape[2] * r;
+      // shape[4] is an optional rotation in radians, for the pirate's strap.
+      if (shape[4]) {
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(shape[4]);
+        ctx.roundRect(-w / 2, -h / 2, w, h, Math.max(0, shape[3] * r));
+        ctx.fill();
+        if (stroke) {
+          ctx.strokeStyle = chipEyeColour(stroke, accent);
+          ctx.lineWidth = Math.max(0.5, r * 0.018);
+          ctx.stroke();
+        }
+        ctx.restore();
+        continue;
+      }
       ctx.roundRect(px - w / 2, py - h / 2, w, h, Math.max(0, shape[3] * r));
     }
     ctx.fill();
+    if (stroke) {
+      ctx.strokeStyle = chipEyeColour(stroke, accent);
+      ctx.lineWidth = Math.max(0.5, r * 0.018);
+      ctx.stroke();
+    }
   }
 }
 
@@ -1117,7 +1170,28 @@ const CHIP_FACE_RY = 0.675;
 const CHIP_LOGO_MAX = 1.30;
 const chipFitCache = new Map();
 
-export function chipHeadScale(kind) {
+/**
+ * Player choice from the picker's CHIP ART row (iOS ChipLogoFit).
+ * 'fit' keeps every head inside its disc; 'breakout' restores the flat 1.30
+ * the app shipped with, where wide heads deliberately hang over the rim -
+ * Rick, 2026-08-21: "having some of the characters jump off their pieces
+ * actually made some of them Unique looking ... I like how the Kraken sticks
+ * off the piece". Neither is wrong, so the player picks.
+ */
+let chipLogoFit = 'fit';
+
+export function setChipLogoFit(mode) {
+  chipLogoFit = mode === 'breakout' ? 'breakout' : 'fit';
+}
+
+export function getChipLogoFit() {
+  return chipLogoFit;
+}
+
+export function chipHeadScale(kind, mode = chipLogoFit) {
+  // Break Out is deliberately unmeasured: the whole point is the silhouettes
+  // that do NOT fit, so it is the original flat scale for every kind.
+  if (mode === 'breakout') return CHIP_LOGO_MAX;
   const key = CHIP_HEAD_ALIAS[kind] ?? kind;
   if (chipFitCache.has(key)) return chipFitCache.get(key);
   const pts = CHIP_HEADS[key];
@@ -1191,7 +1265,7 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   // reads as a keyhole at board scale; a head reads as a face, which is why
   // iOS paints chipHeadPath here and never the figure (Rick, 2026-08-21).
   // Same 1.30 scale and same y offset as the iOS logo node.
-  c.fillStyle = shadeHex(f.primary, -0.55);
+  c.fillStyle = shadeHex(f.primary, -chipHeadDarkening(kind));
   c.strokeStyle = shadeHex(f.stroke, 0.10);
   c.lineWidth = Math.max(0.6, radius * 0.05);
   c.lineJoin = 'round';

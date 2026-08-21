@@ -79,7 +79,7 @@
     <label class="ctl"><b>Logo</b>
       <select id="logofit">
         <option value="fit" selected>Fit to disc</option>
-        <option value="ios">iOS flat 1.30</option>
+        <option value="breakout">Break out</option>
       </select>
     </label>
     <button class="swap" id="swap">Swap side</button>
@@ -147,7 +147,7 @@ function paint(cv, kind, radius, palette, variant) {
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   const x = w / 2;
   if (variant === 'chip') {
-    const ls = document.getElementById('logofit').value === 'ios' ? 1.30 : null;
+    const ls = document.getElementById('logofit').value === 'breakout' ? 1.30 : null;
     drawChipDisc(c, kind, x, h - radius * 1.25, radius, palette, 1, ls);
   }
   else if (variant === 'flat') drawFlatDisc(c, x, h - radius * 1.05, radius, palette);
@@ -198,7 +198,7 @@ function build() {
         // 1.30 and only the web fitted them; iOS ported chipLogoScale on
         // 2026-08-21, so both platforms now compute this same number and the
         // note would be stating something untrue.
-        const fs = chipHeadScale(kind);
+        const fs = chipHeadScale(kind, 'fit');
         if (fs < 1.299) {
           const w = document.createElement('div');
           w.className = 'noeyes';
