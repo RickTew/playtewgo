@@ -7,7 +7,7 @@ import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
 import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
-import { FIGURES, figureHeight, drawFigure, traceFigure, COLOR_SCHEMES, paletteFor, shadeHex } from './pieces.js';
+import { FIGURES, figureHeight, drawFigure, traceFigure, traceChipHead, drawChipEyes, COLOR_SCHEMES, paletteFor, shadeHex } from './pieces.js';
 import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
 import { createProgression, GOLD_WIN_THRESHOLD, THEME_ORDER, THEME_UNLOCK_AFTER } from './engine/progression.js';
 import { startCheckout, handleReturn, restoreWithCode, savedCode } from './unlock.js';
@@ -718,19 +718,27 @@ function drawStone(x, y, radius, player, alpha = 1) {
     ctx.fill();
     ctx.restore();
 
-    // The logo. iOS paints a head-only silhouette (chipHeadPath) which the
-    // web has no equivalent for, so this keeps the full figure but takes
-    // iOS's COLOUR treatment: darkened primary with a lightened outline,
-    // never the flat white it used to be. Head paths are the remaining
-    // difference on this variant and are a per-figure job across 8 themes.
-    const lr = (cr * 1.30) / figureHeight(kind);
+    // The logo is the HEAD, not the whole figure. A body shrunk onto a disc
+    // reads as a keyhole at board scale; a head reads as a face, which is why
+    // iOS paints chipHeadPath here and never the figure (Rick, 2026-08-21).
+    // Same 1.30 scale and same y offset as the iOS logo node.
     ctx.fillStyle = shadeHex(f.primary, -0.55);
     ctx.strokeStyle = shadeHex(f.stroke, 0.10);
-    ctx.lineWidth = Math.max(0.6, radius * 0.04);
+    ctx.lineWidth = Math.max(0.6, radius * 0.05);
     ctx.lineJoin = 'round';
-    traceFigure(ctx, kind, x, y - cr * 0.10 + (figureHeight(kind) * lr) / 2, lr);
-    ctx.fill();
-    ctx.stroke();
+    if (traceChipHead(ctx, kind, x, y - cr * 0.10, cr * 1.30)) {
+      ctx.fill();
+      ctx.stroke();
+      // The eyes are what turn the silhouette into a face. Without them the
+      // head is just a dark hole punched in the chip.
+      drawChipEyes(ctx, kind, x, y - cr * 0.10, cr * 1.30, f.accent);
+    } else {
+      // No head for this kind: an accent dot, exactly as iOS falls back.
+      ctx.fillStyle = f.accent;
+      ctx.beginPath();
+      ctx.arc(x, y - cr * 0.10, cr * 0.20, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
   ctx.restore();
 }
