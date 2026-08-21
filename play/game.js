@@ -7,7 +7,7 @@ import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
 import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
-import { FIGURES, figureHeight, drawFigure, traceFigure, traceChipHead, drawChipEyes, COLOR_SCHEMES, paletteFor, shadeHex } from './pieces.js';
+import { FIGURES, figureHeight, drawFigure, traceFigure, drawChipDisc, COLOR_SCHEMES, paletteFor, shadeHex } from './pieces.js';
 import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
 import { createProgression, GOLD_WIN_THRESHOLD, THEME_ORDER, THEME_UNLOCK_AFTER } from './engine/progression.js';
 import { startCheckout, handleReturn, restoreWithCode, savedCode } from './unlock.js';
@@ -672,73 +672,7 @@ function drawStone(x, y, radius, player, alpha = 1) {
     ctx.arc(x, y, radius * 0.22, 0, Math.PI * 2);
     ctx.fill();
   } else {
-    // Chip: a direct port of PieceRenderer.makeChipDisc. The web had this as
-    // a single flat circle with a white silhouette on it, so picking Chip on
-    // iOS and Chip on the web gave two different-looking pieces (Rick,
-    // 2026-08-21). iOS builds it from five stacked parts and the depth comes
-    // from the pair of ELLIPSES, not from the shadow: a wide dark band and a
-    // narrower lighter face offset up from it. A circle cannot read as a disc
-    // lying on a board no matter how it is shaded.
-    // iOS calls this with radius * 1.25 and all the ratios below are relative
-    // to that, which is why the face still lands near the old 1.02 width.
-    // SpriteKit's y points up and canvas y points down, so every iOS offset
-    // is negated here.
-    const cr = radius * 1.25;
-    const lw = Math.max(1, radius * 0.06);
-
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.beginPath();
-    ctx.ellipse(x, y + cr * 0.32, cr * 0.775, cr * 0.225, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Side band: the rim, darker and offset DOWN, which is the whole trick.
-    ctx.fillStyle = shadeHex(f.primary, -0.40);
-    ctx.strokeStyle = shadeHex(f.stroke, -0.40);
-    ctx.lineWidth = lw;
-    ctx.beginPath();
-    ctx.ellipse(x, y + cr * 0.10, cr * 0.825, cr * 0.775, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Top face: main colour, narrower, offset UP off the band.
-    ctx.fillStyle = f.primary;
-    ctx.strokeStyle = f.stroke;
-    ctx.lineWidth = lw;
-    ctx.beginPath();
-    ctx.ellipse(x, y - cr * 0.10, cr * 0.775, cr * 0.675, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    // Curved highlight along the top edge.
-    ctx.save();
-    ctx.globalAlpha = 0.55 * alpha;
-    ctx.fillStyle = shadeHex(f.primary, 0.40);
-    ctx.beginPath();
-    ctx.ellipse(x, y - cr * 0.50, cr * 0.475, cr * 0.15, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // The logo is the HEAD, not the whole figure. A body shrunk onto a disc
-    // reads as a keyhole at board scale; a head reads as a face, which is why
-    // iOS paints chipHeadPath here and never the figure (Rick, 2026-08-21).
-    // Same 1.30 scale and same y offset as the iOS logo node.
-    ctx.fillStyle = shadeHex(f.primary, -0.55);
-    ctx.strokeStyle = shadeHex(f.stroke, 0.10);
-    ctx.lineWidth = Math.max(0.6, radius * 0.05);
-    ctx.lineJoin = 'round';
-    if (traceChipHead(ctx, kind, x, y - cr * 0.10, cr * 1.30)) {
-      ctx.fill();
-      ctx.stroke();
-      // The eyes are what turn the silhouette into a face. Without them the
-      // head is just a dark hole punched in the chip.
-      drawChipEyes(ctx, kind, x, y - cr * 0.10, cr * 1.30, f.accent);
-    } else {
-      // No head for this kind: an accent dot, exactly as iOS falls back.
-      ctx.fillStyle = f.accent;
-      ctx.beginPath();
-      ctx.arc(x, y - cr * 0.10, cr * 0.20, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    drawChipDisc(ctx, kind, x, y, radius, f, alpha);
   }
   ctx.restore();
 }

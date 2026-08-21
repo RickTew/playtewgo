@@ -1088,6 +1088,84 @@ export function drawChipEyes(ctx, kind, cx, cy, r, accent) {
   }
 }
 
+/**
+ * One chip, drawn exactly as the board draws it. Lives here rather than in
+ * game.js so the piece lab page and the game cannot drift: there is one
+ * implementation and both call it.
+ *
+ * f is a palette ({primary, stroke, accent}); radius is the BOARD radius,
+ * and the chip sizes itself from that the way iOS does.
+ */
+export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1) {
+  // Chip: a direct port of PieceRenderer.makeChipDisc. The web had this as
+  // a single flat circle with a white silhouette on it, so picking Chip on
+  // iOS and Chip on the web gave two different-looking pieces (Rick,
+  // 2026-08-21). iOS builds it from five stacked parts and the depth comes
+  // from the pair of ELLIPSES, not from the shadow: a wide dark band and a
+  // narrower lighter face offset up from it. A circle cannot read as a disc
+  // lying on a board no matter how it is shaded.
+  // iOS calls this with radius * 1.25 and all the ratios below are relative
+  // to that, which is why the face still lands near the old 1.02 width.
+  // SpriteKit's y points up and canvas y points down, so every iOS offset
+  // is negated here.
+  const cr = radius * 1.25;
+  const lw = Math.max(1, radius * 0.06);
+
+  c.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  c.beginPath();
+  c.ellipse(x, y + cr * 0.32, cr * 0.775, cr * 0.225, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // Side band: the rim, darker and offset DOWN, which is the whole trick.
+  c.fillStyle = shadeHex(f.primary, -0.40);
+  c.strokeStyle = shadeHex(f.stroke, -0.40);
+  c.lineWidth = lw;
+  c.beginPath();
+  c.ellipse(x, y + cr * 0.10, cr * 0.825, cr * 0.775, 0, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+
+  // Top face: main colour, narrower, offset UP off the band.
+  c.fillStyle = f.primary;
+  c.strokeStyle = f.stroke;
+  c.lineWidth = lw;
+  c.beginPath();
+  c.ellipse(x, y - cr * 0.10, cr * 0.775, cr * 0.675, 0, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+
+  // Curved highlight along the top edge.
+  c.save();
+  c.globalAlpha = 0.55 * alpha;
+  c.fillStyle = shadeHex(f.primary, 0.40);
+  c.beginPath();
+  c.ellipse(x, y - cr * 0.50, cr * 0.475, cr * 0.15, 0, 0, Math.PI * 2);
+  c.fill();
+  c.restore();
+
+  // The logo is the HEAD, not the whole figure. A body shrunk onto a disc
+  // reads as a keyhole at board scale; a head reads as a face, which is why
+  // iOS paints chipHeadPath here and never the figure (Rick, 2026-08-21).
+  // Same 1.30 scale and same y offset as the iOS logo node.
+  c.fillStyle = shadeHex(f.primary, -0.55);
+  c.strokeStyle = shadeHex(f.stroke, 0.10);
+  c.lineWidth = Math.max(0.6, radius * 0.05);
+  c.lineJoin = 'round';
+  if (traceChipHead(c, kind, x, y - cr * 0.10, cr * 1.30)) {
+    c.fill();
+    c.stroke();
+    // The eyes are what turn the silhouette into a face. Without them the
+    // head is just a dark hole punched in the chip.
+    drawChipEyes(c, kind, x, y - cr * 0.10, cr * 1.30, f.accent);
+  } else {
+    // No head for this kind: an accent dot, exactly as iOS falls back.
+    c.fillStyle = f.accent;
+    c.beginPath();
+    c.arc(x, y - cr * 0.10, cr * 0.20, 0, Math.PI * 2);
+    c.fill();
+  }
+}
+
 export function traceFigure(ctx, kind, cx, feetY, r) {
   const f = FIGURES[kind];
   if (f) tracePath(ctx, f.points, cx, feetY, r);
