@@ -140,7 +140,10 @@
     <div class="card" id="game">
       <h3>Play TEWGO right now, free in your browser.</h3>
       <p style="color:var(--muted)">Same rules as the iOS game. Face the AI on three difficulty levels. Works great on Android phones.</p>
-      <a class="btn btn-gold" style="margin-top:16px" href="/play/">Play now</a>
+      <div class="cta" style="margin-top:16px">
+        <a class="btn btn-gold" id="continueBtn" href="/play/?continue=1" style="display:none">Continue your game</a>
+        <a class="btn btn-gold" id="playBtn" href="/play/">Play now</a>
+      </div>
     </div>
   </section>
 
@@ -168,5 +171,37 @@
   <p style="margin-top:8px;"><a href="/updates.html">Features &amp; Updates</a> &middot; <a href="/play/">Play in your browser</a> &middot; <a href="/contact.html">Contact</a></p>
   <p style="margin-top:8px;">&copy; 2026 Rick Tew</p>
 </footer>
+
+<script>
+  // Continue lives here now so an unfinished game is one press away instead
+  // of a press, a wait and a second press on the setup card (Rick).
+  // This is the only place the home page reads game state, so it stays
+  // deliberately small: read one key, prove a game is genuinely in progress,
+  // and otherwise leave the page exactly as it was.
+  (function () {
+    var saved;
+    try { saved = localStorage.getItem('tewgo.web.game'); } catch (e) { return; }
+    if (!saved) return;
+    var state;
+    try { state = JSON.parse(saved); } catch (e) { return; }
+    // A game counts as continuable only if it is unfinished AND somebody has
+    // actually moved. A saved-but-empty board would offer a Continue that
+    // continues nothing.
+    if (!state || state.isGameOver) return;
+    var cells = state.cells;
+    if (!Array.isArray(cells)) return;
+    var played = cells.some(function (row) {
+      return Array.isArray(row) && row.some(function (v) { return v === 1 || v === 2; });
+    });
+    if (!played) return;
+    var cont = document.getElementById('continueBtn');
+    var play = document.getElementById('playBtn');
+    if (!cont || !play) return;
+    cont.style.display = '';
+    // Two gold buttons compete, so the new game becomes the quieter one.
+    play.className = 'btn btn-ghost';
+    play.textContent = 'Start a new game';
+  }());
+</script>
 </body>
 </html>

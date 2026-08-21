@@ -61,7 +61,10 @@
   /* Capture shelves: each side's captured PAIRS shown as the enemy figures
      they took, so how close someone is to the five-pair win is visible
      without reading a number. Painted in game.js onto the two canvases. */
-  .shelves { display: flex; gap: 10px; align-items: flex-end; }
+  /* The between-shelves gap must always beat the WITHIN-shelf socket gap,
+     which drawShelf() sets to cssW * 0.02. At 10px it lost that contest on
+     desktop and the two sets of five read as one run of ten (Rick). */
+  .shelves { display: flex; gap: clamp(26px, 5vw, 72px); align-items: flex-end; }
   .shelf { flex: 1; min-width: 0; }
   .shelf-head {
     display: flex; align-items: baseline; gap: 6px;
@@ -470,8 +473,50 @@
     opacity: 1;
   }
   .toggle:active { transform: translateY(0); }
+  /* Sound and music default to ON. Until now on and off differed only by
+     opacity, so a player had no way to know there was anything to switch
+     off (Rick). On now carries a gold glyph and a faint gold edge; hover
+     stays stronger than both so it still reads as hover. */
+  .toggle.audio:not(.off) {
+    color: var(--gold);
+    border-color: rgba(255, 214, 10, 0.45);
+    background: rgba(255, 214, 10, 0.09);
+  }
   #soundToggle .slash { display: none; }
   #soundToggle.off .slash { display: inline; }
+  /* Tooltips were native title= attributes: a two second wait and an OS
+     bubble, which reads as a form control rather than a game (Rick).
+     This one appears in 90ms and is painted in the game's own palette. */
+  [data-tip] { position: relative; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute; left: 50%; bottom: calc(100% + 9px);
+    transform: translateX(-50%) translateY(4px) scale(0.96);
+    background: rgba(9, 10, 26, 0.97); color: var(--text);
+    border: 1px solid rgba(255, 214, 10, 0.4);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    padding: 5px 10px; border-radius: 9px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
+    white-space: nowrap; pointer-events: none; z-index: 40;
+    opacity: 0;
+    transition: opacity 0.09s ease, transform 0.09s cubic-bezier(0.2, 1.3, 0.4, 1);
+  }
+  [data-tip]:hover::after, [data-tip]:focus-visible::after {
+    opacity: 1; transform: translateX(-50%) translateY(0) scale(1);
+  }
+  body.light [data-tip]::after {
+    background: rgba(255, 255, 255, 0.98); color: #16161c;
+    border-color: rgba(179, 149, 0, 0.45);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  }
+  /* While the setup card is up the dock is not part of the conversation.
+     Leaving it live put two primary buttons on screen at once, which read
+     as two separate pages rather than one setup (Rick). */
+  .dock.behind-setup {
+    opacity: 0.25; pointer-events: none; filter: saturate(0.4);
+    transition: opacity 0.18s ease, filter 0.18s ease;
+  }
+  .dock { transition: opacity 0.18s ease, filter 0.18s ease; }
   .swatch-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 6px 0 18px; }
   .swatch {
     position: relative; width: 30px; height: 30px; border-radius: 50%;
@@ -634,7 +679,7 @@
       <canvas id="aiShelf"></canvas>
     </div>
   </div>
-  <div id="status">Your move</div>
+  <div id="status">Choose how you want to play</div>
   <div class="rules-hint" id="rulesHint" style="display: none;">Five in a row wins. Capturing five pairs also wins. Flank two enemy pieces to capture them.</div>
 </div>
 
@@ -680,11 +725,11 @@
         </label>
         <label>Mode
           <select id="setupMode">
-            <option value="ai">vs AI</option>
-            <option value="2p">2 players</option>
+            <option value="ai">1 player, vs the computer</option>
+            <option value="2p">2 players, same device</option>
           </select>
         </label>
-        <label id="setupDiffRow">AI level
+        <label id="setupDiffRow">Difficulty
           <select id="setupDiff">
             <option value="easy">Easy</option>
             <option value="medium" selected>Medium</option>
@@ -694,8 +739,12 @@
         </label>
       </div>
       <p id="setupRecord" style="color:var(--gold); font-size:14px; margin-bottom:6px; display:none"></p>
-      <p style="color:var(--muted); font-size:14px; margin-bottom:18px">
-        Pieces, board, background and sound can be changed any time below the board.
+      <p style="color:var(--muted); font-size:14px; margin-bottom:6px">
+        Pieces, board, background and sound can be changed any time below the board,
+        and your record and collection live in your <a href="#" id="setupProfileLink" style="color:var(--gold)">profile</a>.
+      </p>
+      <p style="color:var(--muted); font-size:13px; margin-bottom:18px; opacity:0.8">
+        Both players share this screen. Playing someone over the internet is coming later.
       </p>
       <div class="overlay-buttons">
         <button class="btn-gold" id="setupCancel" style="display:none">Continue game</button>
@@ -815,37 +864,37 @@
   <div class="dock">
     <div class="dock-row1">
     <div class="faceoff">
-      <button class="fighter you" id="fighterYou" title="Change your figure">
+      <button class="fighter you" id="fighterYou" data-tip="Change your figure" aria-label="Change your figure">
         <canvas id="fighterYouCv"></canvas>
         <span class="fname" id="fighterYouName">Robot</span>
       </button>
       <span class="vs-badge">VS</span>
-      <button class="fighter ai" id="fighterAi" title="Change their figure">
+      <button class="fighter ai" id="fighterAi" data-tip="Change their figure" aria-label="Change their figure">
         <canvas id="fighterAiCv"></canvas>
         <span class="fname" id="fighterAiName">Alien</span>
       </button>
     </div>
     <span class="dock-tools">
-      <button class="toggle" id="profileBtn" title="Profile and collection">
+      <button class="toggle" id="profileBtn" data-tip="Profile and collection" aria-label="Profile and collection">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20v-1c0-3.3 3.6-5 8-5s8 1.7 8 5v1"/><circle cx="12" cy="7.5" r="3.8"/></svg>
       </button>
-    <button class="toggle" id="sceneBtn" title="Board &amp; Background">
+    <button class="toggle" id="sceneBtn" data-tip="Board &amp; Background" aria-label="Board and Background">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><circle cx="8.7" cy="9.7" r="1.6"/><path d="M20.5 15.5l-4.8-4.8L6 20.4"/></svg>
     </button>
-    <button class="toggle" id="pieceBtn" title="Pieces">
+    <button class="toggle" id="pieceBtn" data-tip="Pieces" aria-label="Pieces">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="16.5" cy="9" r="2.6"/><path d="M16 14.6c2.6 0 4.5 1.8 4.5 4.4"/></svg>
     </button>
-    <button class="toggle" id="soundToggle" title="Sound effects">
+    <button class="toggle audio" id="soundToggle" data-tip="Sound effects" aria-label="Sound effects">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4z"/><path d="M15.5 9a4.2 4.2 0 010 6"/><path d="M18 6.6a8 8 0 010 10.8"/><line class="slash" x1="4" y1="20" x2="20" y2="4"/></svg>
     </button>
-    <button class="toggle" id="musicToggle" title="Music">
+    <button class="toggle audio" id="musicToggle" data-tip="Music" aria-label="Music">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>
     </button>
     </span>
     <button class="btn-gold" id="newGame">New game</button>
     </div>
   <div class="dock-row2">
-    <button class="who" id="avatarBtn" title="Your profile">
+    <button class="who" id="avatarBtn" data-tip="Your name and record" aria-label="Your name and record">
       <span class="pname">
         <span id="playerName">Player One</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4L8 20l-5 1 1-5L17 3z"/></svg>

@@ -62,7 +62,13 @@ function ringedPlanet(c, x, y, r) {
   c.strokeStyle = 'rgba(180, 210, 255, 0.25)';
   c.lineWidth = r * 0.16;
   c.beginPath();
-  c.ellipse(0, 0, r * 1.75, r * 0.5, 0, Math.PI + 0.15, Math.PI * 2 - 0.15);
+  // Runs PAST both crossover points on purpose. Both arcs used to stop
+  // 0.15 rad short of 0 and PI, which left two visible notches in the ring
+  // at its widest left and right edges and read as broken art (Rick). The
+  // far arc now closes those, and because it is the dimmer of the two the
+  // ring simply fades where it passes the planet's silhouette, which is
+  // what a real ring does there anyway.
+  c.ellipse(0, 0, r * 1.75, r * 0.5, 0, Math.PI - 0.25, Math.PI * 2 + 0.25);
   c.stroke();
   c.restore();
   const body = c.createRadialGradient(x - r * 0.4, y - r * 0.4, r * 0.1, x, y, r);

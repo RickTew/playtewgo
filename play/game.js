@@ -1029,15 +1029,32 @@ function anyOverlayOpen() {
   return document.querySelector('.overlay.show') !== null;
 }
 
+/**
+ * The dock is a permanent strip, so while the setup card floats over the
+ * board both were live and BOTH showed a start button. Setup owns the screen
+ * while it is open: the dock dims out and stops taking clicks, leaving one
+ * primary action at a time. Only setup does this; the pickers are reached
+ * FROM the dock, so dimming it under them would be nonsense.
+ */
+function syncDockToSetup() {
+  const dock = document.querySelector('.dock');
+  if (!dock) return;
+  const setupOpen = !!document.getElementById('setup')?.classList.contains('show');
+  dock.classList.toggle('behind-setup', setupOpen);
+  updateHud();
+}
+
 function presentOverlay(el) {
   for (const o of document.querySelectorAll('.overlay')) {
     o.classList.toggle('show', o === el);
   }
+  syncDockToSetup();
   clearAim();
 }
 
 function closeOverlays() {
   for (const o of document.querySelectorAll('.overlay')) o.classList.remove('show');
+  syncDockToSetup();
   clearAim();
 }
 
@@ -1048,9 +1065,17 @@ function updateHud() {
   aiPairsEl.textContent = board.captureCount[TWO];
   youPairsEl.style.color = counterColor(ONE);
   aiPairsEl.style.color = counterColor(TWO);
+  // The name takes the same tint as the count, so the colour means "this
+  // side" rather than decorating a single digit. The "/5 pairs" suffix is
+  // held back by its own opacity rule, which keeps the live number loudest.
+  youLabelEl.style.color = counterColor(ONE);
+  aiLabelEl.style.color = counterColor(TWO);
   drawShelf(ONE);
   drawShelf(TWO);
-  if (gameOver) {
+  if (document.getElementById('setup')?.classList.contains('show')) {
+    // Setup is up and nothing has been chosen yet, so "Your move" is a lie.
+    statusEl.textContent = 'Choose how you want to play';
+  } else if (gameOver) {
     statusEl.textContent = 'Game over';
   } else if (isAiGame()) {
     statusEl.textContent = current === HUMAN ? 'Your move' : 'AI is thinking…';
@@ -2376,6 +2401,14 @@ function openSetup() {
 
 document.getElementById('setupCancel')?.addEventListener('click', () => {
   setupEl.classList.remove('show');
+  syncDockToSetup();
+});
+
+// The setup card names the profile, so the word is a way in rather than a
+// pointer at an unlabelled icon.
+document.getElementById('setupProfileLink')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  openProfile();
 });
 
 document.getElementById('setupMode')?.addEventListener('change', () => {
@@ -2396,6 +2429,7 @@ document.getElementById('startGame')?.addEventListener('click', () => {
   }
   if (THEMES[pickedTheme] && pickedTheme !== theme) applyTheme(pickedTheme);
   setupEl.classList.remove('show');
+  syncDockToSetup();
   ensureMusic();
   newGame();
 });
@@ -2498,7 +2532,19 @@ applyScene();
 // see the options screen from the front").
 const resumed = restore();
 if (resumed && isAiGame() && current === AI_PLAYER) scheduleAiMove();
-openSetup();
+// The home page offers Continue directly when a game is waiting, and sends
+// the player here with ?continue=1. Honouring it drops them straight back
+// onto the board instead of making them press through setup a second time
+// (Rick). It only ever SKIPS a screen: if there turned out to be nothing to
+// resume, setup opens exactly as it always did. The parameter is stripped so
+// a later refresh gets the normal front door.
+const wantsResume = new URLSearchParams(location.search).has('continue');
+if (wantsResume) {
+  const url = new URL(location.href);
+  url.searchParams.delete('continue');
+  history.replaceState(null, '', url.pathname + url.search + url.hash);
+}
+if (!(wantsResume && resumed)) openSetup();
 updateToggles();
 draw();
 updateHud();
