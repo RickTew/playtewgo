@@ -1282,39 +1282,31 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   c.fill();
 
   // Side band: the rim, darker and offset DOWN, which is the whole trick.
+  // NO stroke on the rim. Two stroked ellipses stacked under one head is
+  // two circles, which is exactly what Rick kept seeing ("the chips all look
+  // like they have two circles so they lost the 3D look"). Depth comes from
+  // SHADING - a graded face over a dark rim - not from drawing more edges.
   c.fillStyle = shadeHex(f.primary, -0.80);
-  c.strokeStyle = shadeHex(f.stroke, -0.40);
-  c.lineWidth = lw;
   c.beginPath();
   c.ellipse(x, y + cr * 0.10, cr * 0.825, cr * 0.775, 0, 0, Math.PI * 2);
   c.fill();
-  c.stroke();
 
-  // Top face: the dark GROUND the head sits on, narrower and offset UP.
-  c.fillStyle = shadeHex(f.primary, -0.40);
-  c.strokeStyle = f.stroke;
-  c.lineWidth = lw;
+  // Top face: the GROUND the head sits on, graded top to bottom so the disc
+  // has a shape rather than being a flat ring.
+  const faceGrad = c.createLinearGradient(0, y - cr * 0.785, 0, y + cr * 0.575);
+  faceGrad.addColorStop(0, shadeHex(f.primary, -0.30));
+  faceGrad.addColorStop(1, shadeHex(f.primary, -0.62));
+  c.fillStyle = faceGrad;
+  c.strokeStyle = shadeHex(f.primary, 0.10);
+  c.lineWidth = Math.max(0.6, cr * 0.03);
   c.beginPath();
   c.ellipse(x, y - cr * 0.10, cr * 0.775, cr * 0.675, 0, 0, Math.PI * 2);
   c.fill();
   c.stroke();
 
-  // A lit edge where the face meets the rim. Without it the dark face and
-  // the dark rim read as two flat circles rather than a disc with depth -
-  // "the chips all look like they have two circles so they lost the 3D
-  // look" (2026-08-21). One bright arc is all it takes.
-  c.save();
-  c.globalAlpha = 0.55 * alpha;
-  c.strokeStyle = shadeHex(f.primary, 0.30);
-  c.lineWidth = Math.max(0.8, cr * 0.05);
-  c.beginPath();
-  c.ellipse(x, y - cr * 0.10, cr * 0.775, cr * 0.675, 0, 0, Math.PI * 2);
-  c.stroke();
-  c.restore();
-
   // Curved highlight along the top edge.
   c.save();
-  c.globalAlpha = 0.22 * alpha;
+  c.globalAlpha = 0.16 * alpha;
   c.fillStyle = '#ffffff';
   c.beginPath();
   c.ellipse(x, y - cr * 0.50, cr * 0.475, cr * 0.15, 0, 0, Math.PI * 2);
