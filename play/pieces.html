@@ -36,7 +36,15 @@
      a board either. */
   .variants { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
   .vcell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-  .vcell .vlabel { font-size: 10px; letter-spacing: 1px; color: var(--muted); }
+  .vlabel { font-size: 10px; letter-spacing: 1px; color: var(--muted); text-align: center; }
+  .colhead {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    padding: 0 8px 6px; margin-top: 4px;
+  }
+  /* Every cell the same height with the piece centred in it, so a row reads
+     as one line rather than four things floating at different heights. */
+  .vcell .big { height: 100%; }
+  .variants { align-items: center; }
   .vcell .big, .vcell .small { display: flex; align-items: flex-end; justify-content: center; }
   .vcell .small { opacity: 0.95; }
   @media (max-width: 560px) {
@@ -82,7 +90,7 @@
 <body>
 <header>
   <h1><a href="/play/">TEW<span class="go">GO</span></a> <span id="worldName">Space</span> lab</h1>
-  <p class="lede">One world at a time: every piece, with every variant a player can pick, in the order the game offers them. Drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. The slider is real board size &ndash; a phone board draws at about 14px, so anything that stops reading there will not read in play. Beside each name is a reference <b>icon and emoji</b>: not art, just a target. If the piece is harder to recognise than the icon, the piece needs work.</p>
+  <p class="lede">One world at a time: every piece, with every variant a player can pick, <b>Tall down to Flat</b> so you can follow what survives as the character is simplified. Drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. The slider is real board size &ndash; a phone board draws at about 14px, and anything that stops reading there will not read in play. Beside each name is a reference <b>icon and emoji</b>: not art, just a target. If the piece is harder to recognise than the icon, the piece needs work.</p>
 </header>
 
 <main>
@@ -137,11 +145,16 @@ all.textContent = 'All worlds';
 themeEl.appendChild(all);
 themeEl.value = 'space';
 
+// Tall first, Flat last. Reading left to right is then a story of the same
+// character being simplified, which is the thing you are actually judging:
+// what survives. Rick, 2026-08-21: "I am used to the concept of going from
+// Tall to Flat and trying to see how it maintains the look (similarites)
+// from left to right."
 const VARIANT_ORDER = [
-  { key: 'flat', name: 'FLAT' },
-  { key: 'chip', name: 'CHIP' },
-  { key: 'half', name: 'HALF' },
   { key: 'tall', name: 'TALL' },
+  { key: 'half', name: 'HALF' },
+  { key: 'chip', name: 'CHIP' },
+  { key: 'flat', name: 'FLAT' },
 ];
 
 /**
@@ -197,9 +210,12 @@ function paint(cv, kind, radius, palette, variant) {
   // centre. Sizing this to the disc alone silently guillotined every hat and
   // horn on the page, which is what Rick saw as "many are cut off". A lab
   // that crops the thing being judged is worse than no lab.
-  const pad = variant === 'half' || variant === 'tall' ? 3.6 : 2.4;
+  // ONE canvas size for every variant, and the piece centred inside it, so
+  // a row of four sits on a single line instead of each floating at its own
+  // height. A tall figure is the tallest thing drawn (~3.2 radii plus the
+  // head that breaks past it), so it sets the box for all of them.
   const w = Math.ceil(radius * 3.4);
-  const h = Math.ceil(radius * pad);
+  const h = Math.ceil(radius * 3.8);
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = Math.round(w * dpr);
   cv.height = Math.round(h * dpr);
@@ -208,13 +224,17 @@ function paint(cv, kind, radius, palette, variant) {
   const c = cv.getContext('2d');
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   const x = w / 2;
+  const midY = h / 2;
   if (variant === 'chip') {
-    drawChipDisc(c, kind, x, h - radius * 1.25, radius, palette, 1, chipHeadScale(kind));
-  }
-  else if (variant === 'flat') drawFlatDisc(c, kind, x, h - radius * 1.05, radius, palette);
-  else {
+    drawChipDisc(c, kind, x, midY, radius, palette, 1, chipHeadScale(kind));
+  } else if (variant === 'flat') {
+    drawFlatDisc(c, kind, x, midY, radius, palette);
+  } else {
+    // Figures are drawn from the FEET up, so centring means dropping the
+    // feet half the figure's own height below the middle.
     const rf = variant === 'tall' ? radius : radius * 0.68;
-    drawFigure(c, kind, x, h - 2, rf, 1, { palette, finish: 'classic' });
+    const feetY = midY + (figureHeight(kind) * rf) / 2;
+    drawFigure(c, kind, x, feetY, rf, 1, { palette, finish: 'classic' });
   }
 }
 
@@ -234,6 +254,17 @@ function build() {
     const h2 = document.createElement('h2');
     h2.textContent = def.name + ' \u00b7 pieces \u00b7 ' + def.figures.length + ' figures';
     out.appendChild(h2);
+
+    // Headed once, not once per piece. "We know it is tall or flat etc."
+    const head = document.createElement('div');
+    head.className = 'colhead';
+    for (const v of VARIANT_ORDER) {
+      const l = document.createElement('div');
+      l.className = 'vlabel';
+      l.textContent = v.name;
+      head.appendChild(l);
+    }
+    out.appendChild(head);
 
     // One card per PIECE, holding every variant a player can choose, in the
     // order the in-game row shows them. Rick, 2026-08-21: "let's have all of
@@ -261,10 +292,6 @@ function build() {
       ref.title = 'reference emoji, not art';
       h3.appendChild(ref);
       h3.appendChild(document.createTextNode(kind));
-      const note = document.createElement('span');
-      note.className = 'note';
-      note.textContent = 'flat inside \u00b7 chip breaks out';
-      h3.appendChild(note);
       card.appendChild(h3);
 
       const row = document.createElement('div');
@@ -272,10 +299,6 @@ function build() {
       for (const v of VARIANT_ORDER) {
         const vc = document.createElement('div');
         vc.className = 'vcell';
-        const lab = document.createElement('div');
-        lab.className = 'vlabel';
-        lab.textContent = v.name;
-        vc.appendChild(lab);
         // ONE render per cell. Showing the same piece twice at two sizes
         // made the page a puzzle - "can we not have two images per image?
         // Makes it confusing. Just allow the slider to make them smaller"
