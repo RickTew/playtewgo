@@ -28,8 +28,13 @@ export const FIGURES = {
     accent: '#99D9FF',
     points: [
       [0.65, 0.00], [0.65, 0.55], [0.55, 1.15], [0.95, 1.40], [0.85, 1.85],
-      [0.55, 2.05], [0.40, 2.20], [0.65, 2.40], [0.85, 2.75], [0.55, 3.05],
-      [0.00, 3.18], [-0.55, 3.05], [-0.85, 2.75], [-0.65, 2.40], [-0.40, 2.20],
+      [0.55, 2.05],
+      // A ROUND helmet, the same dome his chip wears. The old one flared to
+      // 0.85 with hard shoulders and read as a hood, which is why his tall
+      // and his chip looked like two different characters.
+      [0.34, 2.20], [0.62, 2.38], [0.76, 2.64], [0.72, 2.92], [0.50, 3.12],
+      [0.22, 3.22], [0.00, 3.24], [-0.22, 3.22], [-0.50, 3.12], [-0.72, 2.92],
+      [-0.76, 2.64], [-0.62, 2.38], [-0.34, 2.20],
       [-0.55, 2.05], [-0.85, 1.85], [-0.95, 1.40], [-0.55, 1.15], [-0.65, 0.55],
       [-0.65, 0.00],
     ],
@@ -55,10 +60,13 @@ export const FIGURES = {
     glowRgb: '77, 255, 140',
     accent: '#4DFF8C',
     points: [
-      [0.96, 0.48], [1.04, 0.73], [0.91, 0.96], [0.57, 1.13], [0.48, 1.38],
-      [0.26, 1.58], [0.00, 1.68], [-0.26, 1.58], [-0.48, 1.38], [-0.57, 1.13],
-      [-0.91, 0.96], [-1.04, 0.73], [-0.96, 0.48], [-0.48, 0.36], [0.00, 0.30],
-      [0.48, 0.36],
+      // The SAME saucer the chip wears, at figure proportions: blunt rims
+      // and a domed cockpit. The tall craft used to be a different shape
+      // entirely, so the two variants read as two different vehicles.
+      [1.02, 0.62], [0.96, 0.80], [0.60, 0.94], [0.46, 1.22], [0.22, 1.52],
+      [0.00, 1.60], [-0.22, 1.52], [-0.46, 1.22], [-0.60, 0.94], [-0.96, 0.80],
+      [-1.02, 0.62], [-0.90, 0.46], [-0.50, 0.36], [0.00, 0.32], [0.50, 0.36],
+      [0.90, 0.46],
     ],
   },
   // ----- Ocean roster (ThemeRegistry.ocean palettes) -----
@@ -625,17 +633,21 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
     ctx.arc(cx, at(2.45), r * 0.08, 0, Math.PI * 2);
     ctx.fill();
   } else if (kind === 'astronaut') {
+    // The same big round WINDOW his chip wears, sized to the helmet dome,
+    // so the tall figure and the chip are one character rather than two.
     ctx.fillStyle = 'rgba(26, 26, 26, 1)';
-    roundedRect(ctx, cx, at(2.65), r * 0.85, r * 0.42, r * 0.18);
+    ctx.beginPath();
+    ctx.ellipse(cx, at(2.68), r * 0.51, r * 0.40, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = accent;
-    roundedRect(ctx, cx + r * 0.18, at(2.78), r * 0.20, r * 0.08, r * 0.03);
+    ctx.beginPath();
+    ctx.ellipse(cx - r * 0.20, at(2.86), r * 0.15, r * 0.10, -0.4, 0, Math.PI * 2);
     ctx.fill();
   } else if (kind === 'ufo') {
     ctx.fillStyle = accent;
     for (const dx of [-0.48, -0.17, 0.17, 0.48]) {
       ctx.beginPath();
-      ctx.arc(cx + dx * r, at(0.73), r * 0.07, 0, Math.PI * 2);
+      ctx.arc(cx + dx * r, at(0.80), r * 0.07, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.fillStyle = 'rgba(77, 255, 140, 0.30)';
@@ -1270,7 +1282,7 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   c.fill();
 
   // Side band: the rim, darker and offset DOWN, which is the whole trick.
-  c.fillStyle = shadeHex(f.primary, -0.68);
+  c.fillStyle = shadeHex(f.primary, -0.80);
   c.strokeStyle = shadeHex(f.stroke, -0.40);
   c.lineWidth = lw;
   c.beginPath();
@@ -1279,7 +1291,7 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   c.stroke();
 
   // Top face: the dark GROUND the head sits on, narrower and offset UP.
-  c.fillStyle = shadeHex(f.primary, -0.52);
+  c.fillStyle = shadeHex(f.primary, -0.40);
   c.strokeStyle = f.stroke;
   c.lineWidth = lw;
   c.beginPath();
@@ -1287,9 +1299,22 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   c.fill();
   c.stroke();
 
+  // A lit edge where the face meets the rim. Without it the dark face and
+  // the dark rim read as two flat circles rather than a disc with depth -
+  // "the chips all look like they have two circles so they lost the 3D
+  // look" (2026-08-21). One bright arc is all it takes.
+  c.save();
+  c.globalAlpha = 0.55 * alpha;
+  c.strokeStyle = shadeHex(f.primary, 0.30);
+  c.lineWidth = Math.max(0.8, cr * 0.05);
+  c.beginPath();
+  c.ellipse(x, y - cr * 0.10, cr * 0.775, cr * 0.675, 0, 0, Math.PI * 2);
+  c.stroke();
+  c.restore();
+
   // Curved highlight along the top edge.
   c.save();
-  c.globalAlpha = 0.14 * alpha;
+  c.globalAlpha = 0.22 * alpha;
   c.fillStyle = '#ffffff';
   c.beginPath();
   c.ellipse(x, y - cr * 0.50, cr * 0.475, cr * 0.15, 0, 0, Math.PI * 2);
