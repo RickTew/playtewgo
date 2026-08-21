@@ -21,6 +21,15 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const PRICE_CENTS = 259; // $2.59, matching the iOS price (2 and 5 for TEW = 2, GO = 5; sub-$10 Apple tiers end in 9, so $2.50 does not exist)
 const CURRENCY = 'usd';
+
+// The card statement reads "TEWS INC.* TEWGO". Tews Inc is the account
+// descriptor and CANNOT change, because that one entity takes the money for
+// every game and business Rick runs and it matches the bank name. Stripe's
+// per-charge suffix is the way to name the product without touching it, so
+// the shared prefix stays and each purchase says what it was.
+// Allowed characters only: no < > \ ' " *.
+const DESCRIPTOR_UNLOCK = 'TEWGO';
+const DESCRIPTOR_TIP = 'TEWGO TIP';
 const PRODUCT_NAME = 'TEWGO: Unlock All Worlds';
 const PRODUCT_BLURB = 'Skip the grind. Every world, every figure, instantly.';
 
@@ -134,6 +143,7 @@ Deno.serve(async (req) => {
         'line_items[0][price_data][unit_amount]': String(PRICE_CENTS),
         'line_items[0][price_data][product_data][name]': PRODUCT_NAME,
         'line_items[0][price_data][product_data][description]': PRODUCT_BLURB,
+        'payment_intent_data[statement_descriptor_suffix]': DESCRIPTOR_UNLOCK,
         success_url: `${base}/play/?unlock={CHECKOUT_SESSION_ID}`,
         cancel_url: `${base}/play/?unlock=cancelled`,
       });
@@ -151,6 +161,7 @@ Deno.serve(async (req) => {
         'line_items[0][price_data][unit_amount]': String(amount),
         'line_items[0][price_data][product_data][name]': TIP_NAME,
         'line_items[0][price_data][product_data][description]': TIP_BLURB,
+        'payment_intent_data[statement_descriptor_suffix]': DESCRIPTOR_TIP,
         success_url: `${base}/?tip=thanks`,
         cancel_url: `${base}/?tip=cancelled`,
       });

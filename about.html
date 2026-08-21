@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEWGO - About Rick Tew</title>
+<meta name="description" content="Who made TEWGO. Rick Tew splits his time between a martial arts gym and a digital dojo, and builds games in between.">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#05051a">
+<style>
+  :root {
+    --bg: #0a0a14;
+    --gold: #ffd60a;
+    --text: #f2f2f7;
+    --muted: #9a9ab0;
+    --card: rgba(255,255,255,0.05);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65; overflow-x: hidden;
+  }
+  .stars {
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(1px 1px at 20% 30%, #fff8, transparent 40%),
+      radial-gradient(1px 1px at 70% 15%, #fff6, transparent 40%),
+      radial-gradient(1.5px 1.5px at 40% 70%, #fff7, transparent 40%),
+      radial-gradient(1px 1px at 85% 55%, #fff5, transparent 40%),
+      radial-gradient(1px 1px at 10% 85%, #fff6, transparent 40%),
+      radial-gradient(ellipse 80% 50% at 50% -10%, #1c1c4a 0%, transparent 60%),
+      var(--bg);
+  }
+  header { text-align: center; padding: 56px 24px 8px; }
+  .logo {
+    font-size: clamp(40px, 8vw, 64px); font-weight: 900; letter-spacing: 2px;
+    text-shadow: 0 0 40px rgba(255,214,10,0.25);
+    text-decoration: none; color: var(--text); display: inline-block;
+  }
+  .logo .go { color: var(--gold); }
+  .pagetitle { font-size: clamp(17px, 3vw, 22px); color: var(--muted); margin-top: 2px; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 24px 80px; }
+  section { margin-top: 40px; }
+  h2 {
+    margin-bottom: 14px; color: var(--gold);
+    letter-spacing: 1px; text-transform: uppercase; font-size: 15px;
+  }
+  .card { background: var(--card); border: 1px solid #ffffff14; border-radius: 18px; padding: 22px; }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
+  p { color: var(--muted); font-size: 15px; }
+  p + p { margin-top: 12px; }
+  strong { color: var(--text); }
+  a { color: var(--gold); }
+  .lede {
+    background: rgba(255,214,10,0.07); border: 1px solid rgba(255,214,10,0.28);
+    border-radius: 18px; padding: 22px;
+  }
+  .lede p { color: var(--text); font-size: 16px; }
+  /* The split. Two panels side by side, because the whole point is that
+     there are two of him. They stack on a phone. */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 620px) { .split { grid-template-columns: 1fr; } }
+  .split .card h3 { color: var(--gold); font-size: 16px; letter-spacing: 0.5px; }
+  .split .card .kicker {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); font-weight: 700; margin-bottom: 4px;
+  }
+  /* The photo slot. Until a picture is dropped in, the page must still read
+     as finished rather than broken, so nothing here depends on the image. */
+  .portrait { margin-top: 18px; }
+  .portrait img {
+    width: 100%; height: auto; border-radius: 18px;
+    border: 1px solid #ffffff1f; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    display: block;
+  }
+  .portrait figcaption {
+    color: var(--muted); font-size: 13px; text-align: center; margin-top: 8px;
+  }
+  .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .games .card h3 { font-size: 16px; }
+  .games .card p { font-size: 14px; }
+  .tag {
+    display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    background: #ffd60a1a; color: var(--gold); vertical-align: 2px;
+  }
+  footer {
+    border-top: 1px solid #ffffff14; text-align: center;
+    padding: 32px 24px 48px; color: var(--muted); font-size: 14px;
+  }
+  footer a { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<header>
+  <a class="logo" href="/">TEW<span class="go">GO</span></a>
+  <p class="pagetitle">About</p>
+</header>
+
+<main>
+  <section>
+    <div class="lede">
+      <p><strong>Rick Tew has a split personality, and he can prove it.</strong></p>
+      <p style="margin-top:12px">Half of his week goes to a martial arts gym. The other half goes to a digital dojo, teaching and building software. TEWGO happened in between the two, on his own time and his own dime.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The two halves</h2>
+    <div class="split">
+      <div class="card">
+        <div class="kicker">One side</div>
+        <h3>The gym</h3>
+        <p>Martial arts is the older half and the one most people know him for. Decades of teaching it, and a gym that runs on real mats with real people in it.</p>
+        <p>That half shows up in this game more than you would think. Eight worlds, and the one he built first after Space was Feudal Japan.</p>
+      </div>
+      <div class="card">
+        <div class="kicker">The other side</div>
+        <h3>The digital dojo</h3>
+        <p>The newer half. Building software, teaching people to work with it, and turning what he learns into things other people can pick up and use.</p>
+        <p>Same instinct as the gym, different mat. Learn the move, drill the move, keep only what actually works.</p>
+      </div>
+    </div>
+    <p style="margin-top:16px">Both halves live at <a href="https://ricktew.com" target="_blank" rel="noopener">ricktew.com</a>.</p>
+  </section>
+
+  <section>
+    <h2>Why TEWGO exists</h2>
+    <div class="card">
+      <p>He loves chess and does not have an evening to give it. TEWGO is the game he wanted instead: the same shape of thinking, playable in the time it takes to wait in a queue.</p>
+      <p>It is free and it stays free. Everything in it, all eight worlds and every figure, board, background and soundtrack, is earned by playing. There is one optional purchase that skips the earning and it is cosmetic. It cannot touch the board, the rules, the difficulty or your odds, and that is a promise written into the <a href="/terms.html">terms</a>, not a marketing line.</p>
+      <p>There are no accounts, no analytics, no advertising and no tracking. The <a href="/privacy.html">privacy policy</a> is short because there is very little to describe.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The name</h2>
+    <div class="card">
+      <p><strong>TEW is two</strong>, the pair you capture. <strong>GO is five</strong> in Japanese, the row you need. And Tew is his surname, which made naming it easy.</p>
+      <p>That is also why a purchase shows up on your card statement as <strong>TEWS INC.</strong> Tews Inc is his company, and the same one sits behind his other games and sites.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Other things he is building</h2>
+    <div class="games">
+      <div class="card">
+        <h3>Dungeon Hole</h3>
+        <p>A one against one browser strategy game. One player builds the dungeon, the other sends a party through it, and both watch the same replay. <a href="https://dungeonhole.com" target="_blank" rel="noopener">dungeonhole.com</a></p>
+      </div>
+      <div class="card">
+        <h3>AstroHold</h3>
+        <p>A game with a home of its own at <a href="https://astrohold.com" target="_blank" rel="noopener">astrohold.com</a>.</p>
+      </div>
+      <div class="card">
+        <h3>Arena RPG <span class="tag">Coming</span></h3>
+        <p>A board game with fantasy dungeon and dragon vibes that he designed as a teenager and is bringing back. Soon TEW be released.</p>
+      </div>
+    </div>
+    <p style="margin-top:16px">They are all in beta while he finishes them, which is the honest version.</p>
+  </section>
+
+  <section>
+    <h2>Say hello</h2>
+    <div class="card">
+      <p>Bug reports, ideas, or just why you love the game: it all goes to the same place and he reads it himself. <a href="/contact.html">Send a message</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p><a href="/">Home</a> &middot; <a href="/play/">Play in your browser</a> &middot; <a href="/updates.html">Features &amp; Updates</a> &middot; <a href="/contact.html">Contact</a></p>
+  <p style="margin-top:8px;"><a href="/privacy.html">Privacy</a> &middot; <a href="/terms.html">Terms</a></p>
+  <p style="margin-top:8px;">&copy; 2026 Rick Tew</p>
+</footer>
+</body>
+</html>
