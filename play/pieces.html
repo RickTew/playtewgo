@@ -193,11 +193,16 @@ function build() {
       sz.textContent = 'board · 2.4x';
       cell.appendChild(sz);
       if (variant === 'chip') {
+        // Heads wider or taller than the chip face get shrunk to fit. This
+        // used to read "(iOS 1.30)" because iOS blew every head up by a flat
+        // 1.30 and only the web fitted them; iOS ported chipLogoScale on
+        // 2026-08-21, so both platforms now compute this same number and the
+        // note would be stating something untrue.
         const fs = chipHeadScale(kind);
         if (fs < 1.299) {
           const w = document.createElement('div');
           w.className = 'noeyes';
-          w.textContent = 'fitted ' + fs.toFixed(2) + ' (iOS 1.30)';
+          w.textContent = 'fitted to disc · ' + fs.toFixed(2) + 'x';
           cell.appendChild(w);
         }
       }
