@@ -1285,17 +1285,22 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   // NO stroke on the rim. Two stroked ellipses stacked under one head is
   // two circles, which is exactly what Rick kept seeing ("the chips all look
   // like they have two circles so they lost the 3D look"). Depth comes from
-  // SHADING - a graded face over a dark rim - not from drawing more edges.
-  c.fillStyle = shadeHex(f.primary, -0.80);
+  // SHADING - a graded face over a darker rim - not from drawing more edges.
+  //
+  // The rim also has to stay VISIBLE. At -0.80 on an almost-black page it
+  // disappeared into the background and the chip went flat instead ("chips
+  // lost their 3d look entirely now"). It sits BETWEEN the face and the
+  // background in tone, and shows a real crescent under the face.
+  c.fillStyle = shadeHex(f.primary, -0.58);
   c.beginPath();
-  c.ellipse(x, y + cr * 0.10, cr * 0.825, cr * 0.775, 0, 0, Math.PI * 2);
+  c.ellipse(x, y + cr * 0.16, cr * 0.825, cr * 0.775, 0, 0, Math.PI * 2);
   c.fill();
 
   // Top face: the GROUND the head sits on, graded top to bottom so the disc
   // has a shape rather than being a flat ring.
   const faceGrad = c.createLinearGradient(0, y - cr * 0.785, 0, y + cr * 0.575);
-  faceGrad.addColorStop(0, shadeHex(f.primary, -0.30));
-  faceGrad.addColorStop(1, shadeHex(f.primary, -0.62));
+  faceGrad.addColorStop(0, shadeHex(f.primary, -0.24));
+  faceGrad.addColorStop(1, shadeHex(f.primary, -0.46));
   c.fillStyle = faceGrad;
   c.strokeStyle = shadeHex(f.primary, 0.10);
   c.lineWidth = Math.max(0.6, cr * 0.03);
