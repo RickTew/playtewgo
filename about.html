@@ -7,7 +7,7 @@
 <meta name="description" content="Who made TEWGO. Rick Tew splits his time between a martial arts gym and a digital dojo, and builds games in between.">
 <meta property="og:title" content="About Rick Tew">
 <meta property="og:description" content="A split personality, and he can prove it. Half a martial arts gym, half a digital dojo, and TEWGO in between.">
-<meta property="og:image" content="https://playtewgo.com/assets/rick-splits.jpg">
+<meta property="og:image" content="https://playtewgo.com/assets/rick-tew-splits.png">
 <meta property="og:url" content="https://playtewgo.com/about.html">
 <meta property="og:type" content="profile">
 <meta name="twitter:card" content="summary_large_image">
@@ -75,17 +75,20 @@
     font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
     color: var(--muted); font-weight: 700; margin-bottom: 4px;
   }
-  /* The photo slot. Until a picture is dropped in, the page must still read
-     as finished rather than broken, so nothing here depends on the image. */
-  .portrait { margin-top: 18px; }
-  .portrait img {
-    width: 100%; height: auto; border-radius: 18px;
-    border: 1px solid #ffffff1f; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-    display: block;
+  /* The mark: he is literally doing the splits in it, it says his name,
+     and it is drawn rather than photographed, which suits a game site. */
+  .mark { text-align: center; margin: 4px 0 8px; }
+  .mark img { width: min(340px, 78%); height: auto; display: inline-block; }
+  /* Each half of the split personality gets its own picture, because the
+     claim is visual and two photographs make it faster than two paragraphs. */
+  .split .card .shot {
+    width: 100%; height: 190px; object-fit: cover; object-position: center;
+    border-radius: 12px; margin-bottom: 14px; display: block;
+    background: rgba(255,255,255,0.04);
   }
-  .portrait figcaption {
-    color: var(--muted); font-size: 13px; text-align: center; margin-top: 8px;
-  }
+  .split .card .shot.contain { object-fit: contain; }
+  .plug .card { border-color: rgba(255,214,10,0.3); background: rgba(255,214,10,0.06); }
+  .plug .card p { color: var(--text); }
   .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
   .games .card h3 { font-size: 16px; }
   .games .card p { font-size: 14px; }
@@ -111,30 +114,33 @@
 
 <main>
   <section>
-    <div class="lede">
-      <p><strong>Rick Tew has a split personality, and he can prove it.</strong></p>
-      <p style="margin-top:12px">Half of his week goes to a martial arts gym. The other half goes to a digital dojo, teaching and building software. TEWGO happened in between the two, on his own time and his own dime.</p>
+    <div class="mark">
+      <img src="/assets/rick-tew-splits.png" width="460" height="410"
+           alt="The Rick Tew logo: a ninja in blue doing the splits, holding a sword in each hand, above the words RICK TEW">
     </div>
-    <figure class="portrait">
-      <img src="/assets/rick-splits.jpg" width="1100" height="618"
-           alt="Rick Tew doing the splits, braced between two large boulders with his arms outstretched">
-      <figcaption>Exhibit A. Two rocks, one Rick.</figcaption>
-    </figure>
+    <div class="lede">
+      <p><strong>"Even though my last name says otherwise, there is only one of me. But I do have a split personality."</strong></p>
+      <p style="margin-top:12px">Half of his week goes to a martial arts gym. The other half goes to building software and teaching people to build with it. TEWGO happened in between the two, on his own time and his own dime.</p>
+    </div>
   </section>
 
   <section>
     <h2>The two halves</h2>
     <div class="split">
       <div class="card">
+        <img class="shot" src="/assets/rick-splits-climb.jpg"
+             alt="Rick Tew holding the full splits across a cliff face while climbing">
         <div class="kicker">One side</div>
-        <h3>The gym</h3>
-        <p>Martial arts is the older half and the one most people know him for. Decades of teaching it, and a gym that runs on real mats with real people in it.</p>
+        <h3>The ninja</h3>
+        <p>Martial arts is the older half and the one most people know him for. Decades of teaching it, a gym on Samui that runs on real mats with real people, and the splits, still, on the side of a cliff.</p>
         <p>That half shows up in this game more than you would think. Eight worlds, and the one he built first after Space was Feudal Japan.</p>
       </div>
       <div class="card">
+        <img class="shot contain" src="/assets/rick-dojo.png"
+             alt="Rick Tew, arms folded, in a green shirt">
         <div class="kicker">The other side</div>
         <h3>The digital dojo</h3>
-        <p>The newer half. Building software, teaching people to work with it, and turning what he learns into things other people can pick up and use.</p>
+        <p>The newer half. Building software, teaching people to build with it, and turning what he learns into things other people can pick up and use.</p>
         <p>Same instinct as the gym, different mat. Learn the move, drill the move, keep only what actually works.</p>
       </div>
     </div>
@@ -175,6 +181,15 @@
       </div>
     </div>
     <p style="margin-top:16px">They are all in beta while he finishes them, which is the honest version.</p>
+  </section>
+
+  <section class="plug">
+    <h2>Building something yourself?</h2>
+    <div class="card">
+      <p><strong>The digital half of the split is a job, not just a hobby.</strong> Rick builds and ships real things: games, booking systems, shops, sites and the automation behind them, and he teaches people to work the same way.</p>
+      <p>TEWGO is the toy version of that. Everything on this site, the game, the engine, the store and the pages you are reading, is his own work. If you have a project of your own and want help getting it built or getting unstuck, that is exactly the other half of the week.</p>
+      <p><a href="https://ricktew.com" target="_blank" rel="noopener">Find him at ricktew.com</a>, or just <a href="/contact.html">send a message here</a> and say what you are working on.</p>
+    </div>
   </section>
 
   <section>
