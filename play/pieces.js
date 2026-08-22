@@ -1502,19 +1502,40 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
  * lesson that survived the three failed chip attempts: depth comes from a
  * solid side and a graded face, never from adding another outline.
  *
- * Sized to the chip's own footprint (HEAD_PIECE_FOOTPRINT is the shipping
+ * Sized against the chip's own footprint (HEAD_PIECE_WIDTH is the shipping
  * chip's visible half width) so a board full of these occupies exactly the
  * space a board full of chips did, and nothing about the grid has to move.
  */
-export const HEAD_PIECE_FOOTPRINT = 1.25 * 0.825;
+export const HEAD_PIECE_WIDTH = 1.25 * 0.825 * 2;
 
 export const HEAD_STYLE = {
   fill: 1.0,
-  // Matched on WIDTH, not on the outermost point. Scaling a roughly square
-  // head by its longest radius scales it by its CORNER, which lands it
-  // visibly smaller than the disc it replaces - the robot showed this
-  // immediately. Width-matching puts the piece in the same footprint the chip
-  // had. maxTall then stops a tall head becoming a tower on the grid.
+  /**
+   * Matched on AREA, not on width, and not on the outermost point.
+   *
+   * Both earlier rules were wrong and each looked right in a different way.
+   * Scaling by the outermost point scales a squarish head by its CORNER, so
+   * the robot came out visibly smaller than the disc it replaced. Width-
+   * matching fixed that and produced a table where every width was identical
+   * to three decimals, which FELT like proof - and was proof of the wrong
+   * thing. Identical widths with heights running 0.92 to 2.14 means a square
+   * head carries nearly twice the ink of a flat one, so the pieces still did
+   * not look the same size. Rick, 2026-08-22, looking at a Space board: "we
+   * will need a set chip sizing. Here the robot head looks bigger?" Measured:
+   * robot 2.01 against alien 1.78 on sqrt(w*h), 1.53x across the roster.
+   *
+   * `area` is the side of the square with the same area as the piece's
+   * bounding box, in radius units. Matching it drops the spread to 1.31x and
+   * puts robot at 1.80 against alien 1.78. The rest of the spread is the
+   * genuinely letterbox heads (scarab, cowboy, ufo) hitting the WIDTH clamp,
+   * which is correct rather than a miss: equalising a saucer by area would
+   * push it wider than its cell, and a saucer staying a saucer is the point.
+   *
+   * THE LESSON, which outlives the constant: a SIZE rule cannot be verified
+   * in a per-piece view or in a column of numbers. It only shows up with two
+   * different silhouettes side by side on a board.
+   */
+  area: 1.80,
   maxTall: 1.15,
   depth: 0.16,
   // 1 slice is a single hard offset copy, which reads as a sticker lifted off
@@ -1539,23 +1560,33 @@ function headPieceExtent(kind) {
   const key = CHIP_HEAD_ALIAS[kind] ?? kind;
   if (headExtentCache.has(key)) return headExtentCache.get(key);
   const pts = CHIP_HEADS[key];
-  const ext = pts && pts.length
-    ? { hw: Math.max(...pts.map((p) => Math.abs(p[0]))), hh: Math.max(...pts.map((p) => Math.abs(p[1]))) }
-    : { hw: 0, hh: 0 };
+  let ext = { W: 0, H: 0 };
+  if (pts && pts.length) {
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    ext = { W: Math.max(...xs) - Math.min(...xs), H: Math.max(...ys) - Math.min(...ys) };
+  }
   headExtentCache.set(key, ext);
   return ext;
 }
 
 export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null) {
   const s = style ? { ...HEAD_STYLE, ...style } : HEAD_STYLE;
-  const { hw, hh } = headPieceExtent(kind);
-  if (hw <= 0 || hh <= 0) return false;
-  const half = radius * HEAD_PIECE_FOOTPRINT * s.fill;
-  let hs = half / hw;
-  if (hh * hs > half * s.maxTall) hs = (half * s.maxTall) / hh;
-  // The drawn half-height, which is what the shading and the shadow have to
-  // be measured against: a saucer and a tall helmet cannot share one number.
-  const halfH = hh * hs;
+  const { W, H } = headPieceExtent(kind);
+  if (W <= 0 || H <= 0) return false;
+  // Match the piece's AREA, then clamp so nothing outgrows its cell. See
+  // HEAD_STYLE.area for why width-matching was wrong.
+  const unit = radius * s.fill;
+  const hs = unit * Math.min(
+    s.area / Math.sqrt(W * H),
+    HEAD_PIECE_WIDTH / W,
+    (HEAD_PIECE_WIDTH * s.maxTall) / H,
+  );
+  // The DRAWN half-width and half-height. Both vary per piece now, and the
+  // shading and shadow have to be measured against the real ones: a saucer
+  // and a tall helmet cannot share one number.
+  const half = (W * hs) / 2;
+  const halfH = (H * hs) / 2;
   const drop = half * s.depth;
 
   c.save();
