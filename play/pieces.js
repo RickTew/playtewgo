@@ -1583,15 +1583,34 @@ export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null)
     c.stroke();
   }
 
+  // The sheen FADES OUT. A flat-alpha ellipse has a hard edge, and on a
+  // near-black piece that edge reads as a grey oval painted on the face
+  // rather than as light on it - the onyx stone showed it as an obvious
+  // smudge. A radial falloff is what a real specular does and it behaves on
+  // every colour in every scheme, dark ones included.
   if (s.highlightAlpha > 0) {
     c.save();
     traceChipHead(c, kind, x, y, hs);
     c.clip();
+    const hx = x;
+    const hy = y - halfH * 0.52;
+    const hr = Math.max(half * 0.58, 0.01);
+    const sheen = c.createRadialGradient(hx, hy, 0, hx, hy, hr);
+    sheen.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    sheen.addColorStop(0.55, 'rgba(255, 255, 255, 0.45)');
+    sheen.addColorStop(1, 'rgba(255, 255, 255, 0)');
     c.globalAlpha = s.highlightAlpha * alpha;
-    c.fillStyle = '#ffffff';
+    c.fillStyle = sheen;
+    c.save();
+    // Squashed into the head's own proportions so a saucer gets a wide, low
+    // sheen and a tall helmet gets a rounder one.
+    c.translate(hx, hy);
+    c.scale(1, Math.max(0.25, halfH / half) * 0.85);
+    c.translate(-hx, -hy);
     c.beginPath();
-    c.ellipse(x, y - halfH * 0.52, half * 0.54, halfH * 0.24, 0, 0, Math.PI * 2);
+    c.arc(hx, hy, hr, 0, Math.PI * 2);
     c.fill();
+    c.restore();
     c.restore();
   }
 

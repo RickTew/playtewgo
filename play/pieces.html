@@ -91,6 +91,7 @@
 <header>
   <h1><a href="/play/">TEW<span class="go">GO</span></a> <span id="worldName">Space</span> lab</h1>
   <p class="lede">One world at a time: every piece, with every variant a player can pick, <b>Tall down to Flat</b> so you can follow what survives as the character is simplified. Drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. The slider is real board size &ndash; a phone board draws at about 14px, and anything that stops reading there will not read in play. Beside each name is a reference <b>icon and emoji</b>: not art, just a target. If the piece is harder to recognise than the icon, the piece needs work.</p>
+  <p class="lede"><b>The piece IS the chip now.</b> The round disc underneath is gone, and Chip and Flat are the two finishes of the character itself: <b>Chip is the 3D one</b>, <b>Flat is the same silhouette without the depth</b>. Old games cut their pieces from rock and gems and no two were ever exactly alike, so each piece keeps its own outline and its own height instead of being posted onto an identical disc. Every one still fills the same footprint, so the board reads evenly. The <b>Disc</b> control keeps the old look for comparison, and can put a plain disc back on Flat alone &ndash; the serious-player option, nothing to read, just a stone.</p>
 </header>
 
 <main>
@@ -99,6 +100,11 @@
       <select id="theme"></select>
     </label>
     <label class="ctl"><b>Colours</b><select id="scheme"></select></label>
+    <label class="ctl"><b>Disc</b><select id="disc">
+      <option value="none">Piece is the chip</option>
+      <option value="flat">Disc on Flat only</option>
+      <option value="both">Old discs</option>
+    </select></label>
     <label class="ctl"><b>Board size</b>
       <input type="range" id="size" min="8" max="64" step="1" value="30">
       <span id="sizeOut">14px</span>
@@ -114,13 +120,14 @@
 </footer>
 
 <script type="module">
-import { FIGURES, drawChipDisc, drawFlatDisc, chipHeadScale, drawFigure, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
+import { FIGURES, drawChipDisc, drawFlatDisc, drawHeadPiece, chipHeadScale, drawFigure, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
 import { THEMES } from './themes.js';
 
 const out = document.getElementById('out');
 const themeEl = document.getElementById('theme');
 const schemeEl = document.getElementById('scheme');
 const sizeEl = document.getElementById('size');
+const discEl = document.getElementById('disc');
 const sizeOut = document.getElementById('sizeOut');
 const countEl = document.getElementById('count');
 let side = 0;
@@ -156,6 +163,14 @@ const VARIANT_ORDER = [
   { key: 'chip', name: 'CHIP' },
   { key: 'flat', name: 'FLAT' },
 ];
+
+/** Chip and Flat are a 3D/2D pair now, so the heading says so. */
+function variantLabel(v) {
+  if (discEl.value === 'both') return v.name;
+  if (v.key === 'chip') return 'CHIP \u00b7 3D';
+  if (v.key === 'flat') return discEl.value === 'flat' ? 'FLAT \u00b7 DISC' : 'FLAT \u00b7 2D';
+  return v.name;
+}
 
 /**
  * A reference glyph per figure, shown beside the name. NOT art and never
@@ -236,6 +251,29 @@ const REFERENCE = {
   ivoryDie: '\u{1F3B2}', brassHourglass: '\u{23F3}',
 };
 
+/**
+ * THE PIECE IS THE CHIP NOW (Rick, 2026-08-22). The round disc underneath is
+ * gone, and the two disc variants become the two FINISHES of the character
+ * itself: Chip is the 3D one, Flat is the same silhouette without the depth.
+ *
+ * His reasoning, and it is why this is not just a simplification: old games
+ * cut their pieces from rock and gems and no two were ever exactly alike. A
+ * uniform disc under every character is the modern, tidy, less fun answer.
+ * Letting each piece keep its own outline and its own height is the old one.
+ * The width-match in drawHeadPiece is what makes that safe - every piece
+ * still occupies the same footprint, so the board reads evenly even though
+ * no two pieces are the same shape.
+ *
+ * The disc is kept as a SETTING rather than deleted, because Rick flagged
+ * that a plain disc on Flat may be what a serious player wants: nothing to
+ * read, just a stone. "Old discs" keeps the previous look whole for
+ * comparison.
+ */
+const HEAD_FLAT = {
+  depth: 0, highlightAlpha: 0, shadowAlpha: 0,
+  faceTopShade: 0, faceBottomShade: 0,
+};
+
 function paint(cv, kind, radius, palette, variant) {
   // Wide enough for the WIDEST thing that can be drawn, which is a head at
   // iOS's flat 1.30 scale: the ufo saucer reaches 1.54 board radii from the
@@ -257,10 +295,13 @@ function paint(cv, kind, radius, palette, variant) {
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   const x = w / 2;
   const midY = h / 2;
+  const disc = discEl.value;
   if (variant === 'chip') {
-    drawChipDisc(c, kind, x, midY, radius, palette, 1, chipHeadScale(kind));
+    if (disc === 'both') drawChipDisc(c, kind, x, midY, radius, palette, 1, chipHeadScale(kind));
+    else drawHeadPiece(c, kind, x, midY, radius, palette);
   } else if (variant === 'flat') {
-    drawFlatDisc(c, kind, x, midY, radius, palette);
+    if (disc === 'both' || disc === 'flat') drawFlatDisc(c, kind, x, midY, radius, palette);
+    else drawHeadPiece(c, kind, x, midY, radius, palette, 1, HEAD_FLAT);
   } else {
     // Figures are drawn from the FEET up, so centring means dropping the
     // feet half the figure's own height below the middle.
@@ -293,7 +334,7 @@ function build() {
     for (const v of VARIANT_ORDER) {
       const l = document.createElement('div');
       l.className = 'vlabel';
-      l.textContent = v.name;
+      l.textContent = variantLabel(v);
       head.appendChild(l);
     }
     out.appendChild(head);
@@ -354,6 +395,7 @@ function build() {
 
 themeEl.addEventListener('change', build);
 schemeEl.addEventListener('change', build);
+discEl.addEventListener('change', build);
 sizeEl.addEventListener('input', build);
 document.getElementById('swap').addEventListener('click', () => { side = side ? 0 : 1; build(); });
 build();
