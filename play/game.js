@@ -2692,6 +2692,15 @@ function buildSetupControls() {
     diffSel?.value,
     (v) => { if (diffSel) diffSel.value = v; buildSetupControls(); });
 
+  // Piece applies immediately, like colour, so the two characters in the
+  // scene above change as you tap. Unlike Players and Difficulty it is not
+  // a property of the match being set up, it is a preference, so there is
+  // nothing to hold until Start.
+  seg(document.getElementById('setupPieceSeg'),
+    VARIANTS.map((v) => [v.key, v.name]),
+    variant,
+    (v) => { setVariant(v); buildSetupControls(); drawSetupPreview(); });
+
   // Colour applies immediately rather than on Start, so the two characters in
   // the scene above change as you tap. That live answer is the whole reason
   // the swatches are on this screen and not just in the picker.
@@ -2756,8 +2765,23 @@ function drawSetupPreview() {
   const feetY = H * 0.90;
   const light = sceneByKey(key)?.light;
 
+  // The stage shows the piece you actually picked, at the ratio the BOARD
+  // uses (a figure draws at 0.68 of a chip's radius), so the two options are
+  // weighed against each other the way they will appear in play rather than
+  // at whatever size flattered each. Without this the Piece control above
+  // would be a button that changes nothing you can see, which is the exact
+  // fault that made the picker feel dead.
   kinds.forEach((kind, i) => {
     const cx = W * (i === 0 ? 0.34 : 0.66);
+    const pal = paletteFor(kind, i, colorScheme);
+    if (variant === 'chip') {
+      const cr = r / 0.68;
+      const cy = feetY - cr * 0.9;
+      drawGlow(c, cx, cy, cr, pal.glowRgb, glow);
+      drawHeadPiece(c, kind, cx, cy, cr, pal, 1,
+        finish === 'dimensional' ? null : HEAD_STANDARD);
+      return;
+    }
     c.save();
     c.globalAlpha = 0.32;
     c.fillStyle = '#000';
@@ -2765,8 +2789,8 @@ function drawSetupPreview() {
     c.ellipse(cx, feetY, r * 0.75, r * 0.26, 0, 0, Math.PI * 2);
     c.fill();
     c.restore();
-    drawFigure(c, kind, cx, feetY, r, 1,
-      { palette: paletteFor(kind, i, colorScheme), finish });
+    drawFigureGlow(c, kind, cx, feetY, r, pal.glowRgb, glow);
+    drawFigure(c, kind, cx, feetY, r, 1, { palette: pal, finish });
   });
 
   // Between the HEADS, not the bodies. A figure is about 3.2r tall, so
