@@ -306,14 +306,34 @@ function difficultyLabel() {
   return v.charAt(0).toUpperCase() + v.slice(1);
 }
 
+/**
+ * Draws the piece the player is ACTUALLY playing, for the two places the UI
+ * says "this is your piece": the dock loadout and the match intro. Both were
+ * hard-wired to the standing figure, so once Chip became the default almost
+ * everyone was shown a Regular they had never chosen. Options that do not
+ * show up where the option is displayed read as options that do not work.
+ */
+function drawChosenPiece(c, kind, cx, cy, boxH, palette) {
+  const rgb = palette.glowRgb ?? FIGURES[kind].glowRgb;
+  if (variant === 'chip') {
+    const r = boxH / 2.4;
+    drawGlow(c, cx, cy, r, rgb, glow);
+    drawHeadPiece(c, kind, cx, cy, r, palette, 1,
+      finish === 'dimensional' ? null : HEAD_STANDARD);
+  } else {
+    const r = boxH / figureHeight(kind);
+    const feetY = cy + (figureHeight(kind) * r) / 2;
+    drawFigureGlow(c, kind, cx, feetY, r, rgb, glow);
+    drawFigure(c, kind, cx, feetY, r, 1, { palette, finish });
+  }
+}
+
 function drawIntroPiece(canvasEl, side) {
   const kind = pieceKind[side];
   const c = canvasEl.getContext('2d');
   c.setTransform(2, 0, 0, 2, 0, 0); // canvas is 184px backing for 92px CSS
   c.clearRect(0, 0, 92, 92);
-  const r = 25;
-  const feetY = (92 + figureHeight(kind) * r) / 2;
-  drawFigure(c, kind, 46, feetY, r, 1, { palette: styleFor(side), finish });
+  drawChosenPiece(c, kind, 46, 46, 74, styleFor(side));
 }
 
 function showIntro() {
@@ -1962,6 +1982,7 @@ function setVariant(v) {
   if (variantSelEl) variantSelEl.value = variant;
   buildVariantRow();
   draw();
+  drawAvatar();
 }
 
 function buildVariantRow() {
@@ -1987,6 +2008,7 @@ function buildVariantRow() {
       try { localStorage.setItem(FINISH_KEY, finish); } catch { /* ignore */ }
       buildPicker();
       draw();
+      drawAvatar();
     });
     finishRowEl.appendChild(btn);
   }
@@ -2007,6 +2029,7 @@ function buildVariantRow() {
       try { localStorage.setItem(GLOW_KEY, glow); } catch { /* ignore */ }
       buildPicker();
       draw();
+      drawAvatar();
     });
     glowRowEl.appendChild(btn);
   }
@@ -2170,8 +2193,7 @@ function drawFighter(cvId, nameId, side) {
   c.setTransform(2, 0, 0, 2, 0, 0);
   c.clearRect(0, 0, 44, 52);
   const kind = pieceKind[side];
-  drawFigure(c, kind, 22, 50, 46 / figureHeight(kind), 1,
-    { palette: styleFor(side), finish });
+  drawChosenPiece(c, kind, 22, 27, 46, styleFor(side));
   const nameEl = document.getElementById(nameId);
   if (nameEl) nameEl.textContent = FIGURES[kind].name;
 }
