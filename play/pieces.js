@@ -1661,10 +1661,34 @@ export function drawFigureGlow(ctx, kind, cx, feetY, r, glowRgb, key, alpha = 1)
   const a = glowAlpha(key) * alpha;
   const f = FIGURES[kind];
   if (a <= 0 || !f) return;
+
+  // LAYERED, never one scaled copy. A scaled silhouette is still a HARD-EDGED
+  // SHAPE: at Soft it passes as a rim, but at Bright it reads as a plate
+  // bolted behind the piece, straight edges and corners included, and the
+  // boxier the piece the worse it looks (the robot shows it, the alien hides
+  // it). Overlapping copies at rising scale and low alpha accumulate toward
+  // the silhouette and thin out at the edge, which is the same rule the
+  // painted backgrounds and the chip's sheen already follow: layered, never a
+  // single hard-edged shape.
+  //
+  // Six, not four: at four the scale steps read as concentric rings.
+  const LAYERS = 6;
+  const spread = key === 'bright' ? 0.20 : 0.14;
+  // Per-layer alpha chosen so the overlap accumulates to exactly `a` rather
+  // than to whatever six additions happen to reach.
+  const per = 1 - Math.pow(1 - a, 1 / LAYERS);
+  const h = figureHeight(kind);
   ctx.save();
-  ctx.fillStyle = `rgba(${glowRgb}, ${a})`;
-  tracePath(ctx, f.points, cx, feetY, r * 1.12);
-  ctx.fill();
+  ctx.fillStyle = `rgba(${glowRgb}, ${per})`;
+  for (let i = LAYERS; i >= 1; i -= 1) {
+    const grow = 1 + spread * (i / LAYERS);
+    // A figure's path is measured from its FEET (y = 0 is the ground), so
+    // scaling it grows the figure UPWARD only and the piece ends up standing
+    // on the bottom edge of its own glow. Push each layer down by half the
+    // height it gained to centre it on the figure.
+    tracePath(ctx, f.points, cx, feetY + (grow - 1) * h * r * 0.5, r * grow);
+    ctx.fill();
+  }
   ctx.restore();
 }
 
