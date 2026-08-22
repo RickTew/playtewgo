@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>TEWGO - Chip test</title>
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<style>
+  :root { --bg:#0a0a14; --gold:#ffd60a; --text:#f2f2f7; --muted:#9a9ab0; --card:rgba(255,255,255,0.05); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5; padding: 24px 18px 90px;
+  }
+  header, main, footer { max-width: 1180px; margin-left: auto; margin-right: auto; }
+  h1 { font-size: 24px; font-weight: 800; }
+  h1 a { color: var(--text); text-decoration: none; }
+  h1 .go { color: var(--gold); }
+  .lede { color: var(--muted); font-size: 14px; margin-top: 8px; max-width: 74ch; }
+  .lede b { color: var(--text); }
+  .controls {
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+    background: var(--card); border: 1px solid #ffffff14; border-radius: 14px;
+    padding: 12px 14px; margin: 18px 0 6px; position: sticky; top: 8px;
+    backdrop-filter: blur(10px); z-index: 5;
+  }
+  .ctl { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); }
+  .ctl b { color: var(--text); font-weight: 700; }
+  select, input { font: inherit; }
+  select, input[type=number] {
+    appearance: none; background: rgba(255,255,255,0.07); color: var(--text);
+    border: 1px solid #ffffff2a; border-radius: 9px; padding: 6px 10px; font-size: 13px;
+  }
+  input[type=number] { width: 74px; }
+  button {
+    background: rgba(255,255,255,0.07); color: var(--text); border: 1px solid #ffffff2a;
+    border-radius: 9px; padding: 6px 12px; font-size: 13px; cursor: pointer; font-weight: 700;
+  }
+  button.on { background: var(--gold); color: #14141a; border-color: var(--gold); }
+  .size-read { color: var(--gold); font-weight: 700; font-variant-numeric: tabular-nums; }
+  h2 {
+    color: var(--gold); font-size: 13px; letter-spacing: 1.4px; text-transform: uppercase;
+    margin: 34px 0 4px; font-weight: 800;
+  }
+  .note { color: var(--muted); font-size: 13px; max-width: 74ch; margin-bottom: 12px; }
+  .note b { color: var(--text); }
+  /* Columns are sized from the ACTUAL canvas width, set in JS, because the
+     canvas is drawn at real board pixels and must never be CSS-scaled: a
+     stretched canvas is a blurred one, and blur is the one thing that would
+     make this page lie about how a chip reads. */
+  .row { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card, 178px), 1fr)); gap: 10px; }
+  #rowWays { grid-template-columns: repeat(auto-fill, minmax(var(--card2, 200px), 1fr)); }
+  .shot { flex-wrap: nowrap; }
+  .cand {
+    background: var(--card); border: 1px solid #ffffff14; border-radius: 13px;
+    padding: 10px 9px 11px; text-align: center;
+  }
+  .cand.pick { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+  .shot { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 96px; }
+  .shot canvas { display: block; border-radius: 3px; }
+  .code {
+    display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    color: #14141a; background: var(--gold); border-radius: 5px; padding: 1px 6px; margin-top: 9px;
+  }
+  .nm { font-size: 12.5px; font-weight: 700; margin-top: 5px; }
+  .why { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .mix { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 18px; align-items: start; }
+  .sliders { display: grid; gap: 9px; }
+  .sl { display: grid; grid-template-columns: 132px 1fr 52px; gap: 9px; align-items: center; font-size: 12px; color: var(--muted); }
+  .sl output { color: var(--gold); font-variant-numeric: tabular-nums; text-align: right; font-weight: 700; }
+  .mixshot {
+    background: var(--card); border: 1px solid #ffffff14; border-radius: 13px;
+    padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  }
+  pre {
+    background: #101018; border: 1px solid #ffffff14; border-radius: 10px; padding: 11px 13px;
+    font-size: 11.5px; color: #cfd4e6; overflow-x: auto; margin-top: 12px; line-height: 1.5;
+  }
+  footer { color: var(--muted); font-size: 13px; margin-top: 44px; }
+  footer a { color: var(--text); }
+  @media (max-width: 700px) {
+    body { padding: 12px 10px 70px; }
+    .mix { grid-template-columns: 1fr; }
+    .controls { position: static; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/play/">TEW<span class="go">GO</span></a> chip test</h1>
+  <p class="lede">
+    One chip, every candidate treatment, on the same ground at the same size.
+    Three goes at tuning the chip in isolation were all caught, so this decides it
+    <b>once for all 38 pieces in both engines</b> instead of per piece.
+    The starting point is your own diagnosis: <b>"the chip lost 3D likely because of the bottom edge
+    lost its line."</b> Killing the double circle removed the rim's stroke entirely, and the
+    OUTER bottom arc went with it &ndash; that arc is the silhouette of a disc with a side, the
+    thing that makes a backgammon chip a chip. The INNER edge (face against rim) is the one that
+    was doubling up, and it is the one still switched on today.
+    Everything here is drawn by <b>the same drawChipDisc the board uses</b>, so nothing on this
+    page is a look the game cannot produce. <b>Name the yellow code</b> of the one you want.
+  </p>
+</header>
+
+<main>
+  <div class="controls">
+    <label class="ctl"><b>Piece</b><select id="kind"></select></label>
+    <label class="ctl"><b>Board width</b><input type="number" id="bw" value="375" min="240" max="1600" step="1"></label>
+    <span class="ctl"><span class="size-read" id="sizeRead"></span></span>
+    <label class="ctl"><b>Ground</b><select id="ground"></select></label>
+    <label class="ctl"><b>Grid</b><select id="grid">
+      <option value="grid">Grid</option><option value="boxes">Boxes</option><option value="none">None</option>
+    </select></label>
+    <label class="ctl"><b>Colours</b><select id="scheme"></select></label>
+    <button id="swap">Swap side</button>
+    <button id="zoom">Inspect 3&times;</button>
+  </div>
+
+  <h2>1 &middot; The edges</h2>
+  <p class="note">
+    The one question underneath all three failed attempts. Break-out is held at today's 1.15 and
+    the shading is untouched, so the ONLY thing changing across these four is which edges are drawn.
+    <b>D2 is your diagnosis rendered exactly</b>: outer bottom arc back, inner edge gone.
+    <b>D3 is the double circle</b>, here on purpose so it can be ruled out on sight rather than from memory.
+  </p>
+  <div class="row" id="rowEdges"></div>
+
+  <h2>2 &middot; How much head breaks out</h2>
+  <p class="note">
+    Way out <b>(a)</b>: pull the break-out target back from 1.15 so more disc shows. This is the
+    structural answer to the real problem underneath the shading &ndash; on the robot, astronaut and UFO
+    the head covers nearly the whole face, so there is barely any disc left to read as 3D, which is
+    why the alien's chip looks fine and theirs does not. Tuning the shading of a surface that is
+    mostly hidden cannot work. All four carry D2's edges so only the head size changes.
+  </p>
+  <div class="row" id="rowBreak"></div>
+
+  <h2>3 &middot; How deep the crescent</h2>
+  <p class="note">
+    Way out <b>(b)</b>: keep the outer edge and deepen the crescent, so the sliver of rim showing
+    below the face reads harder. Pushing the rim further down is what widens it. Past about 0.30 the
+    disc starts to look like two stacked discs rather than one with a side, which is the failure
+    mode at this end.
+  </p>
+  <div class="row" id="rowCrescent"></div>
+
+  <h2>4 &middot; The three ways out, side by side</h2>
+  <p class="note">
+    Each shows <b>Chip and Flat together</b>, because way out (c) changes both: it gives up on
+    depth in the Chip, lets it be a head on a token, and moves the real 3D into Flat so a player
+    still has a disc with a side to pick. Judge these as a PAIR &ndash; the two variants have to stay
+    tellable apart at board size or there is no reason to offer both.
+  </p>
+  <div class="row" id="rowWays"></div>
+
+  <h2>5 &middot; Mixer</h2>
+  <p class="note">
+    If none of the cells above is right, dial it here and read the numbers off the bottom. Anything
+    you land on is a valid answer &ndash; these are the actual constants in <b>CHIP_STYLE</b>, and whatever
+    you pick becomes the default for every piece in both engines.
+  </p>
+  <div class="mix">
+    <div class="sliders" id="sliders"></div>
+    <div class="mixshot">
+      <canvas id="mixReal"></canvas>
+      <canvas id="mixBig"></canvas>
+      <div class="why">Real board size on top, 3&times; below it. Judge on the top one.</div>
+    </div>
+  </div>
+  <pre id="numbers"></pre>
+</main>
+
+<footer>
+  <p>
+    Internal page, not linked from the game and not indexed.
+    <a href="/play/pieces.html">Piece lab</a> &middot; <a href="/play/">Back to the game</a>.
+  </p>
+</footer>
+
+<script type="module">
+import {
+  FIGURES, COLOR_SCHEMES, paletteFor,
+  drawChipDisc, drawFlatDisc, chipHeadScaleTo, CHIP_STYLE, FLAT_STYLE,
+} from './pieces.js';
+import { THEMES, sceneByKey, paintScene } from './themes.js';
+import { UNIVERSAL_BOARDS, THEME_BOARDS, boardByKey, paintBoardRect } from './boards.js';
+
+const $ = (id) => document.getElementById(id);
+const kindEl = $('kind'), bwEl = $('bw'), groundEl = $('ground'), gridEl = $('grid');
+const schemeEl = $('scheme'), sizeRead = $('sizeRead');
+let side = 0;
+let zoomed = false;
+
+/* ---------- controls ---------- */
+
+for (const [tkey, def] of Object.entries(THEMES)) {
+  const g = document.createElement('optgroup');
+  g.label = def.name;
+  for (const k of def.figures) {
+    const o = document.createElement('option');
+    o.value = k;
+    o.textContent = k + (tkey === 'space' && k !== 'alien' ? '  (hard case)' : '');
+    g.appendChild(o);
+  }
+  kindEl.appendChild(g);
+}
+// The astronaut is the default on purpose: his head covers almost the whole
+// face, which is exactly where the problem lives. The alien flatters every
+// candidate because his head is small relative to his disc, so judging on him
+// is how a bad candidate gets through.
+kindEl.value = 'astronaut';
+
+for (const s of COLOR_SCHEMES) {
+  const o = document.createElement('option');
+  o.value = s.key;
+  o.textContent = s.name + (s.rare ? ' (rare)' : '');
+  schemeEl.appendChild(o);
+}
+schemeEl.value = 'original';
+
+// Ground matters and is not decoration: the rim sits BETWEEN the face and the
+// background in tone, so a rim that reads on a nebula can vanish on a dark
+// board. That is exactly how 1.0.9 (23) shipped looking flat.
+const GROUNDS = [];
+{
+  const g1 = document.createElement('optgroup');
+  g1.label = 'Scene (board None)';
+  // Nebula is the Space default and the everyday case. Void is the hard one:
+  // an almost-black ground is where the rim disappeared and the chip went
+  // flat. The two light neutrals are the opposite hard case, where a dark rim
+  // is at its most obvious and a candidate can look better than it is.
+  for (const key of ['nebula', 'void', 'asteroids', 'starChart', 'cleanDark', 'slate', 'cleanLight', 'sepia']) {
+    const sc = sceneByKey(key);
+    if (!sc) continue;
+    GROUNDS.push({ value: 'scene:' + key, scene: key, board: 'none' });
+    const o = document.createElement('option');
+    o.value = 'scene:' + key;
+    o.textContent = sc.name + (sc.light ? ' (light)' : '');
+    g1.appendChild(o);
+  }
+  groundEl.appendChild(g1);
+  const g2 = document.createElement('optgroup');
+  g2.label = 'Board surface';
+  for (const b of [...UNIVERSAL_BOARDS.filter((b) => b.key !== 'none'), ...(THEME_BOARDS.space ?? [])]) {
+    GROUNDS.push({ value: 'board:' + b.key, scene: 'nebula', board: b.key });
+    const o = document.createElement('option');
+    o.value = 'board:' + b.key;
+    o.textContent = b.name + (b.light ? ' (light)' : '');
+    g2.appendChild(o);
+  }
+  groundEl.appendChild(g2);
+}
+groundEl.value = GROUNDS[0].value;
+
+/* ---------- real board geometry, straight out of game.js ---------- */
+
+const SIZE = 22;
+function geom() {
+  const w = Math.max(240, Number(bwEl.value) || 375);
+  const cell = w / (SIZE + 0.6);
+  return { w, cell, radius: cell * 0.42 };
+}
+
+/* ---------- ground, painted once and shared ---------- */
+
+let groundTile = null;
+function buildGround() {
+  const { w } = geom();
+  const g = GROUNDS.find((x) => x.value === groundEl.value) ?? GROUNDS[0];
+  const cv = document.createElement('canvas');
+  paintScene(cv, g.scene, w, w);
+  const c = cv.getContext('2d');
+  if (g.board !== 'none') paintBoardRect(c, g.board, 0, 0, w, w);
+  const light = g.board !== 'none' ? !!boardByKey(g.board)?.light : !!sceneByKey(g.scene)?.light;
+  groundTile = { cv, light, w };
+}
+
+/**
+ * One cell canvas: the same slice of ground for every candidate (a fair test
+ * needs identical ground), the real grid over it, and the piece at the real
+ * board radius on an intersection.
+ */
+function paintShot(cv, kind, palette, opts = {}) {
+  const { cell, radius } = geom();
+  const mult = opts.mult ?? (zoomed ? 3 : 1);
+  const r = radius * mult;
+  const cw = Math.round(cell * mult * 4.6);
+  const ch = Math.round(cell * mult * 4.2);
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(cw * dpr);
+  cv.height = Math.round(ch * dpr);
+  cv.style.width = cw + 'px';
+  cv.style.height = ch + 'px';
+  const c = cv.getContext('2d');
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Ground: the middle of the painted board, same slice every time.
+  if (groundTile) {
+    const sw = cw / mult, sh = ch / mult;
+    const sx = Math.max(0, (groundTile.w - sw) / 2);
+    const sy = Math.max(0, (groundTile.w - sh) / 2);
+    c.drawImage(groundTile.cv, sx * (groundTile.cv.width / groundTile.w),
+      sy * (groundTile.cv.height / groundTile.w),
+      sw * (groundTile.cv.width / groundTile.w),
+      sh * (groundTile.cv.height / groundTile.w), 0, 0, cw, ch);
+  }
+
+  const x = cw / 2, y = ch / 2;
+  const gs = gridEl.value;
+  if (gs !== 'none') {
+    const step = cell * mult;
+    const off = gs === 'boxes' ? step / 2 : 0;
+    c.strokeStyle = groundTile?.light ? 'rgba(20,20,30,0.20)' : 'rgba(255,255,255,0.12)';
+    c.lineWidth = 1;
+    c.beginPath();
+    for (let i = -3; i <= 3; i += 1) {
+      const px = x + i * step + off, py = y + i * step + off;
+      c.moveTo(0, py); c.lineTo(cw, py);
+      c.moveTo(px, 0); c.lineTo(px, ch);
+    }
+    c.stroke();
+  }
+
+  if (opts.variant === 'flat') {
+    drawFlatDisc(c, kind, x, y, r, palette, 1, opts.flatStyle ?? null);
+  } else {
+    const logo = opts.target ? chipHeadScaleTo(kind, opts.target) : null;
+    drawChipDisc(c, kind, x, y, r, palette, 1, logo, opts.style ?? null);
+  }
+}
+
+/* ---------- the candidates ---------- */
+
+// Rick's diagnosis, rendered exactly: outer bottom arc back, inner edge gone.
+const DIAGNOSIS = { outerEdge: true, faceStroke: false };
+
+const EDGES = [
+  { code: 'D1', name: 'Shipping now', why: 'Inner edge on, outer arc off. The one you say lost its 3D.', style: {} },
+  { code: 'D2', name: 'Your diagnosis', why: 'Outer bottom arc back, inner edge gone. The disc gets its silhouette.', style: DIAGNOSIS },
+  { code: 'D3', name: 'Both edges', why: 'The double circle again. Here to be ruled out on sight.', style: { outerEdge: true } },
+  { code: 'D4', name: 'No edges', why: 'Shading only. What 1.0.9 (23) shipped and you called flat.', style: { faceStroke: false } },
+];
+
+const BREAKOUT = [
+  { code: 'B1', name: 'Break out 1.15', why: 'Today. On this piece almost no disc is left to read.', target: 1.15 },
+  { code: 'B2', name: 'Break out 1.05', why: 'Just over the rim. A sliver of disc comes back.', target: 1.05 },
+  { code: 'B3', name: 'Break out 0.95', why: 'Head inside the rim. Most disc showing, least character.', target: 0.95 },
+  { code: 'B4', name: 'Break out 0.85', why: 'Clearly a disc with a face on it. Is the face still readable?', target: 0.85 },
+];
+
+const CRESCENT = [
+  { code: 'C1', name: 'Crescent 0.16', why: "Today's rim drop, with the outer arc restored.", style: { ...DIAGNOSIS, rimDrop: 0.16 } },
+  { code: 'C2', name: 'Crescent 0.22', why: 'Rim pushed down. The lit sliver widens.', style: { ...DIAGNOSIS, rimDrop: 0.22 } },
+  { code: 'C3', name: 'Crescent 0.28', why: 'Deep. Strongest read of a side at 13px.', style: { ...DIAGNOSIS, rimDrop: 0.28 } },
+  { code: 'C4', name: 'Crescent 0.34', why: 'Too far on purpose: starts reading as two stacked discs.', style: { ...DIAGNOSIS, rimDrop: 0.34 } },
+];
+
+// Way out (c): Chip becomes a plain token. Flat inherits the depth.
+const TOKEN = {
+  shadowAlpha: 0.30, shadowDrop: 0.12, shadowRX: 0.80, shadowRY: 0.18,
+  rimDrop: 0, rimRX: 0.82, rimRY: 0.82, rimShade: -0.64,
+  faceRise: 0, faceRX: 0.74, faceRY: 0.74,
+  faceGradTop: 0.74, faceGradBottom: 0.74,
+  faceTopShade: -0.40, faceBottomShade: -0.40,
+  faceStroke: true, faceStrokeShade: 0.08, faceStrokeWidth: 0.03,
+  outerEdge: false, highlightAlpha: 0,
+};
+
+const WAYS = [
+  { code: 'W0', name: 'Now', why: 'Shipping chip beside shipping flat, for reference.', style: {}, flatStyle: {} },
+  { code: 'WA', name: '(a) Less break-out', why: 'Head pulled back to 0.95 so the disc has room to read.', style: DIAGNOSIS, target: 0.95, flatStyle: {} },
+  { code: 'WB', name: '(b) Edge + deep crescent', why: 'Head stays at 1.15; the visible sliver does the work.', style: { ...DIAGNOSIS, rimDrop: 0.28 }, flatStyle: {} },
+  { code: 'WC', name: '(c) Token + 3D flat', why: 'Chip gives up depth and becomes a head on a token; Flat carries the 3D.', style: TOKEN, flatStyle: { depth: 0.16 } },
+];
+
+function cell(cand, withFlat) {
+  const kind = kindEl.value;
+  const palette = paletteFor(kind, side, schemeEl.value);
+  const box = document.createElement('div');
+  box.className = 'cand';
+  const shot = document.createElement('div');
+  shot.className = 'shot';
+  const cv = document.createElement('canvas');
+  paintShot(cv, kind, palette, { style: cand.style, target: cand.target });
+  shot.appendChild(cv);
+  if (withFlat) {
+    const cf = document.createElement('canvas');
+    paintShot(cf, kind, palette, { variant: 'flat', flatStyle: cand.flatStyle });
+    shot.appendChild(cf);
+  }
+  box.appendChild(shot);
+  const code = document.createElement('span');
+  code.className = 'code';
+  code.textContent = cand.code;
+  box.appendChild(code);
+  const nm = document.createElement('div');
+  nm.className = 'nm';
+  nm.textContent = cand.name;
+  box.appendChild(nm);
+  const why = document.createElement('div');
+  why.className = 'why';
+  why.textContent = cand.why;
+  box.appendChild(why);
+  return box;
+}
+
+function fill(rowId, list, withFlat = false) {
+  const row = $(rowId);
+  row.innerHTML = '';
+  for (const cand of list) row.appendChild(cell(cand, withFlat));
+}
+
+/* ---------- mixer ---------- */
+
+const KNOBS = [
+  { key: 'outerEdge', label: 'Outer bottom arc', min: 0, max: 1, step: 1, fmt: (v) => (v ? 'on' : 'off') },
+  { key: 'faceStroke', label: 'Inner edge', min: 0, max: 1, step: 1, fmt: (v) => (v ? 'on' : 'off') },
+  { key: 'outerEdgeShade', label: 'Outer arc darkness', min: -1, max: 0, step: 0.02 },
+  { key: 'rimDrop', label: 'Crescent depth', min: 0, max: 0.40, step: 0.01 },
+  { key: 'rimShade', label: 'Rim darkness', min: -0.95, max: -0.10, step: 0.01 },
+  { key: 'faceTopShade', label: 'Face top', min: -0.80, max: 0.20, step: 0.01 },
+  { key: 'faceBottomShade', label: 'Face bottom', min: -0.90, max: 0.10, step: 0.01 },
+  { key: 'highlightAlpha', label: 'Top highlight', min: 0, max: 0.45, step: 0.01 },
+  { key: 'target', label: 'Break out', min: 0.75, max: 1.35, step: 0.01 },
+];
+const mix = { ...CHIP_STYLE, ...DIAGNOSIS, target: 1.15 };
+
+function buildSliders() {
+  const box = $('sliders');
+  box.innerHTML = '';
+  for (const k of KNOBS) {
+    const row = document.createElement('label');
+    row.className = 'sl';
+    const nm = document.createElement('span');
+    nm.textContent = k.label;
+    const inp = document.createElement('input');
+    inp.type = 'range';
+    inp.min = k.min; inp.max = k.max; inp.step = k.step;
+    inp.value = Number(mix[k.key]);
+    const out = document.createElement('output');
+    const show = () => { out.textContent = k.fmt ? k.fmt(Number(inp.value)) : Number(inp.value).toFixed(2); };
+    show();
+    inp.addEventListener('input', () => {
+      mix[k.key] = k.step === 1 && k.fmt ? !!Number(inp.value) : Number(inp.value);
+      show();
+      paintMix();
+    });
+    row.append(nm, inp, out);
+    box.appendChild(row);
+  }
+}
+
+function paintMix() {
+  const kind = kindEl.value;
+  const palette = paletteFor(kind, side, schemeEl.value);
+  const { target, ...style } = mix;
+  paintShot($('mixReal'), kind, palette, { style, target, mult: 1 });
+  paintShot($('mixBig'), kind, palette, { style, target, mult: 3 });
+  const changed = Object.entries(style)
+    .filter(([k, v]) => CHIP_STYLE[k] !== v)
+    .map(([k, v]) => `  ${k}: ${typeof v === 'number' ? v.toFixed(3).replace(/0+$/, '').replace(/\.$/, '') : v},`);
+  $('numbers').textContent =
+    'CHIP_STYLE changes\n'
+    + (changed.length ? changed.join('\n') : '  (none - this is the shipping chip)')
+    + `\n\nBreak-out target: ${Number(target).toFixed(2)}`
+    + (Number(target) !== 1.15 ? '   (CHIP_TARGET.breakout, today 1.15)' : '   (unchanged)')
+    + '\n\nSame names exist in PieceRenderer.swift, so this ports as-is.';
+}
+
+/* ---------- build ---------- */
+
+function buildAll() {
+  const { cell: cs, radius } = geom();
+  sizeRead.textContent = `cell ${cs.toFixed(1)}px · chip Ø ${(radius * 2 * 1.25 * 0.825).toFixed(1)}px`;
+  // Cards are sized to whatever the canvas actually is, with a floor wide
+  // enough for the caption to stay readable at real board size.
+  const shotW = Math.round(cs * (zoomed ? 3 : 1) * 4.6);
+  const root = document.documentElement.style;
+  root.setProperty('--card', Math.max(178, shotW + 20) + 'px');
+  root.setProperty('--card2', Math.max(200, shotW * 2 + 30) + 'px');
+  buildGround();
+  fill('rowEdges', EDGES);
+  fill('rowBreak', BREAKOUT.map((b) => ({ ...b, style: DIAGNOSIS })));
+  fill('rowCrescent', CRESCENT);
+  fill('rowWays', WAYS, true);
+  paintMix();
+}
+
+for (const el of [kindEl, groundEl, gridEl, schemeEl]) el.addEventListener('change', buildAll);
+bwEl.addEventListener('input', buildAll);
+$('swap').addEventListener('click', (e) => { side = side ? 0 : 1; e.target.classList.toggle('on', side === 1); buildAll(); });
+$('zoom').addEventListener('click', (e) => { zoomed = !zoomed; e.target.classList.toggle('on', zoomed); buildAll(); });
+
+buildSliders();
+buildAll();
+</script>
+</body>
+</html>

@@ -1151,20 +1151,27 @@ export function drawChipEyes(ctx, kind, cx, cy, r, accent) {
  * and the chip sizes itself from that the way iOS does.
  */
 /**
- * How big the head can be on its chip.
+ * How big the head sits on its chip.
  *
- * iOS scales every head by a flat 1.30, and by its own numbers that pushes
- * 13 of the 38 heads WIDER THAN THE DISC THEY SIT ON: the ufo saucer reaches
- * 1.5x the disc, and hats, horns and brims on cowboy, daimyo, pirate,
- * sheriff, pharaoh, samurai and others all spill past the rim (Rick spotted
- * it as "many are cut off ... UFO looks funny").
+ * NOT a cap, and NOT a per-kind fit. Every head is scaled so its OUTERMOST
+ * POINT lands on ONE target for the variant: 0.98 for Flat (just inside the
+ * rim) and 1.15 for Chip (deliberately breaching it). Small heads are scaled
+ * UP to the target as much as big heads are scaled down, because the look has
+ * to be CONSISTENT - Rick, 2026-08-21: "the face can go off of the chip or
+ * not but not some off the chip and some inside." A cap only moves the heads
+ * that breach it and leaves the rest wherever they fell, which is the exact
+ * mix he rejected.
  *
- * Rather than clip them, which chops a hat in half, each head gets the
- * LARGEST scale that still fits inside the face, capped at iOS's 1.30 so
- * nothing is ever bigger than iOS draws it. Heads that already fit are
- * untouched and stay pixel-identical to iOS; only the ones that would have
- * overflowed shrink, and they shrink to exactly the point where they fit.
- * Computed from the path data, so it cannot drift when a path is edited.
+ * CHIP_LOGO_MAX survives only as the fallback for a kind with NO head path,
+ * where reach is 0 and there is nothing to measure.
+ *
+ * iOS does the same thing with the same numbers (PieceRenderer.swift,
+ * chipLogoScale(for:mode:)). This comment used to claim iOS applied a flat
+ * 1.30 and overflowed 13 of 38 heads on purpose; that was stale, and on
+ * 2026-08-22 it cost the web and iOS sessions a full round trip each hunting
+ * an overflow bug that does not exist. Both engines were read line by line
+ * that day and agree. The scale is computed from the path data, so it cannot
+ * drift when a path is edited.
  */
 const CHIP_FACE_RX = 0.775;
 const CHIP_FACE_RY = 0.675;
@@ -1180,6 +1187,90 @@ const chipFitCache = new Map();
  * mix he was looking at.
  */
 const CHIP_TARGET = { fit: 0.98, breakout: 1.15 };
+
+/**
+ * Every number that decides how a chip LOOKS, in one place, so the chip can
+ * be judged as a set of candidates instead of being re-tuned in isolation.
+ * Three attempts were made that way and Rick caught all three.
+ *
+ * The board calls drawChipDisc with no style and gets exactly these, so the
+ * defaults ARE the shipping chip; /play/chiptest.html passes overrides. One
+ * code path, so the test page can never show something the game does not
+ * draw. When Rick picks a candidate, his numbers land here and every one of
+ * the 38 pieces moves at once, in both engines - that is the whole point of
+ * deciding it once.
+ *
+ * All lengths are in units of cr (the chip radius, itself radius * 1.25).
+ * Shades are shadeHex amounts against the piece's primary colour.
+ */
+export const CHIP_STYLE = {
+  // Ground shadow. The chip lies ON something.
+  shadowAlpha: 0.45,
+  shadowDrop: 0.32,
+  shadowRX: 0.775,
+  shadowRY: 0.225,
+
+  // Side band: the disc's SIDE, seen from slightly above. Offset DOWN from
+  // the face, and the sliver of it left showing is the crescent. It has to
+  // stay visible against the background: at -0.80 on an almost-black page it
+  // vanished and the chip read flat ("chips lost their 3d look entirely").
+  rimShade: -0.58,
+  rimDrop: 0.16,
+  rimRX: 0.825,
+  rimRY: 0.775,
+
+  // THE OUTER BOTTOM ARC: the lower half of the rim, which is the silhouette
+  // of a disc with a side. Rick, 2026-08-21: "the chip lost 3D likely because
+  // of the bottom edge lost its line." Killing the double circle removed the
+  // rim's stroke entirely, and this outer arc went with it. Default OFF only
+  // because that is what ships today; it is the leading candidate to turn on.
+  outerEdge: false,
+  outerEdgeShade: -0.82,
+  outerEdgeWidth: 0.045,
+
+  // Top face: the ground the head sits on, graded so the disc has a shape.
+  // The gradient ends are held as their own numbers rather than derived from
+  // the face ellipse, because these are the shipping values to the digit.
+  faceRise: 0.10,
+  faceRX: CHIP_FACE_RX,
+  faceRY: CHIP_FACE_RY,
+  faceGradTop: 0.785,
+  faceGradBottom: 0.575,
+  faceTopShade: -0.24,
+  faceBottomShade: -0.46,
+
+  // THE INNER EDGE: face against rim. By Rick's reading this is the one that
+  // was doubling up, and it is the one still switched ON today, which makes
+  // the shipping chip the wrong way round from his diagnosis.
+  faceStroke: true,
+  faceStrokeShade: 0.10,
+  faceStrokeWidth: 0.03,
+
+  // Curved highlight along the top edge.
+  highlightAlpha: 0.16,
+  highlightRise: 0.50,
+  highlightRX: 0.475,
+  highlightRY: 0.15,
+};
+
+/**
+ * The same for Flat. `depth` is the one candidate knob: option (c) from the
+ * chip brief is to stop fighting for depth on the Chip, let it be a head on a
+ * token, and put the real 3D here instead. 0 is the shipping flat disc.
+ */
+export const FLAT_STYLE = {
+  depth: 0,
+  faceShade: -0.52,
+  rimShade: -0.72,
+};
+
+/** The scale that puts a head's outermost point on an arbitrary target. */
+export function chipHeadScaleTo(kind, target) {
+  const key = CHIP_HEAD_ALIAS[kind] ?? kind;
+  const pts = CHIP_HEADS[key];
+  const reach = pts && pts.length ? chipHeadReach(pts) : 0;
+  return reach > 0 ? target / reach : CHIP_LOGO_MAX;
+}
 
 /**
  * The head's outermost point in units of the face ellipse: 1.0 touches the
@@ -1218,14 +1309,32 @@ export function flatLogoScale(kind) {
  * Lives here rather than inline in game.js so the lab and the board cannot
  * drift - they did, and the lab kept its own copy for a while.
  */
-export function drawFlatDisc(c, kind, x, y, radius, f, alpha = 1) {
+export function drawFlatDisc(c, kind, x, y, radius, f, alpha = 1, style = null) {
+  const s = style ? { ...FLAT_STYLE, ...style } : FLAT_STYLE;
   c.save();
   c.globalAlpha = alpha;
-  c.fillStyle = shadeHex(f.primary, -0.52);
+  const fr = radius * FLAT_FACE_R;
+  if (s.depth > 0) {
+    // Option (c) from the chip brief: stop fighting for depth on the Chip,
+    // let it be a head on a token, and put the real 3D HERE. Built on
+    // CIRCLES rather than the chip's ellipses, so Flat reads as a disc seen
+    // face on while Chip reads as one lying away from you. The two have to
+    // stay visibly different or there is no reason to offer both.
+    c.fillStyle = shadeHex(f.primary, s.rimShade);
+    c.beginPath();
+    c.arc(x, y + fr * s.depth, fr, 0, Math.PI * 2);
+    c.fill();
+    const g = c.createLinearGradient(0, y - fr, 0, y + fr);
+    g.addColorStop(0, shadeHex(f.primary, s.faceShade + 0.18));
+    g.addColorStop(1, shadeHex(f.primary, s.faceShade - 0.10));
+    c.fillStyle = g;
+  } else {
+    c.fillStyle = shadeHex(f.primary, s.faceShade);
+  }
   c.strokeStyle = f.stroke;
   c.lineWidth = Math.max(1, radius * 0.09);
   c.beginPath();
-  c.arc(x, y, radius * FLAT_FACE_R, 0, Math.PI * 2);
+  c.arc(x, y, fr, 0, Math.PI * 2);
   c.fill();
   c.stroke();
 
@@ -1261,7 +1370,7 @@ export function chipHeadScale(kind, mode = 'breakout') {
   return scale;
 }
 
-export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = null) {
+export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = null, style = null) {
   // Chip: a direct port of PieceRenderer.makeChipDisc. The web had this as
   // a single flat circle with a white silhouette on it, so picking Chip on
   // iOS and Chip on the web gave two different-looking pieces (Rick,
@@ -1274,12 +1383,14 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   // SpriteKit's y points up and canvas y points down, so every iOS offset
   // is negated here.
   const cr = radius * 1.25;
-  const lw = Math.max(1, radius * 0.06);
+  const s = style ? { ...CHIP_STYLE, ...style } : CHIP_STYLE;
 
-  c.fillStyle = 'rgba(0, 0, 0, 0.45)';
-  c.beginPath();
-  c.ellipse(x, y + cr * 0.32, cr * 0.775, cr * 0.225, 0, 0, Math.PI * 2);
-  c.fill();
+  if (s.shadowAlpha > 0) {
+    c.fillStyle = `rgba(0, 0, 0, ${s.shadowAlpha})`;
+    c.beginPath();
+    c.ellipse(x, y + cr * s.shadowDrop, cr * s.shadowRX, cr * s.shadowRY, 0, 0, Math.PI * 2);
+    c.fill();
+  }
 
   // Side band: the rim, darker and offset DOWN, which is the whole trick.
   // NO stroke on the rim. Two stroked ellipses stacked under one head is
@@ -1291,32 +1402,50 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   // disappeared into the background and the chip went flat instead ("chips
   // lost their 3d look entirely now"). It sits BETWEEN the face and the
   // background in tone, and shows a real crescent under the face.
-  c.fillStyle = shadeHex(f.primary, -0.58);
+  const rimY = y + cr * s.rimDrop;
+  c.fillStyle = shadeHex(f.primary, s.rimShade);
   c.beginPath();
-  c.ellipse(x, y + cr * 0.16, cr * 0.825, cr * 0.775, 0, 0, Math.PI * 2);
+  c.ellipse(x, rimY, cr * s.rimRX, cr * s.rimRY, 0, 0, Math.PI * 2);
   c.fill();
+
+  // The outer bottom arc, when it is switched on: the LOWER HALF of the rim
+  // only. A full ellipse here is the double circle that got pulled; half of
+  // one is the silhouette of a disc with a side, which is the line Rick says
+  // went missing.
+  if (s.outerEdge) {
+    c.strokeStyle = shadeHex(f.primary, s.outerEdgeShade);
+    c.lineWidth = Math.max(0.7, cr * s.outerEdgeWidth);
+    c.beginPath();
+    c.ellipse(x, rimY, cr * s.rimRX, cr * s.rimRY, 0, 0, Math.PI);
+    c.stroke();
+  }
 
   // Top face: the GROUND the head sits on, graded top to bottom so the disc
   // has a shape rather than being a flat ring.
-  const faceGrad = c.createLinearGradient(0, y - cr * 0.785, 0, y + cr * 0.575);
-  faceGrad.addColorStop(0, shadeHex(f.primary, -0.24));
-  faceGrad.addColorStop(1, shadeHex(f.primary, -0.46));
+  const faceY = y - cr * s.faceRise;
+  const faceGrad = c.createLinearGradient(0, y - cr * s.faceGradTop, 0, y + cr * s.faceGradBottom);
+  faceGrad.addColorStop(0, shadeHex(f.primary, s.faceTopShade));
+  faceGrad.addColorStop(1, shadeHex(f.primary, s.faceBottomShade));
   c.fillStyle = faceGrad;
-  c.strokeStyle = shadeHex(f.primary, 0.10);
-  c.lineWidth = Math.max(0.6, cr * 0.03);
   c.beginPath();
-  c.ellipse(x, y - cr * 0.10, cr * 0.775, cr * 0.675, 0, 0, Math.PI * 2);
+  c.ellipse(x, faceY, cr * s.faceRX, cr * s.faceRY, 0, 0, Math.PI * 2);
   c.fill();
-  c.stroke();
+  if (s.faceStroke) {
+    c.strokeStyle = shadeHex(f.primary, s.faceStrokeShade);
+    c.lineWidth = Math.max(0.6, cr * s.faceStrokeWidth);
+    c.stroke();
+  }
 
   // Curved highlight along the top edge.
-  c.save();
-  c.globalAlpha = 0.16 * alpha;
-  c.fillStyle = '#ffffff';
-  c.beginPath();
-  c.ellipse(x, y - cr * 0.50, cr * 0.475, cr * 0.15, 0, 0, Math.PI * 2);
-  c.fill();
-  c.restore();
+  if (s.highlightAlpha > 0) {
+    c.save();
+    c.globalAlpha = s.highlightAlpha * alpha;
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.ellipse(x, y - cr * s.highlightRise, cr * s.highlightRX, cr * s.highlightRY, 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
 
   // The logo is the HEAD, not the whole figure. A body shrunk onto a disc
   // reads as a keyhole at board scale; a head reads as a face, which is why
@@ -1333,17 +1462,17 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   c.lineWidth = Math.max(0.6, radius * 0.05);
   c.lineJoin = 'round';
   const hs = cr * (logoScale ?? chipHeadScale(kind));
-  if (traceChipHead(c, kind, x, y - cr * 0.10, hs)) {
+  if (traceChipHead(c, kind, x, faceY, hs)) {
     c.fill();
     c.stroke();
     // The eyes are what turn the silhouette into a face. Without them the
     // head is just a dark hole punched in the chip.
-    drawChipEyes(c, kind, x, y - cr * 0.10, hs, f.accent);
+    drawChipEyes(c, kind, x, faceY, hs, f.accent);
   } else {
     // No head for this kind: an accent dot, exactly as iOS falls back.
     c.fillStyle = f.accent;
     c.beginPath();
-    c.arc(x, y - cr * 0.10, cr * 0.20, 0, Math.PI * 2);
+    c.arc(x, faceY, cr * 0.20, 0, Math.PI * 2);
     c.fill();
   }
 }

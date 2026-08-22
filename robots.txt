@@ -12,3 +12,4 @@ Disallow: /supabase/
 # Design explorations, kept for the record, not for players.
 Disallow: /play/concepts.html
 Disallow: /play/pieces.html
+Disallow: /play/chiptest.html
