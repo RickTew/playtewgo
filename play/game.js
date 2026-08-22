@@ -83,9 +83,23 @@ const VARIANT_KEY = 'tewgo.web.pieceVariant';
 // Standard depth. The DRAWING code for tall is deliberately left alone in
 // pieces.js: this is a taste decision and taste decisions reverse, so bringing
 // it back should be one line here rather than a re-port.
+// STAND and FACE. Rick asked which of "Standing/Facing", "Stand/Face" or
+// "Standard/Face" a player would pick, 2026-08-22.
+//
+// "Standard" is out on a checkable ground rather than a taste one: DEPTH
+// already offers Standard, so the same word would sit on two different
+// controls meaning two different things, one row apart.
+//
+// Between the other two, Stand and Face win on being the same length, the
+// same register, and both readable as nouns - they name the two things you
+// are looking at rather than describing them. "Facing" also raises a question
+// it cannot answer (facing what?), while a face is just what the piece is.
+//
+// The KEYS stay 'regular' and 'chip'. They are storage, and renaming them
+// would strand every saved preference for a cosmetic relabel.
 const VARIANTS = [
-  { key: 'regular', name: 'Regular' },
-  { key: 'chip', name: 'Chip' },
+  { key: 'regular', name: 'Stand' },
+  { key: 'chip', name: 'Face' },
 ];
 
 /**
@@ -2770,97 +2784,103 @@ function drawSetupPreview() {
   const kinds = live ? [pieceKind[ONE], pieceKind[TWO]] : def.defaults;
   const light = (live && boardKey !== 'none' ? boardByKey(boardKey)?.light : sceneByKey(key)?.light);
 
-  // A PATCH OF THE REAL BOARD, not a poster. Rick, 2026-08-22: "if they
-  // choose Chip can the image change be how it looks on the game board?"
-  // He is choosing how his game will look, so the preview has to be the
-  // thing he is choosing: the same surface, the same grid, the pieces on
-  // intersections at the board's own ratios. Drawn larger than a 22-wide
-  // board would be, because this is a close-up of a board and not a
-  // thumbnail of one - shrinking it to true scale would show him two
-  // specks and answer nothing.
-  // Zoomed to about four cells across. True board scale would be honest and
-  // useless: at 22 cells wide it would show two specks and answer nothing
-  // about the choice being made. Four cells is close enough to read the
-  // grid as a board and large enough to judge a piece on.
-  const cell = W / 4.2;
-  const r = cell * 0.42;
-  const midX = W / 2;
-  const midY = H * 0.56;
+  // TWO different pictures on purpose, and only ONE of them is a board.
+  //
+  // Rick, 2026-08-22: "I did not ask you to change the standard piece
+  // background that showed space as it looked nice - just the chip one ... I
+  // like the theme images as they look like movie scenes." He is right and I
+  // overreached: he asked for the CHIP preview to show board reality, and I
+  // put a grid under both, which cost the standing figures the painted scene
+  // that made them look like a still from something.
+  //
+  // So Stand keeps its scene, because a standing character in a painted world
+  // is the thing worth showing. Face gets a patch of board, because a disc
+  // lying on a grid is what it actually is and there is nothing to lose by
+  // showing it.
+  if (variant === 'chip') {
+    // Wider than a close-up. The first pass sat at four cells across and read
+    // as zoomed in; this shows enough board to be a board.
+    const cell = W / 6.6;
+    const r = cell * 0.42;
+    const midX = W / 2;
+    const midY = H * 0.54;
 
-  if (live && boardKey !== 'none') {
-    paintBoardRect(c, boardKey, 0, 0, W, H);
-  }
+    if (live && boardKey !== 'none') paintBoardRect(c, boardKey, 0, 0, W, H);
 
-  c.save();
-  const line = light ? 'rgba(20,20,30,0.20)' : 'rgba(255,255,255,0.12)';
-  if (gridStyle === 'grid' || gridStyle === 'boxes') {
-    const off = gridStyle === 'boxes' ? cell / 2 : 0;
-    c.strokeStyle = line;
-    c.lineWidth = 1;
-    c.beginPath();
-    for (let i = -4; i <= 4; i += 1) {
-      c.moveTo(0, midY + i * cell + off); c.lineTo(W, midY + i * cell + off);
-      c.moveTo(midX + i * cell + off, 0); c.lineTo(midX + i * cell + off, H);
-    }
-    c.stroke();
-  } else {
-    c.fillStyle = light ? 'rgba(20,20,30,0.30)' : 'rgba(255,255,255,0.22)';
-    for (let gx = -4; gx <= 4; gx += 1) {
-      for (let gy = -4; gy <= 4; gy += 1) {
-        c.beginPath();
-        c.arc(midX + gx * cell, midY + gy * cell, Math.max(1, cell * 0.07), 0, Math.PI * 2);
-        c.fill();
+    c.save();
+    if (gridStyle === 'grid' || gridStyle === 'boxes') {
+      const off = gridStyle === 'boxes' ? cell / 2 : 0;
+      c.strokeStyle = light ? 'rgba(20,20,30,0.20)' : 'rgba(255,255,255,0.12)';
+      c.lineWidth = 1;
+      c.beginPath();
+      for (let i = -6; i <= 6; i += 1) {
+        c.moveTo(0, midY + i * cell + off); c.lineTo(W, midY + i * cell + off);
+        c.moveTo(midX + i * cell + off, 0); c.lineTo(midX + i * cell + off, H);
+      }
+      c.stroke();
+    } else {
+      c.fillStyle = light ? 'rgba(20,20,30,0.30)' : 'rgba(255,255,255,0.22)';
+      for (let gx = -6; gx <= 6; gx += 1) {
+        for (let gy = -6; gy <= 6; gy += 1) {
+          c.beginPath();
+          c.arc(midX + gx * cell, midY + gy * cell, Math.max(1, cell * 0.07), 0, Math.PI * 2);
+          c.fill();
+        }
       }
     }
-  }
-  c.restore();
-
-  // The stage shows the piece you actually picked, at the ratio the BOARD
-  // uses (a figure draws at 0.68 of a chip's radius), so the two options are
-  // weighed against each other the way they will appear in play rather than
-  // at whatever size flattered each. Without this the Piece control above
-  // would be a button that changes nothing you can see, which is the exact
-  // fault that made the picker feel dead.
-  // Placed on intersections a cell apart, and drawn by the SAME routine the
-  // board uses, so what he judges here is what he gets. Back row first, like
-  // the board, so a nearer piece overlaps the one behind rather than under it.
-  const spots = [[-1, 0], [1, 0]];
-  kinds.forEach((kind, i) => {
-    const px = midX + spots[i][0] * cell;
-    const py = midY + spots[i][1] * cell;
-    const pal = paletteFor(kind, i, colorScheme);
-    if (variant === 'chip') {
-      drawGlow(c, px, py, r, pal.glowRgb, glow);
-      drawHeadPiece(c, kind, px, py, r, pal, 1,
-        finish === 'dimensional' ? null : HEAD_STANDARD);
-      return;
-    }
-    const rf = r * 0.68;
-    c.save();
-    c.globalAlpha = 0.35;
-    c.fillStyle = '#000';
-    c.beginPath();
-    c.ellipse(px, py + r * 0.05, r * 0.65, r * 0.225, 0, 0, Math.PI * 2);
-    c.fill();
     c.restore();
-    drawFigureGlow(c, kind, px, py + r * 0.98, rf, pal.glowRgb, glow);
-    drawFigure(c, kind, px, py + r * 0.98, rf, 1, { palette: pal, finish });
-  });
 
-  // VS sits on the empty intersection BETWEEN the two pieces, which is a
-  // square a player could actually play, so it reads as a face-off on a board
-  // rather than a sticker over one.
-  c.save();
-  c.beginPath();
-  c.arc(midX, midY, r * 0.5, 0, Math.PI * 2);
-  c.fillStyle = light ? 'rgba(255,255,255,0.78)' : 'rgba(8,8,20,0.62)';
-  c.fill();
-  c.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  c.textAlign = 'center';
-  c.textBaseline = 'middle';
-  c.fillStyle = '#ffd60a';
-  c.fillText('VS', midX, midY + 0.5);
-  c.restore();
+    kinds.forEach((kind, i) => {
+      const px = midX + (i === 0 ? -1 : 1) * cell;
+      const pal = paletteFor(kind, i, colorScheme);
+      drawGlow(c, px, midY, r, pal.glowRgb, glow);
+      drawHeadPiece(c, kind, px, midY, r, pal, 1,
+        finish === 'dimensional' ? null : HEAD_STANDARD);
+    });
+
+    c.save();
+    c.beginPath();
+    c.arc(midX, midY, r * 0.62, 0, Math.PI * 2);
+    c.fillStyle = light ? 'rgba(255,255,255,0.78)' : 'rgba(8,8,20,0.62)';
+    c.fill();
+    c.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillStyle = '#ffd60a';
+    c.fillText('VS', midX, midY + 0.5);
+    c.restore();
+  } else {
+    const r = H * 0.115;
+    const feetY = H * 0.90;
+    kinds.forEach((kind, i) => {
+      const cx = W * (i === 0 ? 0.34 : 0.66);
+      const pal = paletteFor(kind, i, colorScheme);
+      c.save();
+      c.globalAlpha = 0.32;
+      c.fillStyle = '#000';
+      c.beginPath();
+      c.ellipse(cx, feetY, r * 0.75, r * 0.26, 0, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+      drawFigureGlow(c, kind, cx, feetY, r, pal.glowRgb, glow);
+      drawFigure(c, kind, cx, feetY, r, 1, { palette: pal, finish });
+    });
+
+    // Between the HEADS, not the bodies. A figure is about 3.2r tall, so
+    // anything under ~2.6r reads as a mark sitting on top of a piece.
+    const vsY = feetY - r * 2.5;
+    c.save();
+    c.beginPath();
+    c.arc(W / 2, vsY, r * 0.52, 0, Math.PI * 2);
+    c.fillStyle = light ? 'rgba(255,255,255,0.78)' : 'rgba(8,8,20,0.62)';
+    c.fill();
+    c.font = '800 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillStyle = '#ffd60a';
+    c.fillText('VS', W / 2, vsY + 0.5);
+    c.restore();
+  }
 
   const nameEl = document.getElementById('setupWorldName');
   if (nameEl) {

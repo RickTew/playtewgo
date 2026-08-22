@@ -91,7 +91,7 @@
 <header>
   <h1><a href="/play/">TEW<span class="go">GO</span></a> <span id="worldName">Space</span> lab</h1>
   <p class="lede">One world at a time: every piece, in every combination a player can actually pick. Drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. The slider is real board size &ndash; a phone board draws at about 14px, and anything that stops reading there will not read in play. Beside each name is a reference <b>icon and emoji</b>: not art, just a target. If the piece is harder to recognise than the icon, the piece needs work.</p>
-  <p class="lede"><b>Two pieces, five options.</b> The piece IS the chip now, so the round disc under it is gone and the roster is just <b>Regular</b> (what Half was) and <b>Chip</b>. Each is drawn at both <b>depths</b>: Standard is the flat silhouette, 3D carries its own side. Chip at Standard is what Flat used to be. Tall is no longer offered in the game, so it is not offered here either. Colour, depth and glow are three of the five option axes; sounds and effects come later. Figures now carry a <b>separation contour</b>, a hard edge so a piece in front cuts a clean line out of the one behind instead of merging into it.</p>
+  <p class="lede"><b>Two pieces, five options.</b> The piece IS the chip now, so the round disc under it is gone and the roster is just <b>Stand</b> (what Half was) and <b>Face</b>. Each is drawn at both <b>depths</b>: Standard is the flat silhouette, 3D carries its own side. Face at Standard is what Flat used to be. Tall is no longer offered in the game, so it is not offered here either. Colour, depth and glow are three of the five option axes; sounds and effects come later. Figures now carry a <b>separation contour</b>, a hard edge so a piece in front cuts a clean line out of the one behind instead of merging into it.</p>
 </header>
 
 <main>
@@ -167,10 +167,10 @@ themeEl.value = 'space';
  * cannot pick is worse than one that offers none.
  */
 const VARIANT_ORDER = [
-  { key: 'regular', depth: 'classic', name: 'REGULAR \u00b7 STD' },
-  { key: 'regular', depth: 'dimensional', name: 'REGULAR \u00b7 3D' },
-  { key: 'chip', depth: 'classic', name: 'CHIP \u00b7 STD' },
-  { key: 'chip', depth: 'dimensional', name: 'CHIP \u00b7 3D' },
+  { key: 'regular', depth: 'classic', name: 'STAND \u00b7 STD' },
+  { key: 'regular', depth: 'dimensional', name: 'STAND \u00b7 3D' },
+  { key: 'chip', depth: 'classic', name: 'FACE \u00b7 STD' },
+  { key: 'chip', depth: 'dimensional', name: 'FACE \u00b7 3D' },
 ];
 
 function variantLabel(v) { return v.name; }
