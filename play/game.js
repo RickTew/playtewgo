@@ -103,9 +103,11 @@ const HEAD_STANDARD = {
   faceTopShade: 0, faceBottomShade: 0,
 };
 
-// The default is the one we think looks best, per Rick: "We default to the one
-// we feel looks the best like 3D version of the chip."
-let variant = 'chip';
+// Rick's call, 2026-08-22, after seeing both on a board: "Regular (Standard)
+// should be default". It supersedes his earlier "we default to the one we
+// feel looks the best like 3D version of the chip", which was a guess made
+// before either of us had looked at the two side by side in play.
+let variant = 'regular';
 
 // Board surface (iOS BoardPanelStyle). Global, like tewgo.boardPanelStyle.
 const BOARD_KEY = 'tewgo.web.board';
@@ -2761,9 +2763,52 @@ function drawSetupPreview() {
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const kinds = live ? [pieceKind[ONE], pieceKind[TWO]] : def.defaults;
-  const r = H * 0.115;
-  const feetY = H * 0.90;
-  const light = sceneByKey(key)?.light;
+  const light = (live && boardKey !== 'none' ? boardByKey(boardKey)?.light : sceneByKey(key)?.light);
+
+  // A PATCH OF THE REAL BOARD, not a poster. Rick, 2026-08-22: "if they
+  // choose Chip can the image change be how it looks on the game board?"
+  // He is choosing how his game will look, so the preview has to be the
+  // thing he is choosing: the same surface, the same grid, the pieces on
+  // intersections at the board's own ratios. Drawn larger than a 22-wide
+  // board would be, because this is a close-up of a board and not a
+  // thumbnail of one - shrinking it to true scale would show him two
+  // specks and answer nothing.
+  // Zoomed to about four cells across. True board scale would be honest and
+  // useless: at 22 cells wide it would show two specks and answer nothing
+  // about the choice being made. Four cells is close enough to read the
+  // grid as a board and large enough to judge a piece on.
+  const cell = W / 4.2;
+  const r = cell * 0.42;
+  const midX = W / 2;
+  const midY = H * 0.56;
+
+  if (live && boardKey !== 'none') {
+    paintBoardRect(c, boardKey, 0, 0, W, H);
+  }
+
+  c.save();
+  const line = light ? 'rgba(20,20,30,0.20)' : 'rgba(255,255,255,0.12)';
+  if (gridStyle === 'grid' || gridStyle === 'boxes') {
+    const off = gridStyle === 'boxes' ? cell / 2 : 0;
+    c.strokeStyle = line;
+    c.lineWidth = 1;
+    c.beginPath();
+    for (let i = -4; i <= 4; i += 1) {
+      c.moveTo(0, midY + i * cell + off); c.lineTo(W, midY + i * cell + off);
+      c.moveTo(midX + i * cell + off, 0); c.lineTo(midX + i * cell + off, H);
+    }
+    c.stroke();
+  } else {
+    c.fillStyle = light ? 'rgba(20,20,30,0.30)' : 'rgba(255,255,255,0.22)';
+    for (let gx = -4; gx <= 4; gx += 1) {
+      for (let gy = -4; gy <= 4; gy += 1) {
+        c.beginPath();
+        c.arc(midX + gx * cell, midY + gy * cell, Math.max(1, cell * 0.07), 0, Math.PI * 2);
+        c.fill();
+      }
+    }
+  }
+  c.restore();
 
   // The stage shows the piece you actually picked, at the ratio the BOARD
   // uses (a figure draws at 0.68 of a chip's radius), so the two options are
@@ -2771,41 +2816,45 @@ function drawSetupPreview() {
   // at whatever size flattered each. Without this the Piece control above
   // would be a button that changes nothing you can see, which is the exact
   // fault that made the picker feel dead.
+  // Placed on intersections a cell apart, and drawn by the SAME routine the
+  // board uses, so what he judges here is what he gets. Back row first, like
+  // the board, so a nearer piece overlaps the one behind rather than under it.
+  const spots = [[-1, 0], [1, 0]];
   kinds.forEach((kind, i) => {
-    const cx = W * (i === 0 ? 0.34 : 0.66);
+    const px = midX + spots[i][0] * cell;
+    const py = midY + spots[i][1] * cell;
     const pal = paletteFor(kind, i, colorScheme);
     if (variant === 'chip') {
-      const cr = r / 0.68;
-      const cy = feetY - cr * 0.9;
-      drawGlow(c, cx, cy, cr, pal.glowRgb, glow);
-      drawHeadPiece(c, kind, cx, cy, cr, pal, 1,
+      drawGlow(c, px, py, r, pal.glowRgb, glow);
+      drawHeadPiece(c, kind, px, py, r, pal, 1,
         finish === 'dimensional' ? null : HEAD_STANDARD);
       return;
     }
+    const rf = r * 0.68;
     c.save();
-    c.globalAlpha = 0.32;
+    c.globalAlpha = 0.35;
     c.fillStyle = '#000';
     c.beginPath();
-    c.ellipse(cx, feetY, r * 0.75, r * 0.26, 0, 0, Math.PI * 2);
+    c.ellipse(px, py + r * 0.05, r * 0.65, r * 0.225, 0, 0, Math.PI * 2);
     c.fill();
     c.restore();
-    drawFigureGlow(c, kind, cx, feetY, r, pal.glowRgb, glow);
-    drawFigure(c, kind, cx, feetY, r, 1, { palette: pal, finish });
+    drawFigureGlow(c, kind, px, py + r * 0.98, rf, pal.glowRgb, glow);
+    drawFigure(c, kind, px, py + r * 0.98, rf, 1, { palette: pal, finish });
   });
 
-  // Between the HEADS, not the bodies. A figure is about 3.2r tall, so
-  // anything under ~2.6r reads as a mark sitting on top of a piece.
-  const vsY = feetY - r * 2.5;
+  // VS sits on the empty intersection BETWEEN the two pieces, which is a
+  // square a player could actually play, so it reads as a face-off on a board
+  // rather than a sticker over one.
   c.save();
   c.beginPath();
-  c.arc(W / 2, vsY, r * 0.52, 0, Math.PI * 2);
+  c.arc(midX, midY, r * 0.5, 0, Math.PI * 2);
   c.fillStyle = light ? 'rgba(255,255,255,0.78)' : 'rgba(8,8,20,0.62)';
   c.fill();
-  c.font = '800 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  c.font = '800 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   c.textAlign = 'center';
   c.textBaseline = 'middle';
   c.fillStyle = '#ffd60a';
-  c.fillText('VS', W / 2, vsY + 0.5);
+  c.fillText('VS', midX, midY + 0.5);
   c.restore();
 
   const nameEl = document.getElementById('setupWorldName');
