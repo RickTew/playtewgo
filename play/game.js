@@ -130,7 +130,12 @@ let gridStyle = 'dots';
 // it and because "finish" tested badly on the personas (Maya read it as nail
 // polish, Priya as finishing the game).
 const FINISH_KEY = 'tewgo.web.pieceFinish';
-let finish = 'dimensional';
+// Standard, not 3D. Rick's "Regular (Standard) should be default" names two
+// option values, not one: Regular is a PIECE and Standard is a DEPTH. I first
+// read the parenthetical as "the regular one" and flipped only the piece,
+// which left the two engines disagreeing on a default - the exact class of
+// drift we spent 2026-08-22 removing. iOS read it correctly and shipped both.
+let finish = 'classic';
 
 // GLOW, the third of Rick's five option axes. Colour already existed; sounds
 // and effect are explicitly "(later)" and are not built.
