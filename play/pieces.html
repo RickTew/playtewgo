@@ -252,6 +252,38 @@ const REFERENCE = {
 };
 
 /**
+ * ONE cell box for the whole world, sized to the world's BIGGEST figure so
+ * every card still lines up, and sized from the path data so nothing is cut.
+ *
+ * The old box was a flat radius * 3.4 by 3.8, and it clipped: at 30px the
+ * robot, astronaut and alien tall figures all ran into the TOP edge, which
+ * is the robot's antenna and the astronaut's helmet getting guillotined. The
+ * page's own rule is that a lab which crops the thing being judged is worse
+ * than no lab, so this measures instead of guessing.
+ *
+ * The pad is for ink that lands OUTSIDE the point data: the classic finish
+ * paints a glow and a stroke past the silhouette, worth about 0.25 radii
+ * measured, so 0.4 each side leaves room and still no slack to spare.
+ * The width floor keeps the old chip usable in "Old discs", where a head at
+ * full break-out reaches wider than any figure does.
+ */
+function worldBox(figures, radius) {
+  let hx = 0;
+  let hy = 0;
+  for (const k of figures) {
+    for (const [px, py] of FIGURES[k].points) {
+      hx = Math.max(hx, Math.abs(px));
+      hy = Math.max(hy, py);
+    }
+  }
+  const pad = 0.4;
+  return {
+    w: Math.ceil(radius * Math.max(2 * hx + 2 * pad, 3.2)),
+    h: Math.ceil(radius * Math.max(hy + 2 * pad, 3.0)),
+  };
+}
+
+/**
  * THE PIECE IS THE CHIP NOW (Rick, 2026-08-22). The round disc underneath is
  * gone, and the two disc variants become the two FINISHES of the character
  * itself: Chip is the 3D one, Flat is the same silhouette without the depth.
@@ -274,7 +306,7 @@ const HEAD_FLAT = {
   faceTopShade: 0, faceBottomShade: 0,
 };
 
-function paint(cv, kind, radius, palette, variant) {
+function paint(cv, kind, radius, palette, variant, box) {
   // Wide enough for the WIDEST thing that can be drawn, which is a head at
   // iOS's flat 1.30 scale: the ufo saucer reaches 1.54 board radii from the
   // centre. Sizing this to the disc alone silently guillotined every hat and
@@ -284,8 +316,8 @@ function paint(cv, kind, radius, palette, variant) {
   // a row of four sits on a single line instead of each floating at its own
   // height. A tall figure is the tallest thing drawn (~3.2 radii plus the
   // head that breaks past it), so it sets the box for all of them.
-  const w = Math.ceil(radius * 3.4);
-  const h = Math.ceil(radius * 3.8);
+  const w = box.w;
+  const h = box.h;
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = Math.round(w * dpr);
   cv.height = Math.round(h * dpr);
@@ -324,6 +356,7 @@ function build() {
     : [[picked, THEMES[picked]]];
 
   for (const [, def] of worlds) {
+    const box = worldBox(def.figures, base);
     const h2 = document.createElement('h2');
     h2.textContent = def.name + ' \u00b7 pieces \u00b7 ' + def.figures.length + ' figures';
     out.appendChild(h2);
@@ -379,7 +412,7 @@ function build() {
         const holder = document.createElement('div');
         holder.className = 'big';
         const cv = document.createElement('canvas');
-        paint(cv, kind, base, palette, v.key);
+        paint(cv, kind, base, palette, v.key, box);
         holder.appendChild(cv);
         vc.appendChild(holder);
         row.appendChild(vc);
