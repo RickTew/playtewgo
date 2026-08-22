@@ -1477,6 +1477,132 @@ export function drawChipDisc(c, kind, x, y, radius, f, alpha = 1, logoScale = nu
   }
 }
 
+/**
+ * NO DISC AT ALL: the head IS the piece, and it carries its own depth.
+ *
+ * Rick, 2026-08-22: "we have NO chip at all but the HEAD becomes the CHIP
+ * itself. Most of the pieces already are close enough to be like a chip piece
+ * and it will be fun for them to have their own depth."
+ *
+ * This dissolves the conflict the chip could not be tuned out of rather than
+ * balancing it. Break-out fought chip depth because the head covered the face,
+ * so there was no disc left to shade; with no disc there is nothing left to
+ * cover. The depth moves onto the shape a player is actually looking at.
+ *
+ * The side is the SAME path swept downward, not a drawn edge. That is the one
+ * lesson that survived the three failed chip attempts: depth comes from a
+ * solid side and a graded face, never from adding another outline.
+ *
+ * Sized to the chip's own footprint (HEAD_PIECE_FOOTPRINT is the shipping
+ * chip's visible half width) so a board full of these occupies exactly the
+ * space a board full of chips did, and nothing about the grid has to move.
+ */
+export const HEAD_PIECE_FOOTPRINT = 1.25 * 0.825;
+
+export const HEAD_STYLE = {
+  fill: 1.0,
+  // Matched on WIDTH, not on the outermost point. Scaling a roughly square
+  // head by its longest radius scales it by its CORNER, which lands it
+  // visibly smaller than the disc it replaces - the robot showed this
+  // immediately. Width-matching puts the piece in the same footprint the chip
+  // had. maxTall then stops a tall head becoming a tower on the grid.
+  maxTall: 1.15,
+  depth: 0.16,
+  // 1 slice is a single hard offset copy, which reads as a sticker lifted off
+  // the board. More slices sweep the path into a solid side.
+  slices: 6,
+  sideShade: -0.55,
+  faceTopShade: 0.08,
+  faceBottomShade: -0.22,
+  outline: true,
+  outlineShade: 0.25,
+  outlineWidth: 0.05,
+  shadowAlpha: 0.40,
+  shadowDrop: 0.34,
+  shadowRX: 0.66,
+  shadowRY: 0.17,
+  highlightAlpha: 0.18,
+};
+
+const headExtentCache = new Map();
+/** Half-width and half-height of the head path, in raw path units. */
+function headPieceExtent(kind) {
+  const key = CHIP_HEAD_ALIAS[kind] ?? kind;
+  if (headExtentCache.has(key)) return headExtentCache.get(key);
+  const pts = CHIP_HEADS[key];
+  const ext = pts && pts.length
+    ? { hw: Math.max(...pts.map((p) => Math.abs(p[0]))), hh: Math.max(...pts.map((p) => Math.abs(p[1]))) }
+    : { hw: 0, hh: 0 };
+  headExtentCache.set(key, ext);
+  return ext;
+}
+
+export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null) {
+  const s = style ? { ...HEAD_STYLE, ...style } : HEAD_STYLE;
+  const { hw, hh } = headPieceExtent(kind);
+  if (hw <= 0 || hh <= 0) return false;
+  const half = radius * HEAD_PIECE_FOOTPRINT * s.fill;
+  let hs = half / hw;
+  if (hh * hs > half * s.maxTall) hs = (half * s.maxTall) / hh;
+  // The drawn half-height, which is what the shading and the shadow have to
+  // be measured against: a saucer and a tall helmet cannot share one number.
+  const halfH = hh * hs;
+  const drop = half * s.depth;
+
+  c.save();
+  c.globalAlpha = alpha;
+
+  if (s.shadowAlpha > 0) {
+    c.fillStyle = `rgba(0, 0, 0, ${s.shadowAlpha})`;
+    c.beginPath();
+    c.ellipse(x, y + halfH * s.shadowDrop + drop, half * s.shadowRX, half * s.shadowRY, 0, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // The side: the same silhouette swept down. Drawn deepest first so the
+  // stack unions into one solid body instead of reading as layers.
+  if (drop > 0 && s.slices > 0) {
+    c.fillStyle = shadeHex(f.primary, s.sideShade);
+    for (let i = s.slices; i >= 1; i -= 1) {
+      traceChipHead(c, kind, x, y + drop * (i / s.slices), hs);
+      c.fill();
+    }
+  }
+
+  // The face, graded so the head has a form rather than being a cut-out.
+  const g = c.createLinearGradient(0, y - halfH, 0, y + halfH);
+  g.addColorStop(0, shadeHex(f.primary, s.faceTopShade));
+  g.addColorStop(1, shadeHex(f.primary, s.faceBottomShade));
+  c.fillStyle = g;
+  c.lineJoin = 'round';
+  traceChipHead(c, kind, x, y, hs);
+  c.fill();
+  if (s.outline) {
+    c.strokeStyle = shadeHex(f.stroke, s.outlineShade);
+    c.lineWidth = Math.max(0.6, radius * s.outlineWidth);
+    c.stroke();
+  }
+
+  if (s.highlightAlpha > 0) {
+    c.save();
+    traceChipHead(c, kind, x, y, hs);
+    c.clip();
+    c.globalAlpha = s.highlightAlpha * alpha;
+    c.fillStyle = '#ffffff';
+    c.beginPath();
+    c.ellipse(x, y - halfH * 0.52, half * 0.54, halfH * 0.24, 0, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  }
+
+  // The eyes are still what turn a silhouette into a face, and they matter
+  // MORE here: there is no disc left to say "this is a piece", so the face
+  // is carrying the whole read.
+  drawChipEyes(c, kind, x, y, hs, f.accent);
+  c.restore();
+  return true;
+}
+
 export function traceFigure(ctx, kind, cx, feetY, r) {
   const f = FIGURES[kind];
   if (f) tracePath(ctx, f.points, cx, feetY, r);

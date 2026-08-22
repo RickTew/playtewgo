@@ -51,7 +51,7 @@
      stretched canvas is a blurred one, and blur is the one thing that would
      make this page lie about how a chip reads. */
   .row { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card, 178px), 1fr)); gap: 10px; }
-  #rowWays { grid-template-columns: repeat(auto-fill, minmax(var(--card2, 200px), 1fr)); }
+  #rowWays, #rowRoster { grid-template-columns: repeat(auto-fill, minmax(var(--card2, 200px), 1fr)); }
   .shot { flex-wrap: nowrap; }
   .cand {
     background: var(--card); border: 1px solid #ffffff14; border-radius: 13px;
@@ -155,7 +155,31 @@
   </p>
   <div class="row" id="rowWays"></div>
 
-  <h2>5 &middot; Mixer</h2>
+  <h2>5 &middot; No chip at all: the head IS the piece</h2>
+  <p class="note">
+    Your idea, and it <b>dissolves</b> the problem the four rows above are working around rather than
+    balancing it. Break-out fought chip depth because the head covered the face, leaving no disc to
+    shade. Take the disc away and there is nothing left to cover: the depth moves onto the shape you
+    are actually looking at. The side here is the <b>same silhouette swept downward</b>, not a drawn
+    edge, which is the one lesson that survived all three failed chip attempts.
+    Each piece keeps the chip's exact footprint, so a board full of these takes up the same room and
+    nothing about the grid moves. <b>N1 is the control</b>: the same head with no depth at all, so you
+    can see how much of the effect is the depth and how much is just losing the disc.
+  </p>
+  <div class="row" id="rowHead"></div>
+
+  <h2>6 &middot; Does it hold for the whole roster?</h2>
+  <p class="note">
+    Your premise was <b>"most of the pieces are already close enough"</b>, and that is a claim about a
+    roster, not about one piece, so here is every figure in this world: <b>today's chip on the left,
+    head-as-piece on the right</b>. All 40 figures across all 8 worlds do have a head path, so this can
+    be built for every one of them. The question this row answers is the real one: are they all close
+    enough, or do some heads stop reading as a game piece once the disc that framed them is gone?
+    Switch worlds with the Piece control to check another roster.
+  </p>
+  <div class="row" id="rowRoster"></div>
+
+  <h2>7 &middot; Mixer</h2>
   <p class="note">
     If none of the cells above is right, dial it here and read the numbers off the bottom. Anything
     you land on is a valid answer &ndash; these are the actual constants in <b>CHIP_STYLE</b>, and whatever
@@ -182,7 +206,7 @@
 <script type="module">
 import {
   FIGURES, COLOR_SCHEMES, paletteFor,
-  drawChipDisc, drawFlatDisc, chipHeadScaleTo, CHIP_STYLE, FLAT_STYLE,
+  drawChipDisc, drawFlatDisc, drawHeadPiece, chipHeadScaleTo, CHIP_STYLE, FLAT_STYLE, HEAD_STYLE,
 } from './pieces.js';
 import { THEMES, sceneByKey, paintScene } from './themes.js';
 import { UNIVERSAL_BOARDS, THEME_BOARDS, boardByKey, paintBoardRect } from './boards.js';
@@ -323,7 +347,9 @@ function paintShot(cv, kind, palette, opts = {}) {
     c.stroke();
   }
 
-  if (opts.variant === 'flat') {
+  if (opts.variant === 'head') {
+    drawHeadPiece(c, kind, x, y, r, palette, 1, opts.headStyle ?? null);
+  } else if (opts.variant === 'flat') {
     drawFlatDisc(c, kind, x, y, r, palette, 1, opts.flatStyle ?? null);
   } else {
     const logo = opts.target ? chipHeadScaleTo(kind, opts.target) : null;
@@ -383,7 +409,10 @@ function cell(cand, withFlat) {
   const shot = document.createElement('div');
   shot.className = 'shot';
   const cv = document.createElement('canvas');
-  paintShot(cv, kind, palette, { style: cand.style, target: cand.target });
+  paintShot(cv, kind, palette, {
+    style: cand.style, target: cand.target,
+    variant: cand.variant, headStyle: cand.headStyle,
+  });
   shot.appendChild(cv);
   if (withFlat) {
     const cf = document.createElement('canvas');
@@ -410,6 +439,58 @@ function fill(rowId, list, withFlat = false) {
   const row = $(rowId);
   row.innerHTML = '';
   for (const cand of list) row.appendChild(cell(cand, withFlat));
+}
+
+/* ---------- head as the piece ---------- */
+
+// N4 is the full treatment and is what the roster row uses, because judging
+// the idea on the flat control would be judging half of it.
+const HEAD_FULL = { depth: 0.16, slices: 6, highlightAlpha: 0.18, outline: true };
+
+const HEADS = [
+  { code: 'N1', name: 'Head only, no depth', why: 'The control. Disc gone, nothing added. A sticker on the board.',
+    headStyle: { depth: 0, highlightAlpha: 0, faceTopShade: 0, faceBottomShade: 0 } },
+  { code: 'N2', name: 'One hard side', why: 'A single offset copy behind it. Reads as lifted off the board.',
+    headStyle: { depth: 0.14, slices: 1, highlightAlpha: 0 } },
+  { code: 'N3', name: 'Swept side', why: 'The silhouette swept down into a solid body. No new edges.',
+    headStyle: { depth: 0.16, slices: 6, highlightAlpha: 0 } },
+  { code: 'N4', name: 'Swept side + lit face', why: 'Plus the graded face and top highlight. The full idea.',
+    headStyle: HEAD_FULL },
+  { code: 'N5', name: 'Full, deeper', why: 'Same, twice the depth. Is more side better or just taller?',
+    headStyle: { ...HEAD_FULL, depth: 0.30 } },
+];
+
+function themeOf(kind) {
+  for (const def of Object.values(THEMES)) if (def.figures.includes(kind)) return def;
+  return THEMES.space;
+}
+
+function buildRoster() {
+  const row = $('rowRoster');
+  row.innerHTML = '';
+  const def = themeOf(kindEl.value);
+  for (const k of def.figures) {
+    const palette = paletteFor(k, side, schemeEl.value);
+    const box = document.createElement('div');
+    box.className = 'cand';
+    const shot = document.createElement('div');
+    shot.className = 'shot';
+    const a = document.createElement('canvas');
+    paintShot(a, k, palette, {});
+    const b = document.createElement('canvas');
+    paintShot(b, k, palette, { variant: 'head', headStyle: HEAD_FULL });
+    shot.append(a, b);
+    box.appendChild(shot);
+    const nm = document.createElement('div');
+    nm.className = 'nm';
+    nm.textContent = k;
+    box.appendChild(nm);
+    const why = document.createElement('div');
+    why.className = 'why';
+    why.textContent = 'chip \u00b7 head';
+    box.appendChild(why);
+    row.appendChild(box);
+  }
 }
 
 /* ---------- mixer ---------- */
@@ -485,6 +566,8 @@ function buildAll() {
   fill('rowBreak', BREAKOUT.map((b) => ({ ...b, style: DIAGNOSIS })));
   fill('rowCrescent', CRESCENT);
   fill('rowWays', WAYS, true);
+  fill('rowHead', HEADS.map((h) => ({ ...h, variant: 'head' })));
+  buildRoster();
   paintMix();
 }
 
