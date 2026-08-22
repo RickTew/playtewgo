@@ -632,6 +632,33 @@
      card wider than the phone rather than scrolling inside it. The wide
      screens use minmax(0, ...) already; the phone breakpoint uses 1fr. */
   .setup-wide { grid-column: 1 / -1; min-width: 0; }
+  .setup-brand {
+    grid-column: 1 / -1; font-size: clamp(26px, 5vw, 34px); font-weight: 900;
+    letter-spacing: 2px; color: var(--text); margin-bottom: 2px;
+    text-shadow: 0 0 24px rgba(255,214,10,0.25); line-height: 1;
+  }
+  .setup-brand .go { color: var(--gold); }
+  body.light .setup-brand { text-shadow: 0 0 24px rgba(179,149,0,0.35); }
+  .setup-left { min-width: 0; }
+  .setup-left .setup-row { margin-top: 16px; margin-bottom: 0; }
+  /* Boards wrap rather than scroll: there are only about a dozen and they are
+     small, so showing all of them at once is the point. A shelf that hides
+     half the set would be the same mistake the old dropdowns made. */
+  .board-strip { display: flex; flex-wrap: wrap; gap: 6px; }
+  .board-swatch {
+    padding: 0; border-radius: 9px; border: 1px solid #ffffff26; overflow: hidden;
+    background: none; cursor: pointer; line-height: 0; position: relative;
+    transition: transform 0.09s ease, border-color 0.09s ease;
+  }
+  .board-swatch canvas { display: block; }
+  .board-swatch:hover { transform: translateY(-2px); border-color: #ffffff80; }
+  .board-swatch.selected { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,214,10,0.4); }
+  .board-swatch .bname {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 4px 3px;
+    font-size: 9.5px; font-weight: 700; line-height: 1; color: #fff;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  }
+  #setup .setup-hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
   .world-strip { min-width: 0; }
   .setup-row { margin-bottom: 16px; }
   .setup-row .flabel { display: block; margin-bottom: 8px; }
@@ -905,14 +932,22 @@
        block for position:fixed and would trap this inside the board box. -->
   <div class="overlay" id="setup">
     <div class="setup-card">
+      <div class="setup-brand">TEW<span class="go">GO</span></div>
       <h2 class="setup-h">Choose how you want to play</h2>
 
       <!-- The stage: the world you are about to play in, with your two pieces
            standing in it. The hero of this screen is the place, not a form
            field, because the painted worlds are the thing worth choosing. -->
-      <div class="setup-visual">
-        <canvas id="setupPreview"></canvas>
-        <div class="setup-worldname" id="setupWorldName"></div>
+      <div class="setup-left">
+        <div class="setup-visual">
+          <canvas id="setupPreview"></canvas>
+          <div class="setup-worldname" id="setupWorldName"></div>
+        </div>
+        <div class="setup-row">
+          <span class="flabel">Board</span>
+          <div class="board-strip" id="setupBoardRow"></div>
+          <p class="setup-hint">Try a few. You can change any of this during a game too.</p>
+        </div>
       </div>
 
       <div class="setup-controls">
@@ -943,7 +978,7 @@
 
       <div class="setup-wide">
         <p id="setupRecord" class="setup-record" style="display:none"></p>
-        <p class="setup-note">Pieces, board and sound sit under the board once you start, and your collection is in your <a href="#" id="setupProfileLink">profile</a>.</p>
+        <p class="setup-note">Depth, glow, background and sound sit under the board once you start, and your collection is in your <a href="#" id="setupProfileLink">profile</a>.</p>
         <p class="setup-note dim">Both players share this screen. Playing someone over the internet is coming later.</p>
         <div class="overlay-buttons">
           <button class="btn-gold" id="setupCancel" style="display:none">Continue game</button>

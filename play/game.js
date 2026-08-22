@@ -2730,6 +2730,47 @@ function buildSetupControls() {
     drawSetupPreview();
   });
 
+  // Boards, shown rather than listed, in the space under the stage. Rick,
+  // 2026-08-22: "board styles can likely go here." They apply immediately and
+  // the stage repaints, so picking one is answered on the spot - and for Face
+  // the stage IS a board, so the surface you pick is the surface you see.
+  const boardRow = document.getElementById('setupBoardRow');
+  if (boardRow) {
+    boardRow.innerHTML = '';
+    for (const b of boardsForTheme(theme)) {
+      const btn = document.createElement('button');
+      btn.className = `board-swatch${b.key === boardKey ? ' selected' : ''}`;
+      const cv = document.createElement('canvas');
+      const w = 84;
+      const h = 50;
+      cv.width = w * 2;
+      cv.height = h * 2;
+      cv.style.width = w + 'px';
+      cv.style.height = h + 'px';
+      const cc = cv.getContext('2d');
+      cc.setTransform(2, 0, 0, 2, 0, 0);
+      if (b.key === 'none') {
+        // "None" is the scene showing through, so show the scene rather than
+        // an empty box: it is a real choice, not the absence of one.
+        paintScene(cv, sceneKey, w * 2, h * 2);
+        cc.setTransform(2, 0, 0, 2, 0, 0);
+      } else {
+        paintBoardRect(cc, b.key, 0, 0, w, h);
+      }
+      btn.appendChild(cv);
+      const nm = document.createElement('span');
+      nm.className = 'bname';
+      nm.textContent = b.name;
+      btn.appendChild(nm);
+      btn.addEventListener('click', () => {
+        selectBoard(b.key);
+        buildSetupControls();
+        drawSetupPreview();
+      });
+      boardRow.appendChild(btn);
+    }
+  }
+
   const shelf = document.getElementById('setupWorlds');
   if (shelf) {
     shelf.innerHTML = '';
