@@ -596,8 +596,8 @@
      right. Centred text wasted the width and left the select boxes on a
      ragged edge, because each label was a different length (Rick). */
   .setup-card {
-    width: min(760px, 100%); display: grid;
-    grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+    width: min(820px, 100%); display: grid;
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
     gap: 8px 28px; align-items: start; text-align: left;
   }
   #setup .setup-h {
@@ -624,6 +624,37 @@
     text-transform: uppercase; color: var(--muted);
   }
   .setup-card select { width: 100%; font-size: 15px; padding: 11px 14px; }
+  /* The three selects are state, not UI. The visual controls above drive
+     them and the rest of the game keeps reading them. */
+  .setup-card .setup-state { display: none; }
+  /* min-width:0 matters: a grid child defaults to min-content width, and a
+     1306px flex row of world cards inside a `1fr` column would push the whole
+     card wider than the phone rather than scrolling inside it. The wide
+     screens use minmax(0, ...) already; the phone breakpoint uses 1fr. */
+  .setup-wide { grid-column: 1 / -1; min-width: 0; }
+  .world-strip { min-width: 0; }
+  .setup-row { margin-bottom: 16px; }
+  .setup-row .flabel { display: block; margin-bottom: 8px; }
+  .seg { display: flex; gap: 8px; flex-wrap: wrap; }
+  .setup-card .swatch-row { justify-content: flex-start; margin: 0; }
+  /* A shelf of places you scroll, so eight worlds can be SEEN rather than
+     unfolded one name at a time. Snap so a flick lands on a card. */
+  .world-strip {
+    display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 10px;
+    scroll-snap-type: x proximity; scrollbar-width: thin;
+    /* The right edge fades so it is VISIBLE that the shelf continues. A row
+       that simply stops at the container edge reads as the whole set, which
+       is the worlds-row scroll affordance carried open from persona round 1
+       (Marcus). The fade is dropped once the shelf is scrolled to its end. */
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 calc(100% - 44px), transparent 100%);
+  }
+  .world-strip.at-end {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .world-strip .wcard { scroll-snap-align: start; }
+  .setup-card .setup-controls { align-self: start; }
   #setup .setup-record { color: var(--gold); font-size: 14px; margin: 2px 0 10px; }
   #setup .setup-note { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
   #setup .setup-note.dim { opacity: 0.75; }
@@ -875,48 +906,70 @@
   <div class="overlay" id="setup">
     <div class="setup-card">
       <h2 class="setup-h">Choose how you want to play</h2>
+
+      <!-- The stage: the world you are about to play in, with your two pieces
+           standing in it. The hero of this screen is the place, not a form
+           field, because the painted worlds are the thing worth choosing. -->
       <div class="setup-visual">
         <canvas id="setupPreview"></canvas>
         <div class="setup-worldname" id="setupWorldName"></div>
       </div>
+
       <div class="setup-controls">
-        <label class="field">
-          <span class="flabel">World</span>
-          <select id="setupTheme">
-            <option value="space">Space</option>
-            <option value="ocean">Ocean</option>
-            <option value="feudaljapan">Feudal Japan</option>
-            <option value="dungeon">Dungeon</option>
-            <option value="undead">Undead</option>
-            <option value="western">Western</option>
-            <option value="desert">Desert</option>
-            <option value="classic">Classic</option>
-          </select>
-        </label>
-        <label class="field">
-          <span class="flabel">Mode</span>
-          <select id="setupMode">
-            <option value="ai">1 player, vs the computer</option>
-            <option value="2p">2 players, same device</option>
-          </select>
-        </label>
-        <label class="field" id="setupDiffRow">
+        <div class="setup-row">
+          <span class="flabel">Players</span>
+          <div class="seg" id="setupModeSeg"></div>
+        </div>
+        <div class="setup-row" id="setupDiffRow">
           <span class="flabel">Difficulty</span>
-          <select id="setupDiff">
-            <option value="easy">Easy</option>
-            <option value="medium" selected>Medium</option>
-            <option value="hard">Hard</option>
-            <option value="expert">Expert</option>
-          </select>
-        </label>
+          <div class="seg" id="setupDiffSeg"></div>
+        </div>
+        <div class="setup-row">
+          <span class="flabel">Colour</span>
+          <div class="swatch-row" id="setupColorRow"></div>
+        </div>
+      </div>
+
+      <!-- Worlds get the full width because there are eight of them and they
+           are the collection. A shelf you scroll, not a list you unfold. -->
+      <div class="setup-row setup-wide">
+        <span class="flabel">World</span>
+        <div class="world-strip" id="setupWorlds"></div>
+      </div>
+
+      <div class="setup-wide">
         <p id="setupRecord" class="setup-record" style="display:none"></p>
-        <p class="setup-note">Pieces, board, background and sound can be changed any time below the board, and your record and collection live in your <a href="#" id="setupProfileLink">profile</a>.</p>
+        <p class="setup-note">Pieces, board and sound sit under the board once you start, and your collection is in your <a href="#" id="setupProfileLink">profile</a>.</p>
         <p class="setup-note dim">Both players share this screen. Playing someone over the internet is coming later.</p>
         <div class="overlay-buttons">
           <button class="btn-gold" id="setupCancel" style="display:none">Continue game</button>
           <button class="btn-gold" id="startGame">Start new game</button>
         </div>
       </div>
+
+      <!-- The three selects stay as the state the rest of the game reads and
+           writes; the controls above drive them. Same pattern the dock used
+           when it replaced six dropdowns with one loadout. -->
+      <select id="setupTheme" class="setup-state">
+        <option value="space">Space</option>
+        <option value="ocean">Ocean</option>
+        <option value="feudaljapan">Feudal Japan</option>
+        <option value="dungeon">Dungeon</option>
+        <option value="undead">Undead</option>
+        <option value="western">Western</option>
+        <option value="desert">Desert</option>
+        <option value="classic">Classic</option>
+      </select>
+      <select id="setupMode" class="setup-state">
+        <option value="ai">1 player, vs the computer</option>
+        <option value="2p">2 players, same device</option>
+      </select>
+      <select id="setupDiff" class="setup-state">
+        <option value="easy">Easy</option>
+        <option value="medium" selected>Medium</option>
+        <option value="hard">Hard</option>
+        <option value="expert">Expert</option>
+      </select>
     </div>
   </div>
 

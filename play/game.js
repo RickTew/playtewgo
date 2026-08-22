@@ -2034,10 +2034,18 @@ function buildVariantRow() {
     glowRowEl.appendChild(btn);
   }
   }
-  const colorRowEl = document.getElementById('colorRow');
+  buildColorRow(document.getElementById('colorRow'));
+}
+
+/**
+ * The colour swatches, in one place so the picker and the setup screen cannot
+ * drift. Gold is per-theme: 10 wins in the CURRENT theme unlock it there,
+ * like the iOS rare-finish loop. Locked shows the swatch dimmed with a
+ * padlock rather than hidden, because a prize you cannot see is not a prize.
+ */
+function buildColorRow(colorRowEl, after) {
+  if (!colorRowEl) return;
   colorRowEl.innerHTML = '';
-  // Gold is per-theme: 10 wins in the CURRENT theme unlock it there, like
-  // the iOS rare-finish loop. Locked shows the swatch dimmed with a padlock.
   const goldLocked = !progression.isGoldUnlocked(theme);
   for (const s of COLOR_SCHEMES) {
     const locked = s.rare && goldLocked;
@@ -2066,6 +2074,8 @@ function buildVariantRow() {
       buildPicker();
       draw();
       updateHud();
+      drawAvatar();
+      if (after) after();
     });
     colorRowEl.appendChild(btn);
   }
@@ -2246,7 +2256,7 @@ function unlockedThemes() {
  * standing on it, its name, and a padlock plus the cost when it is still
  * locked. Tapping an open one switches world.
  */
-function worldCards(gal) {
+function worldCards(gal, onPick) {
   gal.classList.add('world-gallery');
   for (const key of THEME_ORDER) {
     if (!THEMES[key]) continue;
@@ -2295,8 +2305,8 @@ function worldCards(gal) {
         }
         return;
       }
-      applyTheme(key);
-      openProfile();
+      if (onPick) onPick(key);
+      else { applyTheme(key); openProfile(); }
     });
     gal.appendChild(card);
   }
@@ -2643,6 +2653,79 @@ const setupEl = document.getElementById('setup');
  * so a world you have customised shows your saved scene and figures while
  * any other shows that world's defaults.
  */
+/**
+ * The setup screen is a LOADOUT, not a form. Rick, 2026-08-22: "can we get
+ * more stuff on that page so it looks fun choosing?" - and his standing brief
+ * from the dock work, that the game "is about OPTIONS so we want to really
+ * show them off".
+ *
+ * The old screen did the opposite: three dropdowns and a sentence saying the
+ * options were somewhere else. Everything here is shown instead of named. The
+ * worlds are the painted cards from the profile (a place, not a piece - his
+ * reading, and the reason round medallions were pulled), the colours are live
+ * swatches that recolour the two characters in the scene above as you tap
+ * them, and Players and Difficulty are buttons you can see all of at once.
+ */
+function buildSetupControls() {
+  const seg = (el, options, current, pick) => {
+    if (!el) return;
+    el.innerHTML = '';
+    for (const [value, label] of options) {
+      const b = document.createElement('button');
+      b.className = `piece-option variant-btn${current === value ? ' selected' : ''}`;
+      b.textContent = label;
+      b.addEventListener('click', () => pick(value));
+      el.appendChild(b);
+    }
+  };
+
+  const modeSel = document.getElementById('setupMode');
+  const diffSel = document.getElementById('setupDiff');
+
+  seg(document.getElementById('setupModeSeg'),
+    [['ai', '1 player, vs the computer'], ['2p', '2 players, same device']],
+    modeSel?.value,
+    (v) => { if (modeSel) { modeSel.value = v; modeSel.dispatchEvent(new Event('change')); } buildSetupControls(); });
+
+  seg(document.getElementById('setupDiffSeg'),
+    [['easy', 'Easy'], ['medium', 'Medium'], ['hard', 'Hard'], ['expert', 'Expert']],
+    diffSel?.value,
+    (v) => { if (diffSel) diffSel.value = v; buildSetupControls(); });
+
+  // Colour applies immediately rather than on Start, so the two characters in
+  // the scene above change as you tap. That live answer is the whole reason
+  // the swatches are on this screen and not just in the picker.
+  buildColorRow(document.getElementById('setupColorRow'), () => {
+    buildSetupControls();
+    drawSetupPreview();
+  });
+
+  const shelf = document.getElementById('setupWorlds');
+  if (shelf) {
+    shelf.innerHTML = '';
+    worldCards(shelf, (key) => {
+      const t = document.getElementById('setupTheme');
+      if (t) t.value = key;
+      drawSetupPreview();
+      buildSetupControls();
+      const card = shelf.querySelector('.wcard.current');
+      if (card) card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    // Drop the edge fade once there is nothing more to scroll to, so the
+    // affordance only appears while it is telling the truth.
+    const markEnd = () => shelf.classList.toggle(
+      'at-end', shelf.scrollLeft + shelf.clientWidth >= shelf.scrollWidth - 2);
+    shelf.addEventListener('scroll', markEnd, { passive: true });
+    requestAnimationFrame(markEnd);
+    // The shelf marks the world being CHOSEN, which is not always the world
+    // currently loaded.
+    const picked = document.getElementById('setupTheme')?.value || theme;
+    [...shelf.querySelectorAll('.wcard')].forEach((c, i) => {
+      c.classList.toggle('current', THEME_ORDER.filter((k) => THEMES[k])[i] === picked);
+    });
+  }
+}
+
 function drawSetupPreview() {
   const cv = document.getElementById('setupPreview');
   if (!cv) return;
@@ -2720,6 +2803,7 @@ function openSetup() {
   document.getElementById('setupMode').value = mode;
   document.getElementById('setupDiff').value = difficultyEl.value;
   document.getElementById('setupDiffRow').style.display = mode === 'ai' ? '' : 'none';
+  buildSetupControls();
   // The record line appears once there is a record: vs-AI games only, so a
   // fresh player (or a pass-and-play-only device) sees no zeros clutter.
   const recordEl = document.getElementById('setupRecord');
