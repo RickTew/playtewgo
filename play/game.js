@@ -7,7 +7,7 @@ import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
 import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
-import { FIGURES, figureHeight, drawFigure, traceFigure, drawChipDisc, COLOR_SCHEMES, paletteFor, shadeHex, drawFlatDisc } from './pieces.js';
+import { FIGURES, figureHeight, drawFigure, traceFigure, COLOR_SCHEMES, paletteFor, shadeHex, drawHeadPiece, drawGlow, drawFigureGlow, GLOWS } from './pieces.js';
 import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
 import { createProgression, GOLD_WIN_THRESHOLD, THEME_ORDER, THEME_UNLOCK_AFTER } from './engine/progression.js';
 import { startCheckout, handleReturn, restoreWithCode, savedCode } from './unlock.js';
@@ -72,13 +72,40 @@ try {
 // Piece TYPE (iOS PieceVariant): flat disc / chip / compact figure / tall
 // figure. Global across themes, like tewgo.pieceVariant on iOS.
 const VARIANT_KEY = 'tewgo.web.pieceVariant';
+// TWO pieces, not four. Rick, 2026-08-22: "we may not actually want or need a
+// TALL piece at all but just make half the Normal piece and then they have the
+// chips ... There are only two pieces, one is regular (currently half) and one
+// is chip (currently chip and flat). But they can choose 3D and color options
+// for BOTH. SO we have a less is more process. Only two piece sizes but more
+// OPTIONS."
+//
+// So Tall is gone, Half is renamed Regular, and Flat folds into Chip as its
+// Standard depth. The DRAWING code for tall is deliberately left alone in
+// pieces.js: this is a taste decision and taste decisions reverse, so bringing
+// it back should be one line here rather than a re-port.
 const VARIANTS = [
-  { key: 'flat', name: 'Flat' },
+  { key: 'regular', name: 'Regular' },
   { key: 'chip', name: 'Chip' },
-  { key: 'half', name: 'Half' },
-  { key: 'tall', name: 'Tall' },
 ];
-let variant = 'tall';
+
+/**
+ * What a saved variant from before 2026-08-22 becomes. Depth is deliberately
+ * NOT touched: it is tempting to force Standard when migrating someone off
+ * 'flat', since Flat was the depthless one, but silently rewriting a second
+ * setting from inside a migration takes away a look the player never chose to
+ * change. They land on their own depth and can move it.
+ */
+const VARIANT_MIGRATION = { tall: 'regular', half: 'regular', flat: 'chip', chip: 'chip' };
+
+/** Chip at Standard depth: the same silhouette with the depth taken off. */
+const HEAD_STANDARD = {
+  depth: 0, highlightAlpha: 0, shadowAlpha: 0,
+  faceTopShade: 0, faceBottomShade: 0,
+};
+
+// The default is the one we think looks best, per Rick: "We default to the one
+// we feel looks the best like 3D version of the chip."
+let variant = 'chip';
 
 // Board surface (iOS BoardPanelStyle). Global, like tewgo.boardPanelStyle.
 const BOARD_KEY = 'tewgo.web.board';
@@ -95,9 +122,18 @@ const GRID_STYLES = [
 ];
 let gridStyle = 'dots';
 
-// Piece FINISH (iOS tewgo.pieceFinish): classic | dimensional faux-3D.
+// Piece DEPTH (iOS tewgo.pieceFinish): classic = Standard, dimensional = 3D.
+// Called FINISH in the code and the storage key so saved values keep working;
+// called DEPTH everywhere a player can see it, because that is Rick's word for
+// it and because "finish" tested badly on the personas (Maya read it as nail
+// polish, Priya as finishing the game).
 const FINISH_KEY = 'tewgo.web.pieceFinish';
-let finish = 'classic';
+let finish = 'dimensional';
+
+// GLOW, the third of Rick's five option axes. Colour already existed; sounds
+// and effect are explicitly "(later)" and are not built.
+const GLOW_KEY = 'tewgo.web.pieceGlow';
+let glow = 'soft';
 
 // Color scheme (iOS tewgo.pieceColor): recolors both sides as a pair.
 const COLOR_KEY = 'tewgo.web.pieceColor';
@@ -711,8 +747,9 @@ document.addEventListener('visibilitychange', () => {
 function drawStone(x, y, radius, player, alpha = 1) {
   const kind = pieceKind[player];
   const f = styleFor(player);
-  if (variant === 'half' || variant === 'tall') {
-    const rf = variant === 'tall' ? radius : radius * 0.68;
+  if (variant === 'regular') {
+    const rf = radius * 0.68;
+    drawFigureGlow(ctx, kind, x, y + radius * 0.98, rf, f.glowRgb, glow, alpha);
     // Ground shadow at the TRUE intersection (PieceRenderer.makeFigure
     // draws the same ellipse and the web port had dropped it). A standing
     // figure's body overhangs the cell above, so without this anchor the
@@ -729,28 +766,13 @@ function drawStone(x, y, radius, player, alpha = 1) {
     drawFigure(ctx, kind, x, y + radius * 0.98, rf, alpha, { palette: f, finish });
     return;
   }
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  // iOS puts a glow behind makeFlat (the non-figure themes) but NOT behind
-  // makeFlatDisc or makeChipDisc. On a chip it actively fights the effect:
-  // a lit halo reads as a glowing button, and the whole point of the stacked
-  // ellipses is a solid object sitting on the board. Kept at a fraction for
-  // readability on the busier painted scenes rather than dropped outright.
-  const haloA = variant === 'chip' ? 0.06 : 0.18;
-  const halo = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 1.5);
-  halo.addColorStop(0, `rgba(${f.glowRgb}, ${haloA})`);
-  halo.addColorStop(1, `rgba(${f.glowRgb}, 0)`);
-  ctx.fillStyle = halo;
-  ctx.beginPath();
-  ctx.arc(x, y, radius * 1.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  if (variant === 'flat') {
-    drawFlatDisc(ctx, kind, x, y, radius, f, alpha);
-  } else {
-    drawChipDisc(ctx, kind, x, y, radius, f, alpha);
-  }
-  ctx.restore();
+  drawGlow(ctx, x, y, radius, f.glowRgb, glow, alpha);
+  // Chip: the piece IS the chip now, so there is no disc under it and the
+  // DEPTH axis is the whole difference between the two looks. 3D is the
+  // character with its side swept under it; Standard is the same silhouette
+  // flat, which is what Flat used to be - Rick, 2026-08-22: "the flat can be
+  // the non 3D removing that circle".
+  drawHeadPiece(ctx, kind, x, y, radius, f, alpha, finish === 'dimensional' ? null : HEAD_STANDARD);
 }
 
 function draw() {
@@ -1952,9 +1974,11 @@ function buildVariantRow() {
     btn.addEventListener('click', () => setVariant(v.key));
     rowEl.appendChild(btn);
   }
+  // DEPTH. Standard / 3D rather than Classic / 3D: "classic" is also the name
+  // of a WORLD, so the row was offering a world's name as a finish.
   const finishRowEl = document.getElementById('finishRow');
   finishRowEl.innerHTML = '';
-  for (const f of [['classic', 'Classic'], ['dimensional', '3D']]) {
+  for (const f of [['classic', 'Standard'], ['dimensional', '3D']]) {
     const btn = document.createElement('button');
     btn.className = `piece-option variant-btn${finish === f[0] ? ' selected' : ''}`;
     btn.textContent = f[1];
@@ -1965,6 +1989,27 @@ function buildVariantRow() {
       draw();
     });
     finishRowEl.appendChild(btn);
+  }
+  // Guarded, unlike the rows above it, because this one is NEW: a browser
+  // holding a cached index.html from before the glow row existed would run
+  // this against a missing element and take the whole picker down with it.
+  // The deploy window is short but it is real, and a null check is cheaper
+  // than a broken picker.
+  const glowRowEl = document.getElementById('glowRow');
+  if (glowRowEl) {
+  glowRowEl.innerHTML = '';
+  for (const g of GLOWS) {
+    const btn = document.createElement('button');
+    btn.className = `piece-option variant-btn${glow === g.key ? ' selected' : ''}`;
+    btn.textContent = g.name;
+    btn.addEventListener('click', () => {
+      glow = g.key;
+      try { localStorage.setItem(GLOW_KEY, glow); } catch { /* ignore */ }
+      buildPicker();
+      draw();
+    });
+    glowRowEl.appendChild(btn);
+  }
   }
   const colorRowEl = document.getElementById('colorRow');
   colorRowEl.innerHTML = '';
@@ -2774,7 +2819,15 @@ try {
     });
   }
   const savedVariant = localStorage.getItem(VARIANT_KEY);
-  if (savedVariant && VARIANTS.some((v) => v.key === savedVariant)) variant = savedVariant;
+  if (savedVariant) {
+    // Anyone holding 'tall', 'half' or 'flat' from before the two-piece change
+    // lands on the piece nearest what they had, rather than on a board that
+    // draws nothing.
+    const mapped = VARIANT_MIGRATION[savedVariant] ?? savedVariant;
+    if (VARIANTS.some((v) => v.key === mapped)) variant = mapped;
+  }
+  const savedGlow = localStorage.getItem(GLOW_KEY);
+  if (savedGlow && GLOWS.some((g) => g.key === savedGlow)) glow = savedGlow;
   const savedBoard = localStorage.getItem(BOARD_KEY);
   if (savedBoard && boardsForTheme(theme).some((b) => b.key === savedBoard)) boardKey = savedBoard;
   const savedFinish = localStorage.getItem(FINISH_KEY);

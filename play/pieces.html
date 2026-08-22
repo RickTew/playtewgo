@@ -90,8 +90,8 @@
 <body>
 <header>
   <h1><a href="/play/">TEW<span class="go">GO</span></a> <span id="worldName">Space</span> lab</h1>
-  <p class="lede">One world at a time: every piece, with every variant a player can pick, <b>Tall down to Flat</b> so you can follow what survives as the character is simplified. Drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. The slider is real board size &ndash; a phone board draws at about 14px, and anything that stops reading there will not read in play. Beside each name is a reference <b>icon and emoji</b>: not art, just a target. If the piece is harder to recognise than the icon, the piece needs work.</p>
-  <p class="lede"><b>The piece IS the chip now.</b> The round disc underneath is gone, and Chip and Flat are the two finishes of the character itself: <b>Chip is the 3D one</b>, <b>Flat is the same silhouette without the depth</b>. Old games cut their pieces from rock and gems and no two were ever exactly alike, so each piece keeps its own outline and its own height instead of being posted onto an identical disc. Every one still fills the same footprint, so the board reads evenly. The <b>Disc</b> control keeps the old look for comparison, and can put a plain disc back on Flat alone &ndash; the serious-player option, nothing to read, just a stone.</p>
+  <p class="lede">One world at a time: every piece, in every combination a player can actually pick. Drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. The slider is real board size &ndash; a phone board draws at about 14px, and anything that stops reading there will not read in play. Beside each name is a reference <b>icon and emoji</b>: not art, just a target. If the piece is harder to recognise than the icon, the piece needs work.</p>
+  <p class="lede"><b>Two pieces, five options.</b> The piece IS the chip now, so the round disc under it is gone and the roster is just <b>Regular</b> (what Half was) and <b>Chip</b>. Each is drawn at both <b>depths</b>: Standard is the flat silhouette, 3D carries its own side. Chip at Standard is what Flat used to be. Tall is no longer offered in the game, so it is not offered here either. Colour, depth and glow are three of the five option axes; sounds and effects come later. Figures now carry a <b>separation contour</b>, a hard edge so a piece in front cuts a clean line out of the one behind instead of merging into it.</p>
 </header>
 
 <main>
@@ -100,11 +100,7 @@
       <select id="theme"></select>
     </label>
     <label class="ctl"><b>Colours</b><select id="scheme"></select></label>
-    <label class="ctl"><b>Disc</b><select id="disc">
-      <option value="none">Piece is the chip</option>
-      <option value="flat">Disc on Flat only</option>
-      <option value="both">Old discs</option>
-    </select></label>
+    <label class="ctl"><b>Glow</b><select id="glow"></select></label>
     <label class="ctl"><b>Board size</b>
       <input type="range" id="size" min="8" max="64" step="1" value="30">
       <span id="sizeOut">14px</span>
@@ -120,14 +116,20 @@
 </footer>
 
 <script type="module">
-import { FIGURES, drawChipDisc, drawFlatDisc, drawHeadPiece, chipHeadScale, drawFigure, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
+import { FIGURES, drawHeadPiece, drawFigure, drawFigureGlow, drawGlow, GLOWS, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
 import { THEMES } from './themes.js';
 
 const out = document.getElementById('out');
 const themeEl = document.getElementById('theme');
 const schemeEl = document.getElementById('scheme');
 const sizeEl = document.getElementById('size');
-const discEl = document.getElementById('disc');
+const glowEl = document.getElementById('glow');
+for (const g of GLOWS) {
+  const o = document.createElement('option');
+  o.value = g.key; o.textContent = g.name;
+  glowEl.appendChild(o);
+}
+glowEl.value = 'soft';
 const sizeOut = document.getElementById('sizeOut');
 const countEl = document.getElementById('count');
 let side = 0;
@@ -157,20 +159,21 @@ themeEl.value = 'space';
 // what survives. Rick, 2026-08-21: "I am used to the concept of going from
 // Tall to Flat and trying to see how it maintains the look (similarites)
 // from left to right."
+/**
+ * TWO pieces crossed with TWO depths, which is the whole piece system now
+ * (Rick, 2026-08-22: "Only two piece sizes but more OPTIONS"). Regular is
+ * what Half was; Chip at Standard depth is what Flat was. Tall is gone from
+ * the game, so it is gone from here: a lab that offers a variant the player
+ * cannot pick is worse than one that offers none.
+ */
 const VARIANT_ORDER = [
-  { key: 'tall', name: 'TALL' },
-  { key: 'half', name: 'HALF' },
-  { key: 'chip', name: 'CHIP' },
-  { key: 'flat', name: 'FLAT' },
+  { key: 'regular', depth: 'classic', name: 'REGULAR \u00b7 STD' },
+  { key: 'regular', depth: 'dimensional', name: 'REGULAR \u00b7 3D' },
+  { key: 'chip', depth: 'classic', name: 'CHIP \u00b7 STD' },
+  { key: 'chip', depth: 'dimensional', name: 'CHIP \u00b7 3D' },
 ];
 
-/** Chip and Flat are a 3D/2D pair now, so the heading says so. */
-function variantLabel(v) {
-  if (discEl.value === 'both') return v.name;
-  if (v.key === 'chip') return 'CHIP \u00b7 3D';
-  if (v.key === 'flat') return discEl.value === 'flat' ? 'FLAT \u00b7 DISC' : 'FLAT \u00b7 2D';
-  return v.name;
-}
+function variantLabel(v) { return v.name; }
 
 /**
  * A reference glyph per figure, shown beside the name. NOT art and never
@@ -301,12 +304,12 @@ function worldBox(figures, radius) {
  * read, just a stone. "Old discs" keeps the previous look whole for
  * comparison.
  */
-const HEAD_FLAT = {
+const HEAD_STANDARD = {
   depth: 0, highlightAlpha: 0, shadowAlpha: 0,
   faceTopShade: 0, faceBottomShade: 0,
 };
 
-function paint(cv, kind, radius, palette, variant, box) {
+function paint(cv, kind, radius, palette, v, box) {
   // Wide enough for the WIDEST thing that can be drawn, which is a head at
   // iOS's flat 1.30 scale: the ufo saucer reaches 1.54 board radii from the
   // centre. Sizing this to the disc alone silently guillotined every hat and
@@ -327,19 +330,21 @@ function paint(cv, kind, radius, palette, variant, box) {
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   const x = w / 2;
   const midY = h / 2;
-  const disc = discEl.value;
-  if (variant === 'chip') {
-    if (disc === 'both') drawChipDisc(c, kind, x, midY, radius, palette, 1, chipHeadScale(kind));
-    else drawHeadPiece(c, kind, x, midY, radius, palette);
-  } else if (variant === 'flat') {
-    if (disc === 'both' || disc === 'flat') drawFlatDisc(c, kind, x, midY, radius, palette);
-    else drawHeadPiece(c, kind, x, midY, radius, palette, 1, HEAD_FLAT);
+  // Drawn the way drawStone draws it, glow included, so a cell here cannot
+  // show a look the board cannot produce.
+  const g = glowEl.value;
+  const rgb = FIGURES[kind].glowRgb;
+  if (v.key === 'chip') {
+    drawGlow(c, x, midY, radius, rgb, g);
+    drawHeadPiece(c, kind, x, midY, radius, palette, 1,
+      v.depth === 'dimensional' ? null : HEAD_STANDARD);
   } else {
     // Figures are drawn from the FEET up, so centring means dropping the
     // feet half the figure's own height below the middle.
-    const rf = variant === 'tall' ? radius : radius * 0.68;
+    const rf = radius * 0.68;
     const feetY = midY + (figureHeight(kind) * rf) / 2;
-    drawFigure(c, kind, x, feetY, rf, 1, { palette, finish: 'classic' });
+    drawFigureGlow(c, kind, x, feetY, rf, rgb, g);
+    drawFigure(c, kind, x, feetY, rf, 1, { palette, finish: v.depth });
   }
 }
 
@@ -412,7 +417,7 @@ function build() {
         const holder = document.createElement('div');
         holder.className = 'big';
         const cv = document.createElement('canvas');
-        paint(cv, kind, base, palette, v.key, box);
+        paint(cv, kind, base, palette, v, box);
         holder.appendChild(cv);
         vc.appendChild(holder);
         row.appendChild(vc);
@@ -428,7 +433,7 @@ function build() {
 
 themeEl.addEventListener('change', build);
 schemeEl.addEventListener('change', build);
-discEl.addEventListener('change', build);
+glowEl.addEventListener('change', build);
 sizeEl.addEventListener('input', build);
 document.getElementById('swap').addEventListener('click', () => { side = side ? 0 : 1; build(); });
 build();

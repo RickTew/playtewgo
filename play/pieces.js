@@ -1631,6 +1631,58 @@ export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null)
   return true;
 }
 
+/**
+ * Glow, one of Rick's five option axes (2026-08-22). One scale for BOTH
+ * pieces, because it is a property of the piece and not of the variant: it
+ * used to be hard-coded per variant (0.18 behind a figure, 0.06 behind a
+ * chip, 0.25 inside drawFigure) which meant three different things wore the
+ * same name and none of them could be turned off.
+ *
+ * Soft is the default and reproduces roughly what a figure used to carry, so
+ * nobody's board changes character unless they ask it to.
+ */
+export const GLOWS = [
+  { key: 'none', name: 'None', alpha: 0 },
+  { key: 'soft', name: 'Soft', alpha: 0.20 },
+  { key: 'bright', name: 'Bright', alpha: 0.45 },
+];
+
+export function glowAlpha(key) {
+  return (GLOWS.find((g) => g.key === key) ?? GLOWS[1]).alpha;
+}
+
+/**
+ * A figure's glow FOLLOWS ITS SILHOUETTE; a chip's is a circle. Same option,
+ * same alphas, two shapes, because a figure is about three cells tall and a
+ * circular halo centred on its intersection lights only the feet - it reads
+ * as a puddle the piece is standing in rather than as a glow.
+ */
+export function drawFigureGlow(ctx, kind, cx, feetY, r, glowRgb, key, alpha = 1) {
+  const a = glowAlpha(key) * alpha;
+  const f = FIGURES[kind];
+  if (a <= 0 || !f) return;
+  ctx.save();
+  ctx.fillStyle = `rgba(${glowRgb}, ${a})`;
+  tracePath(ctx, f.points, cx, feetY, r * 1.12);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** The halo behind a piece. Drawn by the board so both variants share it. */
+export function drawGlow(ctx, x, y, radius, glowRgb, key, alpha = 1) {
+  const a = glowAlpha(key) * alpha;
+  if (a <= 0) return;
+  const g = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 1.6);
+  g.addColorStop(0, `rgba(${glowRgb}, ${a})`);
+  g.addColorStop(1, `rgba(${glowRgb}, 0)`);
+  ctx.save();
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(x, y, radius * 1.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 export function traceFigure(ctx, kind, cx, feetY, r) {
   const f = FIGURES[kind];
   if (f) tracePath(ctx, f.points, cx, feetY, r);
@@ -1649,6 +1701,29 @@ export function drawFigure(ctx, kind, cx, feetY, r, alpha = 1, opts = {}) {
   const pal = opts.palette ?? f;
   ctx.save();
   ctx.globalAlpha = alpha;
+
+  // SEPARATION CONTOUR. A standing figure deliberately overhangs the cell
+  // above it, so figures overlap their neighbours by design, and without a
+  // hard edge they merge into each other. Leo said it twice in persona round
+  // 2 and it is the one change he asked for: "tall pieces visually overlap
+  // the piece on the dot above them (my robots looked stacked on each
+  // other's heads)" and "make my robot readable on the board ... tiny
+  // overlapping specks". Logged as round-2 finding 5 and routed to web on
+  // 2026-08-10.
+  //
+  // A stroke, not a glow. This is the whole point: a soft halo blurs INTO
+  // the neighbour it is supposed to separate from, which is why a glow was
+  // never going to fix this and why the chip won - a disc has a hard edge by
+  // construction and a glowing figure does not. Pieces are drawn top row
+  // first, so the nearer figure strokes over the one behind and cuts a clean
+  // line out of it.
+  if (opts.contour !== false) {
+    ctx.strokeStyle = 'rgba(8, 8, 14, 0.88)';
+    ctx.lineWidth = Math.max(1.5, r * 0.22);
+    ctx.lineJoin = 'round';
+    tracePath(ctx, f.points, cx, feetY, r);
+    ctx.stroke();
+  }
 
   if (opts.finish === 'dimensional') {
     // Stacked side-wall slices behind a gradient-shaded body with a
@@ -1686,11 +1761,13 @@ export function drawFigure(ctx, kind, cx, feetY, r, alpha = 1, opts = {}) {
     ctx.fill();
     ctx.restore();
   } else {
-    // Classic: glow silhouette behind a solid body
-    ctx.fillStyle = `rgba(${pal.glowRgb}, 0.25)`;
-    tracePath(ctx, f.points, cx, feetY, r * 1.1);
-    ctx.fill();
-
+    // Standard: a solid body. The scaled-up glow silhouette that used to sit
+    // behind it is GONE. It was doing the separation job badly, and while it
+    // was doing it badly glow could not be anything else - it was a permanent
+    // fixture rather than a thing a player picks. The contour above separates
+    // properly, which is what frees glow to become one of the five options
+    // (Rick, 2026-08-22: "2 pieces and 5 options for each piece (color,
+    // depth, glow, sounds (later), effect (later))"). The caller draws it now.
     ctx.fillStyle = pal.primary;
     ctx.strokeStyle = pal.stroke;
     ctx.lineWidth = Math.max(1, r * 0.08);
