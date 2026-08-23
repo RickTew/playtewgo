@@ -7,7 +7,7 @@ import { GameBoard, SIZE, ONE, TWO, opponentOf } from './engine/board.js';
 import { GameAI } from './engine/ai.js';
 import { encodeState, decodeState } from './engine/state.js';
 import { THEMES, NEUTRALS, sceneByKey, paintScene } from './themes.js';
-import { FIGURES, figureHeight, drawFigure, traceFigure, COLOR_SCHEMES, paletteFor, shadeHex, drawHeadPiece, drawGlow, drawFigureGlow, GLOWS } from './pieces.js';
+import { FIGURES, figureHeight, drawFigure, traceFigure, COLOR_SCHEMES, paletteFor, shadeHex, drawHeadPiece, drawFigureGlow, drawHeadGlow, GLOWS } from './pieces.js';
 import { boardsForTheme, boardByKey, paintBoardRect } from './boards.js';
 import { createProgression, GOLD_WIN_THRESHOLD, THEME_ORDER, THEME_UNLOCK_AFTER } from './engine/progression.js';
 import { startCheckout, handleReturn, restoreWithCode, savedCode } from './unlock.js';
@@ -208,6 +208,7 @@ function nameOf(player) {
 }
 let lastMove = null;
 let lastMover = null; // who played lastMove, for the "just played" glow
+let boardSurfaceIsLight = false; // set each board paint; read by the stones
 // Rick, 2026-08-10: the highlight has to be switchable off, so it can
 // never become the obvious annoying marker its predecessor was.
 // The ladder, in rung order, for the profile's per-level record.
@@ -338,9 +339,9 @@ function drawChosenPiece(c, kind, cx, cy, boxH, palette) {
   const rgb = palette.glowRgb ?? FIGURES[kind].glowRgb;
   if (variant === 'chip') {
     const r = boxH / 2.4;
-    drawGlow(c, cx, cy, r, rgb, glow);
-    drawHeadPiece(c, kind, cx, cy, r, palette, 1,
-      finish === 'dimensional' ? null : HEAD_STANDARD);
+    const headStyle = finish === 'dimensional' ? null : HEAD_STANDARD;
+    drawHeadGlow(c, kind, cx, cy, r, rgb, glow, 1, headStyle);
+    drawHeadPiece(c, kind, cx, cy, r, palette, 1, headStyle);
   } else {
     const r = boxH / figureHeight(kind);
     const feetY = cy + (figureHeight(kind) * r) / 2;
@@ -790,7 +791,8 @@ function drawStone(x, y, radius, player, alpha = 1) {
   const f = styleFor(player);
   if (variant === 'regular') {
     const rf = radius * 0.68;
-    drawFigureGlow(ctx, kind, x, y + radius * 0.98, rf, f.glowRgb, glow, alpha);
+    drawFigureGlow(ctx, kind, x, y + radius * 0.98, rf, f.glowRgb, glow, alpha,
+      boardSurfaceIsLight);
     // Ground shadow at the TRUE intersection (PieceRenderer.makeFigure
     // draws the same ellipse and the web port had dropped it). A standing
     // figure's body overhangs the cell above, so without this anchor the
@@ -807,7 +809,8 @@ function drawStone(x, y, radius, player, alpha = 1) {
     drawFigure(ctx, kind, x, y + radius * 0.98, rf, alpha, { palette: f, finish });
     return;
   }
-  drawGlow(ctx, x, y, radius, f.glowRgb, glow, alpha);
+  drawHeadGlow(ctx, kind, x, y, radius, f.glowRgb, glow, alpha,
+    finish === 'dimensional' ? null : HEAD_STANDARD, boardSurfaceIsLight);
   // Chip: the piece IS the chip now, so there is no disc under it and the
   // DEPTH axis is the whole difference between the two looks. 3D is the
   // character with its side swept under it; Standard is the same silhouette
@@ -847,6 +850,10 @@ function draw() {
   const lightSurface = boardKey !== 'none'
     ? !!boardByKey(boardKey)?.light
     : sceneByKey(sceneKey)?.light;
+  // The stones are drawn from their own function, and a halo has to know
+  // which way to lean: lifted toward white on a dark board, left as picked
+  // on a light one (iOS PieceRenderer.currentSurfaceIsLight).
+  boardSurfaceIsLight = !!lightSurface;
   if (gridStyle === 'grid' || gridStyle === 'boxes') {
     const count = gridStyle === 'boxes' ? SIZE + 1 : SIZE;
     const offset = gridStyle === 'boxes' ? -0.5 : 0;
@@ -2874,9 +2881,9 @@ function drawSetupPreview() {
     kinds.forEach((kind, i) => {
       const px = midX + (i === 0 ? -1 : 1) * cell;
       const pal = paletteFor(kind, i, colorScheme);
-      drawGlow(c, px, midY, r, pal.glowRgb, glow);
-      drawHeadPiece(c, kind, px, midY, r, pal, 1,
-        finish === 'dimensional' ? null : HEAD_STANDARD);
+      const headStyle = finish === 'dimensional' ? null : HEAD_STANDARD;
+      drawHeadGlow(c, kind, px, midY, r, pal.glowRgb, glow, 1, headStyle, light);
+      drawHeadPiece(c, kind, px, midY, r, pal, 1, headStyle);
     });
 
     c.save();

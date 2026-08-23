@@ -1570,18 +1570,29 @@ function headPieceExtent(kind) {
   return ext;
 }
 
-export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null) {
+/**
+ * The head's own scale for a given stone radius. Extracted so the halo can
+ * be measured in exactly the units the head is drawn in - a glow sized off
+ * the cell instead of off the piece is a glow that changes size per piece.
+ */
+export function headPieceScale(kind, radius, style = null) {
   const s = style ? { ...HEAD_STYLE, ...style } : HEAD_STYLE;
   const { W, H } = headPieceExtent(kind);
-  if (W <= 0 || H <= 0) return false;
+  if (W <= 0 || H <= 0) return 0;
   // Match the piece's AREA, then clamp so nothing outgrows its cell. See
   // HEAD_STYLE.area for why width-matching was wrong.
-  const unit = radius * s.fill;
-  const hs = unit * Math.min(
+  return radius * s.fill * Math.min(
     s.area / Math.sqrt(W * H),
     HEAD_PIECE_WIDTH / W,
     (HEAD_PIECE_WIDTH * s.maxTall) / H,
   );
+}
+
+export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null) {
+  const s = style ? { ...HEAD_STYLE, ...style } : HEAD_STYLE;
+  const { W, H } = headPieceExtent(kind);
+  if (W <= 0 || H <= 0) return false;
+  const hs = headPieceScale(kind, radius, style);
   // The DRAWN half-width and half-height. Both vary per piece now, and the
   // shading and shadow have to be measured against the real ones: a saucer
   // and a tall helmet cannot share one number.
@@ -1673,13 +1684,73 @@ export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null)
  * nobody's board changes character unless they ask it to.
  */
 export const GLOWS = [
-  { key: 'none', name: 'None', alpha: 0 },
-  { key: 'soft', name: 'Soft', alpha: 0.20 },
-  { key: 'bright', name: 'Bright', alpha: 0.45 },
+  { key: 'none', name: 'None', alpha: 0, reach: 0 },
+  { key: 'soft', name: 'Soft', alpha: 0.34, reach: 0.14 },
+  { key: 'bright', name: 'Bright', alpha: 0.70, reach: 0.30 },
 ];
 
 export function glowAlpha(key) {
   return (GLOWS.find((g) => g.key === key) ?? GLOWS[1]).alpha;
+}
+
+/**
+ * How far past the CONTOUR the halo reaches, in piece radii.
+ *
+ * A distance, not a scale factor, and that is the whole 2026-08-24 fix (iOS
+ * parity, PieceGlow.reach). It used to be a scale applied to the silhouette,
+ * and scaling grows a shape by a fraction of its OWN size: at Bright the
+ * robot's widest point gained 0.85r x 0.20 = 0.17r, against a separation
+ * contour half r*0.11 wide drawn straight over it. Almost nothing escaped,
+ * and what did escaped above the head, where it read as a dark box rather
+ * than as light. Measured on the shipping iOS build of the same code: None
+ * and Soft differed by NINE pixels on a whole board.
+ */
+export function glowReach(key) {
+  return (GLOWS.find((g) => g.key === key) ?? GLOWS[1]).reach;
+}
+
+/**
+ * Light READS as light by being lighter than what it comes off. A colour
+ * scheme sets the glow to that scheme's primary, so Noir asks for a black
+ * halo and Midnight for a navy one, neither visible on a dark board.
+ */
+function glowTint(rgbStr, lightSurface) {
+  if (lightSurface) return rgbStr;
+  return rgbStr.split(',')
+    .map((v) => Math.round(Math.min(255, Number(v) + (255 - Number(v)) * 0.35)))
+    .join(', ');
+}
+
+/**
+ * The shared halo: layered STROKES of the piece's own outline, each band
+ * wider and all at the same low alpha, so they accumulate to `alpha` at the
+ * silhouette and thin out at the edge.
+ *
+ * Stroked, not scaled: a stroke grows an outline by a fixed DISTANCE in
+ * every direction, which is what a light source does, and it lets the halo
+ * START where the hard edge drawn over it ends. Alpha spent under something
+ * opaque is alpha the player never sees.
+ */
+function strokeHalo(ctx, trace, r, glowRgb, key, alpha, clearing, lightSurface) {
+  const a = glowAlpha(key) * alpha;
+  const reach = glowReach(key);
+  if (a <= 0 || reach <= 0) return;
+  // Six, not four: at four the widths read as concentric rings on a boxy
+  // silhouette like the robot's.
+  const LAYERS = 6;
+  const per = 1 - Math.pow(1 - a, 1 / LAYERS);
+  ctx.save();
+  ctx.strokeStyle = `rgba(${glowTint(glowRgb, lightSurface)}, ${per})`;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  for (let i = LAYERS; i >= 1; i -= 1) {
+    // Doubled because a stroke straddles the path: half of every band falls
+    // inside the silhouette, under the body, and is never seen.
+    ctx.lineWidth = (clearing + reach * r * (i / LAYERS)) * 2;
+    trace();
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 /**
@@ -1688,39 +1759,30 @@ export function glowAlpha(key) {
  * circular halo centred on its intersection lights only the feet - it reads
  * as a puddle the piece is standing in rather than as a glow.
  */
-export function drawFigureGlow(ctx, kind, cx, feetY, r, glowRgb, key, alpha = 1) {
-  const a = glowAlpha(key) * alpha;
+export function drawFigureGlow(ctx, kind, cx, feetY, r, glowRgb, key, alpha = 1,
+  lightSurface = false) {
   const f = FIGURES[kind];
-  if (a <= 0 || !f) return;
+  if (!f) return;
+  // Clear the separation contour drawn over it, which is max(1.5, r*0.22)
+  // wide and straddles the same outline.
+  strokeHalo(ctx, () => tracePath(ctx, f.points, cx, feetY, r),
+    r, glowRgb, key, alpha, Math.max(1.5, r * 0.22) / 2, lightSurface);
+}
 
-  // LAYERED, never one scaled copy. A scaled silhouette is still a HARD-EDGED
-  // SHAPE: at Soft it passes as a rim, but at Bright it reads as a plate
-  // bolted behind the piece, straight edges and corners included, and the
-  // boxier the piece the worse it looks (the robot shows it, the alien hides
-  // it). Overlapping copies at rising scale and low alpha accumulate toward
-  // the silhouette and thin out at the edge, which is the same rule the
-  // painted backgrounds and the chip's sheen already follow: layered, never a
-  // single hard-edged shape.
-  //
-  // Six, not four: at four the scale steps read as concentric rings.
-  const LAYERS = 6;
-  const spread = key === 'bright' ? 0.20 : 0.14;
-  // Per-layer alpha chosen so the overlap accumulates to exactly `a` rather
-  // than to whatever six additions happen to reach.
-  const per = 1 - Math.pow(1 - a, 1 / LAYERS);
-  const h = figureHeight(kind);
-  ctx.save();
-  ctx.fillStyle = `rgba(${glowRgb}, ${per})`;
-  for (let i = LAYERS; i >= 1; i -= 1) {
-    const grow = 1 + spread * (i / LAYERS);
-    // A figure's path is measured from its FEET (y = 0 is the ground), so
-    // scaling it grows the figure UPWARD only and the piece ends up standing
-    // on the bottom edge of its own glow. Push each layer down by half the
-    // height it gained to centre it on the figure.
-    tracePath(ctx, f.points, cx, feetY + (grow - 1) * h * r * 0.5, r * grow);
-    ctx.fill();
-  }
-  ctx.restore();
+/**
+ * The FACE piece's halo, following the head's own outline instead of a
+ * circle around it. Same option, same numbers, same technique as the figure.
+ */
+export function drawHeadGlow(c, kind, x, y, radius, glowRgb, key, alpha = 1,
+  style = null, lightSurface = false) {
+  const s = style ? { ...HEAD_STYLE, ...style } : HEAD_STYLE;
+  const hs = headPieceScale(kind, radius, s);
+  if (hs <= 0) return;
+  // `hs` is the head's own scale, so measure the reach in it and the halo
+  // lands the same size on screen as a figure's does.
+  strokeHalo(c, () => traceChipHead(c, kind, x, y, hs),
+    hs, glowRgb, key, alpha,
+    Math.max(0.6, radius * s.outlineWidth) / 2, lightSurface);
 }
 
 /** The halo behind a piece. Drawn by the board so both variants share it. */

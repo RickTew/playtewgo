@@ -116,7 +116,7 @@
 </footer>
 
 <script type="module">
-import { FIGURES, drawHeadPiece, drawFigure, drawFigureGlow, drawGlow, GLOWS, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
+import { FIGURES, drawHeadPiece, drawFigure, drawFigureGlow, drawHeadGlow, GLOWS, figureHeight, COLOR_SCHEMES, paletteFor } from './pieces.js';
 import { THEMES } from './themes.js';
 
 const out = document.getElementById('out');
@@ -335,9 +335,9 @@ function paint(cv, kind, radius, palette, v, box) {
   const g = glowEl.value;
   const rgb = FIGURES[kind].glowRgb;
   if (v.key === 'chip') {
-    drawGlow(c, x, midY, radius, rgb, g);
-    drawHeadPiece(c, kind, x, midY, radius, palette, 1,
-      v.depth === 'dimensional' ? null : HEAD_STANDARD);
+    const headStyle = v.depth === 'dimensional' ? null : HEAD_STANDARD;
+    drawHeadGlow(c, kind, x, midY, radius, rgb, g, 1, headStyle);
+    drawHeadPiece(c, kind, x, midY, radius, palette, 1, headStyle);
   } else {
     // Figures are drawn from the FEET up, so centring means dropping the
     // feet half the figure's own height below the middle.
