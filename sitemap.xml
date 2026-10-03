@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The public pages of playtewgo.com, hand-kept because this site has no build
+  step (plain HTML served as-is by GitHub Pages). Every URL here is a page a
+  player should land on, written in the same form the site's own nav links use
+  (the .html form, and /play/ for the game).
+
+  Deliberately NOT listed, and already Disallow'd in robots.txt: /playtest/,
+  /tests/, /supabase/, /CLAUDE.md, /THEME_CHECKLIST.md, and the three design
+  explorations /play/concepts.html, /play/pieces.html, /play/chiptest.html.
+
+  lastmod is each page's own last commit date. Add a line here whenever a new
+  public page joins the site.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://playtewgo.com/</loc>
+    <lastmod>2026-08-21</lastmod>
+  </url>
+  <url>
+    <loc>https://playtewgo.com/play/</loc>
+    <lastmod>2026-08-22</lastmod>
+  </url>
+  <url>
+    <loc>https://playtewgo.com/about.html</loc>
+    <lastmod>2026-08-21</lastmod>
+  </url>
+  <url>
+    <loc>https://playtewgo.com/updates.html</loc>
+    <lastmod>2026-08-22</lastmod>
+  </url>
+  <url>
+    <loc>https://playtewgo.com/contact.html</loc>
+    <lastmod>2026-08-21</lastmod>
+  </url>
+  <url>
+    <loc>https://playtewgo.com/privacy.html</loc>
+    <lastmod>2026-08-21</lastmod>
+  </url>
+  <url>
+    <loc>https://playtewgo.com/terms.html</loc>
+    <lastmod>2026-08-21</lastmod>
+  </url>
+</urlset>
