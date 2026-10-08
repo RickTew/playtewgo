@@ -63,10 +63,12 @@ export const FIGURES = {
       // The SAME saucer the chip wears, at figure proportions: blunt rims
       // and a domed cockpit. The tall craft used to be a different shape
       // entirely, so the two variants read as two different vehicles.
-      [1.02, 0.62], [0.96, 0.80], [0.60, 0.94], [0.46, 1.22], [0.22, 1.52],
-      [0.00, 1.60], [-0.22, 1.52], [-0.46, 1.22], [-0.60, 0.94], [-0.96, 0.80],
-      [-1.02, 0.62], [-0.90, 0.46], [-0.50, 0.36], [0.00, 0.32], [0.50, 0.36],
-      [0.90, 0.46],
+      // LIFTED 1.25 off the board onto a beam of light (2026-10-08): sitting
+      // on the ground it read as a Face piece on a Stand board.
+      [1.02, 1.87], [0.96, 2.05], [0.6, 2.19], [0.46, 2.47], [0.22, 2.77],
+      [0.0, 2.85], [-0.22, 2.77], [-0.46, 2.47], [-0.6, 2.19], [-0.96, 2.05],
+      [-1.02, 1.87], [-0.9, 1.71], [-0.5, 1.61], [0.0, 1.57], [0.5, 1.61],
+      [0.9, 1.71],
     ],
   },
   // ----- Ocean roster (ThemeRegistry.ocean palettes) -----
@@ -469,11 +471,10 @@ const PAWN_POINTS = [
   [-0.30, 2.30], [-0.50, 2.10], [-0.30, 1.95], [-0.35, 1.40], [-0.45, 0.80],
   [-0.55, 0.45], [-0.85, 0.25], [-0.85, 0.00],
 ];
-const STONE_POINTS = [
-  [0.95, 0.00], [0.95, 0.20], [0.85, 0.45], [0.60, 0.70], [0.30, 0.85],
-  [0.00, 0.90], [-0.30, 0.85], [-0.60, 0.70], [-0.85, 0.45], [-0.95, 0.20],
-  [-0.95, 0.00],
-];
+// A small STACK of four stones (2026-10-08): one stone side-on was a low dome
+// half as tall as it was wide, so on a Stand board it read as a Face piece.
+// The Face is the single stone seen from above. iOS twin: stonePath.
+const STONE_POINTS = [[0.73, 0.0], [0.89, 0.1], [0.95, 0.28], [0.89, 0.44], [0.75, 0.52], [0.9, 0.6], [0.96, 0.78], [0.9, 0.94], [0.63, 1.02], [0.77, 1.1], [0.83, 1.28], [0.77, 1.44], [0.63, 1.52], [0.8, 1.6], [0.86, 1.78], [0.8, 1.94], [0.64, 2.04], [0.38, 2.1], [-0.32, 2.1], [-0.58, 2.04], [-0.74, 1.94], [-0.8, 1.78], [-0.74, 1.6], [-0.6, 1.52], [-0.85, 1.44], [-0.91, 1.28], [-0.85, 1.1], [-0.66, 1.02], [-0.8, 0.94], [-0.86, 0.78], [-0.8, 0.6], [-0.66, 0.52], [-0.89, 0.44], [-0.95, 0.28], [-0.89, 0.1], [-0.73, 0.0]];
 const ROOK_POINTS = [
   [0.85, 0.00], [0.85, 0.25], [0.55, 0.45], [0.48, 1.00], [0.45, 2.10],
   [0.62, 2.30], [0.62, 3.05], [0.36, 3.05], [0.36, 2.72], [0.13, 2.72],
@@ -487,11 +488,10 @@ const MEEPLE_POINTS = [
   [-0.50, 2.10], [-0.42, 1.80], [-0.88, 1.72], [-0.95, 1.30], [-0.52, 0.85],
   [-0.80, 0.40], [-0.80, 0.00], [-0.30, 0.00], [0.00, 0.45], [0.30, 0.00],
 ];
-const DICE_POINTS = [
-  [0.62, 0.00], [0.80, 0.18], [0.85, 0.50], [0.85, 1.20], [0.80, 1.52],
-  [0.62, 1.70], [-0.62, 1.70], [-0.80, 1.52], [-0.85, 1.20], [-0.85, 0.50],
-  [-0.80, 0.18], [-0.62, 0.00],
-];
+// A die STANDING: a cube on one corner, three faces showing (2026-10-08). It
+// lay flat face-on at half the height of every other Stand piece, so Rick saw
+// "face vs standing". Faces are shaded in drawEyeBand. iOS twin: dicePath.
+const DICE_POINTS = [[0, 0], [1.05, 0.606], [1.05, 1.819], [0, 2.425], [-1.05, 1.819], [-1.05, 0.606]];
 const HOURGLASS_POINTS = [
   [0.80, 0.00], [0.80, 0.20], [0.62, 0.32], [0.16, 1.22], [0.16, 1.42],
   [0.62, 2.32], [0.80, 2.44], [0.80, 2.64], [-0.80, 2.64], [-0.80, 2.44],
@@ -506,7 +506,7 @@ Object.assign(FIGURES, {
   },
   onyxStone: {
     name: 'Onyx Stone', primary: '#14141A', stroke: '#4D4D52',
-    glowRgb: '51, 51, 56', accent: '#4D4D52', points: STONE_POINTS,
+    glowRgb: '51, 51, 56', accent: '#4D4D52', band: 'stone', points: STONE_POINTS,
   },
   onyxRook: {
     name: 'Onyx Rook', primary: '#1F1F24', stroke: '#7A7A80',
@@ -522,7 +522,7 @@ Object.assign(FIGURES, {
   },
   ivoryStone: {
     name: 'Ivory Stone', primary: '#F7F5EB', stroke: '#9E998C',
-    glowRgb: '235, 235, 224', accent: '#9E998C', points: STONE_POINTS,
+    glowRgb: '235, 235, 224', accent: '#9E998C', band: 'stone', points: STONE_POINTS,
   },
   ivoryDie: {
     name: 'Ivory Die', primary: '#F5F2E6', stroke: '#8C8A80',
@@ -657,16 +657,43 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
     ctx.ellipse(cx - r * 0.20, at(2.86), r * 0.15, r * 0.10, -0.4, 0, Math.PI * 2);
     ctx.fill();
   } else if (kind === 'ufo') {
+    // The beam it hovers on: soft, widening to the board, layered so it fades
+    // rather than reading as a solid cone. Same three layers as iOS.
+    for (const [i, w] of [[1, 0.90], [2, 0.66], [3, 0.42]]) {
+      ctx.save();
+      ctx.globalAlpha *= i === 3 ? 0.16 : 0.10;
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 0.40 * w / 0.90, at(1.60));
+      ctx.lineTo(cx + r * 0.40 * w / 0.90, at(1.60));
+      ctx.lineTo(cx + r * w, at(0.04));
+      ctx.lineTo(cx - r * w, at(0.04));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
     ctx.fillStyle = accent;
     for (const dx of [-0.48, -0.17, 0.17, 0.48]) {
       ctx.beginPath();
-      ctx.arc(cx + dx * r, at(0.80), r * 0.07, 0, Math.PI * 2);
+      ctx.arc(cx + dx * r, at(1.98), r * 0.07, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.fillStyle = 'rgba(77, 255, 140, 0.30)';
     ctx.beginPath();
-    ctx.ellipse(cx, at(1.53), r * 0.29, r * 0.11, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, at(2.78), r * 0.29, r * 0.11, 0, 0, Math.PI * 2);
     ctx.fill();
+  } else if (kind === 'stone') {
+    // The seams between the stacked stones.
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha *= 0.85;
+    ctx.lineWidth = Math.max(0.8, r * 0.07);
+    ctx.lineCap = 'round';
+    for (const [y, x0, x1] of [[0.52, -0.60, 0.69], [1.02, -0.60, 0.57], [1.52, -0.54, 0.57]]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + x0 * r, at(y));
+      ctx.lineTo(cx + x1 * r, at(y));
+      ctx.stroke();
+    }
   } else if (kind === 'pirate') {
     // One eye, dark patch over the other, strap across the face
     ctx.fillStyle = '#0d0d0d';
@@ -939,16 +966,31 @@ function drawEyeBand(ctx, kind, cx, feetY, r, accent) {
       ctx.fill();
     }
   } else if (kind === 'dice') {
-    // FIVE, in the quincunx. Rick, 2026-08-22: "maybe the numbers should be 2
-    // or 5 ;) considering..." - TEW is 2 and GO is 5, so the die is not a
-    // neutral prop, it can say the name. Five over two because the quincunx
-    // is the face people picture when they picture a die, and it stays
-    // symmetric at 14px where a diagonal three read as a smear.
-    // If the tall ever becomes two dice stacked, that pair is 2 and 5.
-    ctx.fillStyle = '#0d0d0d';
-    for (const [dx, dy] of [[-0.42, 1.22], [0.42, 1.22], [0, 0.85], [-0.42, 0.48], [0.42, 0.48]]) {
+    // A cube on its corner. Faces by SHADING, not drawn edges: the top
+    // catches the light, the right side turns away from it.
+    const poly = (pts) => {
       ctx.beginPath();
-      ctx.arc(cx + dx * r, at(dy), r * 0.13, 0, Math.PI * 2);
+      pts.forEach(([x, y], i) => (i ? ctx.lineTo(cx + x * r, at(y)) : ctx.moveTo(cx + x * r, at(y))));
+      ctx.closePath();
+    };
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.30)';
+    poly([[0, 1.2125], [1.05, 1.819], [0, 2.425], [-1.05, 1.819]]);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    poly([[0, 0], [1.05, 0.606], [1.05, 1.819], [0, 1.2125]]);
+    ctx.fill();
+    // FIVE on top. Rick, 2026-08-22: TEW is 2 and GO is 5, so the die says
+    // the name. The sides show 1 and 3: on a real die 2 is opposite 5 and
+    // cannot show beside it.
+    ctx.fillStyle = '#0d0d0d';
+    for (const [dx, dy] of [[0, 1.515], [0.525, 1.818], [-0.525, 1.818], [0, 2.121], [0, 1.818]]) {
+      ctx.beginPath();
+      ctx.ellipse(cx + dx * r, at(dy), r * 0.12, r * 0.07, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (const [dx, dy, pr] of [[-0.525, 0.909, 0.11], [0.2625, 1.0605, 0.085], [0.525, 0.909, 0.085], [0.7875, 0.7575, 0.085]]) {
+      ctx.beginPath();
+      ctx.arc(cx + dx * r, at(dy), r * pr, 0, Math.PI * 2);
       ctx.fill();
     }
   } else if (kind === 'hourglass') {
@@ -1552,14 +1594,28 @@ export const HEAD_STYLE = {
    * different silhouettes side by side on a board.
    */
   area: 1.80,
+  /**
+   * SUPERSEDES `area` above (kept as the record of why). 2026-10-08: heads
+   * are matched on INK, the area actually filled, not on their bounding box.
+   * A box treats a solid octagon and a horned head with gaps as the same
+   * size, so on a board the solid ones carried up to twice the ink (Rick:
+   * "some seem bigger ... knight head could be more narrow a bit"; measured
+   * knight 1.40x the average, dragon 0.67x). 2.36 is the median head's ink
+   * under the old rule, so the middle of the roster does not move. iOS twin:
+   * PieceRenderer.headTargetInk.
+   */
+  ink: 2.36,
   maxTall: 1.15,
-  depth: 0.16,
+  // A fraction of the head's HEIGHT, as on iOS. 0.16 of the half WIDTH
+  // shipped until 2026-10-08 and was about two pixels on a phone, which is
+  // why Rick saw Face 3D and Face Standard "look almost exactly the same".
+  depth: 0.30,
   // 1 slice is a single hard offset copy, which reads as a sticker lifted off
   // the board. More slices sweep the path into a solid side.
   slices: 6,
   sideShade: -0.55,
-  faceTopShade: 0.08,
-  faceBottomShade: -0.22,
+  faceTopShade: 0.34,
+  faceBottomShade: -0.34,
   outline: true,
   outlineShade: 0.25,
   outlineWidth: 0.05,
@@ -1567,7 +1623,7 @@ export const HEAD_STYLE = {
   shadowDrop: 0.34,
   shadowRX: 0.66,
   shadowRY: 0.17,
-  highlightAlpha: 0.18,
+  highlightAlpha: 0.42,
 };
 
 const headExtentCache = new Map();
@@ -1576,11 +1632,17 @@ function headPieceExtent(kind) {
   const key = CHIP_HEAD_ALIAS[kind] ?? kind;
   if (headExtentCache.has(key)) return headExtentCache.get(key);
   const pts = CHIP_HEADS[key];
-  let ext = { W: 0, H: 0 };
+  let ext = { W: 0, H: 0, A: 0 };
   if (pts && pts.length) {
     const xs = pts.map((p) => p[0]);
     const ys = pts.map((p) => p[1]);
-    ext = { W: Math.max(...xs) - Math.min(...xs), H: Math.max(...ys) - Math.min(...ys) };
+    let a = 0;
+    for (let i = 0; i < pts.length; i += 1) {
+      const [x1, y1] = pts[i];
+      const [x2, y2] = pts[(i + 1) % pts.length];
+      a += x1 * y2 - x2 * y1;
+    }
+    ext = { W: Math.max(...xs) - Math.min(...xs), H: Math.max(...ys) - Math.min(...ys), A: Math.abs(a) / 2 };
   }
   headExtentCache.set(key, ext);
   return ext;
@@ -1593,12 +1655,12 @@ function headPieceExtent(kind) {
  */
 export function headPieceScale(kind, radius, style = null) {
   const s = style ? { ...HEAD_STYLE, ...style } : HEAD_STYLE;
-  const { W, H } = headPieceExtent(kind);
-  if (W <= 0 || H <= 0) return 0;
-  // Match the piece's AREA, then clamp so nothing outgrows its cell. See
-  // HEAD_STYLE.area for why width-matching was wrong.
+  const { W, H, A } = headPieceExtent(kind);
+  if (W <= 0 || H <= 0 || A <= 0) return 0;
+  // Match the piece's INK, then clamp so nothing outgrows its cell. See
+  // HEAD_STYLE.ink for why box area was wrong, and .area for why width was.
   return radius * s.fill * Math.min(
-    s.area / Math.sqrt(W * H),
+    Math.sqrt(s.ink / A),
     HEAD_PIECE_WIDTH / W,
     (HEAD_PIECE_WIDTH * s.maxTall) / H,
   );
@@ -1614,9 +1676,10 @@ export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null)
   // and a tall helmet cannot share one number.
   const half = (W * hs) / 2;
   const halfH = (H * hs) / 2;
-  // A stone seen from above shows a sliver of its rounded edge, never a wall
-  // (same 0.07 / 0.16 ratio as iOS), or it reads as a checker.
-  const drop = half * s.depth * ((CHIP_HEAD_ALIAS[kind] ?? kind) === 'stone' ? 0.44 : 1);
+  // A stone seen from above shows a sliver of its rounded edge, never a wall,
+  // or it reads as a checker (0.07 of its height, as on iOS).
+  const isStone = (CHIP_HEAD_ALIAS[kind] ?? kind) === 'stone';
+  const drop = 2 * halfH * (s.depth > 0 && isStone ? 0.07 : s.depth);
 
   c.save();
   c.globalAlpha = alpha;
@@ -1661,9 +1724,11 @@ export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null)
     c.save();
     traceChipHead(c, kind, x, y, hs);
     c.clip();
-    const hx = x;
-    const hy = y - halfH * 0.52;
-    const hr = Math.max(half * 0.58, 0.01);
+    // Up and to the left, so the light reads as coming from one place
+    // across the whole board (iOS softLight on the same box).
+    const hx = x - half * 0.24;
+    const hy = y - halfH * 0.58;
+    const hr = Math.max(half * 0.80, 0.01);
     const sheen = c.createRadialGradient(hx, hy, 0, hx, hy, hr);
     sheen.addColorStop(0, 'rgba(255, 255, 255, 1)');
     sheen.addColorStop(0.55, 'rgba(255, 255, 255, 0.45)');
@@ -1674,7 +1739,7 @@ export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null)
     // Squashed into the head's own proportions so a saucer gets a wide, low
     // sheen and a tall helmet gets a rounder one.
     c.translate(hx, hy);
-    c.scale(1, Math.max(0.25, halfH / half) * 0.85);
+    c.scale(1, Math.max(0.25, (halfH / half) * 0.78));
     c.translate(-hx, -hy);
     c.beginPath();
     c.arc(hx, hy, hr, 0, Math.PI * 2);
@@ -1866,15 +1931,15 @@ export function drawFigure(ctx, kind, cx, feetY, r, alpha = 1, opts = {}) {
   }
 
   if (opts.finish === 'dimensional') {
-    // Stacked side-wall slices behind a gradient-shaded body with a
-    // specular streak (PieceRenderer dimensional finish).
+    // Stacked side-wall slices behind a gradient-shaded body with a soft
+    // light (PieceRenderer dimensional finish, same numbers).
     for (let i = 5; i >= 1; i -= 1) {
       const t = i / 5;
       ctx.fillStyle = shadeHex(pal.primary, -0.55);
       ctx.strokeStyle = shadeHex(pal.stroke, -0.50);
       ctx.lineWidth = 0.8;
       ctx.lineJoin = 'round';
-      tracePath(ctx, f.points, cx + r * 0.14 * t, feetY + r * 0.10 * t, r);
+      tracePath(ctx, f.points, cx + r * 0.20 * t, feetY + r * 0.16 * t, r);
       ctx.fill();
       ctx.stroke();
     }
@@ -1889,15 +1954,32 @@ export function drawFigure(ctx, kind, cx, feetY, r, alpha = 1, opts = {}) {
     tracePath(ctx, f.points, cx, feetY, r);
     ctx.fill();
     ctx.stroke();
-    // Specular streak clipped to the silhouette
+    // A light that FADES, on the upper body and head, up and to the left.
+    // This was a hard-edged white ellipse at 0.30 alpha until 2026-10-08,
+    // which read as a streak painted down the piece: Rick, "the lighting
+    // effect is not good".
+    const xs = f.points.map((p) => p[0]);
+    const ys = f.points.map((p) => p[1]);
+    const minX = Math.min(...xs);
+    const w = Math.max(...xs) - minX;
+    const minY = Math.min(...ys);
+    const h = Math.max(...ys) - minY;
+    const lx = cx + (minX + w * 0.37) * r;
+    const ly = feetY - (minY + h * 0.69) * r;
+    const lr = Math.max(w * 0.35 * r, 0.01);
     ctx.save();
     tracePath(ctx, f.points, cx, feetY, r);
     ctx.clip();
-    ctx.translate(cx - r * 0.45, feetY - r * 1.3);
-    ctx.rotate(-0.18);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.30)';
+    const light = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+    light.addColorStop(0, 'rgba(255, 255, 255, 0.40)');
+    light.addColorStop(0.55, 'rgba(255, 255, 255, 0.18)');
+    light.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = light;
+    ctx.translate(lx, ly);
+    ctx.scale(1, Math.max(0.25, (h * 0.29) / (w * 0.35)));
+    ctx.translate(-lx, -ly);
     ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.25, r * 1.3, 0, 0, Math.PI * 2);
+    ctx.arc(lx, ly, lr, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   } else {
