@@ -90,7 +90,7 @@
 <body>
 <header>
   <h1><a href="/play/">TEW<span class="go">GO</span></a> <span id="worldName">Space</span> lab</h1>
-  <p class="lede">One world at a time: every piece, in every combination a player can actually pick. Drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. The slider is real board size &ndash; a phone board draws at about 14px, and anything that stops reading there will not read in play. Beside each name is a reference <b>icon and emoji</b>: not art, just a target. If the piece is harder to recognise than the icon, the piece needs work.</p>
+  <p class="lede">Every world on one page (pick one under World to narrow it): every piece, in every combination a player can actually pick. Drawn by the <b>same function the board uses</b>, so what you see here is what a game shows. The slider is real board size &ndash; a phone board draws at about 14px, and anything that stops reading there will not read in play. Beside each name is a reference <b>icon and emoji</b>: not art, just a target. If the piece is harder to recognise than the icon, the piece needs work.</p>
   <p class="lede"><b>Two pieces, five options.</b> The piece IS the chip now, so the round disc under it is gone and the roster is just <b>Stand</b> (what Half was) and <b>Face</b>. Each is drawn at both <b>depths</b>: Standard is the flat silhouette, 3D carries its own side. Face at Standard is what Flat used to be. Tall is no longer offered in the game, so it is not offered here either. Colour, depth and glow are three of the five option axes; sounds and effects come later. Figures now carry a <b>separation contour</b>, a hard edge so a piece in front cuts a clean line out of the one behind instead of merging into it.</p>
 </header>
 
@@ -142,17 +142,20 @@ for (const s of COLOR_SCHEMES) {
 }
 schemeEl.value = 'original';
 
+// All worlds FIRST and by default. Rick, 2026-10-08, opening the lab on
+// Space: "that is only 4 pieces but we had one with more". The option was
+// there, last in the list, which is the same as not being there.
+const all = document.createElement('option');
+all.value = '*';
+all.textContent = 'All worlds';
+themeEl.appendChild(all);
 for (const [key, def] of Object.entries(THEMES)) {
   const o = document.createElement('option');
   o.value = key;
   o.textContent = def.name;
   themeEl.appendChild(o);
 }
-const all = document.createElement('option');
-all.value = '*';
-all.textContent = 'All worlds';
-themeEl.appendChild(all);
-themeEl.value = 'space';
+themeEl.value = '*';
 
 // Tall first, Flat last. Reading left to right is then a story of the same
 // character being simplified, which is the thing you are actually judging:
