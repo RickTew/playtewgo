@@ -786,6 +786,8 @@ document.addEventListener('visibilitychange', () => {
 // silhouette as a logo; half = compact figure (~1 cell); tall = chess-style
 // figure that deliberately overhangs the cell above (drawn top row first,
 // so nearer pieces overlap ones behind).
+const CALM_SCENES = new Set(['katana', 'kraken', 'boneColossus', 'town', 'revolver', 'relics']);
+
 function drawStone(x, y, radius, player, alpha = 1) {
   const kind = pieceKind[player];
   const f = styleFor(player);
@@ -806,17 +808,18 @@ function drawStone(x, y, radius, player, alpha = 1) {
     ctx.ellipse(x, y + radius * 0.05, radius * 0.65, radius * 0.225, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    drawFigure(ctx, kind, x, y + radius * 0.98, rf, alpha, { palette: f, finish });
+    drawFigure(ctx, kind, x, y + radius * 0.98, rf, alpha, { palette: f, finish, lightSurface: boardSurfaceIsLight });
     return;
   }
   drawHeadGlow(ctx, kind, x, y, radius, f.glowRgb, glow, alpha,
-    finish === 'dimensional' ? null : HEAD_STANDARD, boardSurfaceIsLight);
+    finish === 'dimensional' ? null : HEAD_STANDARD, boardSurfaceIsLight, f.primary);
   // Chip: the piece IS the chip now, so there is no disc under it and the
   // DEPTH axis is the whole difference between the two looks. 3D is the
   // character with its side swept under it; Standard is the same silhouette
   // flat, which is what Flat used to be - Rick, 2026-08-22: "the flat can be
   // the non 3D removing that circle".
-  drawHeadPiece(ctx, kind, x, y, radius, f, alpha, finish === 'dimensional' ? null : HEAD_STANDARD);
+  drawHeadPiece(ctx, kind, x, y, radius, f, alpha,
+    { ...(finish === 'dimensional' ? {} : HEAD_STANDARD), lightSurface: boardSurfaceIsLight });
 }
 
 function draw() {
@@ -843,6 +846,28 @@ function draw() {
     const pad = m.cell * 0.55;
     paintBoardRect(ctx, boardKey, m.margin - pad, m.margin - pad,
       m.size - 2 * (m.margin - pad), m.size - 2 * (m.margin - pad));
+  }
+
+  // Scenes whose centrepiece sits right under the play area get a soft dark
+  // wash over the play area only (iOS calmsPlayArea / makePlayAreaCalm).
+  // Persona board test 2026-10-08: the dots vanished on these for all three
+  // players, and a long painted line across a five-in-a-row board "looks
+  // like a line on the board". Layered so the edge fades, never hard-edged.
+  if (boardKey === 'none' && CALM_SCENES.has(sceneKey)) {
+    const pad = m.cell * 0.55;
+    const lo = m.margin - pad;
+    const span = m.size - 2 * lo;
+    const layers = 5;
+    const per = 1 - Math.pow(1 - 0.42, 1 / layers);
+    ctx.save();
+    ctx.fillStyle = `rgba(0, 0, 0, ${per})`;
+    for (let i = 0; i < layers; i += 1) {
+      const inset = i * m.cell * 0.12 - m.cell * 0.18;
+      ctx.beginPath();
+      ctx.roundRect(lo + inset, lo + inset, span - 2 * inset, span - 2 * inset, m.cell * 0.4);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   // Grid per the iOS BoardStyle: dark overlay whenever the surface under

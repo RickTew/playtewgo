@@ -448,9 +448,11 @@ export const FIGURES = {
   },
   turtle: {
     name: 'Turtle',
-    primary: '#739966',
+    // Teal, not sage: the Snake is green too and all three persona players
+    // (2026-10-08) could not tell the sides apart. iOS twin in ThemeRegistry.
+    primary: '#2F8F83',
     stroke: '#8C6638',
-    glowRgb: '179, 230, 140',
+    glowRgb: '140, 230, 214',
     accent: '#1A1F1A',
     points: [
       [0.95, 0.00], [0.95, 0.40], [0.85, 1.10], [0.65, 1.80], [0.40, 2.20],
@@ -587,6 +589,38 @@ export function shadeHex(hex, f) {
     return Math.round(Math.min(255, Math.max(0, nv)));
   });
   return `#${ch.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Relative luminance of a #rrggbb colour (0 black, 1 white). */
+export function relLum(hex) {
+  const lin = (v) => { const c = v / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const [r, g, b] = hexChannels(hex);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+/**
+ * The separation contour normally MATCHES the surface, a gap cutting one
+ * figure out of the one behind it. That left a dark piece on a dark scene,
+ * or a white piece on a light one, with no edge at all. Persona board test
+ * 2026-10-08: three of three players named it as their one change ("a bright
+ * edge when a dark piece sits on a dark board, a dark edge when a white piece
+ * sits on a white board"). Only those two cases change. `lightSurface`
+ * undefined (lab, previews) keeps the old dark contour. iOS twin:
+ * PieceRenderer.contourColor.
+ */
+export const DARK_PIECE_LUM = 0.06;
+export const LIGHT_PIECE_LUM = 0.55;
+export function needsContrastRim(primary, lightSurface) {
+  if (lightSurface === undefined) return false;
+  const L = relLum(primary);
+  return (!lightSurface && L < DARK_PIECE_LUM) || (lightSurface && L > LIGHT_PIECE_LUM);
+}
+export function contourStyle(primary, lightSurface) {
+  if (lightSurface === undefined) return 'rgba(8, 8, 14, 0.88)';
+  const L = relLum(primary);
+  if (!lightSurface && L < DARK_PIECE_LUM) return 'rgba(255, 255, 255, 0.72)';
+  if (lightSurface && L > LIGHT_PIECE_LUM) return 'rgba(8, 8, 14, 0.85)';
+  return lightSurface ? 'rgba(255, 255, 255, 0.85)' : 'rgba(8, 8, 14, 0.88)';
 }
 
 export function hexToRgbStr(hex) {
@@ -1691,6 +1725,18 @@ export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null)
     c.fill();
   }
 
+  // A contrast rim only where the head would melt into the board (see
+  // contourStyle): around the face and, in 3D, around its swept side.
+  if (needsContrastRim(f.primary, s.lightSurface)) {
+    c.strokeStyle = contourStyle(f.primary, s.lightSurface);
+    c.lineWidth = Math.max(1.2, radius * 0.18);
+    c.lineJoin = 'round';
+    for (const d of drop > 0 ? [0, drop] : [0]) {
+      traceChipHead(c, kind, x, y + d, hs);
+      c.stroke();
+    }
+  }
+
   // The side: the same silhouette swept down. Drawn deepest first so the
   // stack unions into one solid body instead of reading as layers.
   if (drop > 0 && s.slices > 0) {
@@ -1862,15 +1908,20 @@ export function drawFigureGlow(ctx, kind, cx, feetY, r, glowRgb, key, alpha = 1,
  * circle around it. Same option, same numbers, same technique as the figure.
  */
 export function drawHeadGlow(c, kind, x, y, radius, glowRgb, key, alpha = 1,
-  style = null, lightSurface = false) {
+  style = null, lightSurface = false, primary = null) {
   const s = style ? { ...HEAD_STYLE, ...style } : HEAD_STYLE;
   const hs = headPieceScale(kind, radius, s);
   if (hs <= 0) return;
+  // The halo starts where whatever is drawn round the head ENDS: the thin
+  // outline, or the wider contrast rim when the head would otherwise melt
+  // into the board (iOS caught the rim covering the halo, 2026-10-08).
+  const edge = primary && needsContrastRim(primary, lightSurface)
+    ? Math.max(1.2, radius * 0.18)
+    : Math.max(0.6, radius * s.outlineWidth);
   // `hs` is the head's own scale, so measure the reach in it and the halo
   // lands the same size on screen as a figure's does.
   strokeHalo(c, () => traceChipHead(c, kind, x, y, hs),
-    hs, glowRgb, key, alpha,
-    Math.max(0.6, radius * s.outlineWidth) / 2, lightSurface);
+    hs, glowRgb, key, alpha, edge / 2, lightSurface);
 }
 
 /** The halo behind a piece. Drawn by the board so both variants share it. */
@@ -1923,7 +1974,7 @@ export function drawFigure(ctx, kind, cx, feetY, r, alpha = 1, opts = {}) {
   // first, so the nearer figure strokes over the one behind and cuts a clean
   // line out of it.
   if (opts.contour !== false) {
-    ctx.strokeStyle = 'rgba(8, 8, 14, 0.88)';
+    ctx.strokeStyle = contourStyle(pal.primary, opts.lightSurface);
     ctx.lineWidth = Math.max(1.5, r * 0.22);
     ctx.lineJoin = 'round';
     tracePath(ctx, f.points, cx, feetY, r);

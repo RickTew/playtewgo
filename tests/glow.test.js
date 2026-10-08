@@ -95,6 +95,24 @@ test('every head halo clears the face outline and scales with the head', () => {
   }
 });
 
+test('a dark head on a dark board keeps its whole halo outside the contrast rim', () => {
+  // The rim added 2026-10-08 is wider than the outline. If the halo still
+  // started at the outline, the rim would cover its inner third - iOS's
+  // PieceGlowTests caught exactly that on ten dark heads. Watched failing
+  // without the fix: ninja/soft cleared the rim by 8.88pt, needs 11.48pt.
+  const rimHalf = Math.max(1.2, R * 0.18) / 2;
+  for (const kind of ['ninja', 'onyxStone', 'anubis', 'outlaw']) {
+    const hs = headPieceScale(kind, R, null);
+    for (const key of ['soft', 'bright']) {
+      const c = recordingCtx();
+      drawHeadGlow(c, kind, 0, 0, R, FIGURES[kind].glowRgb, key, 1, null, false, FIGURES[kind].primary);
+      const clearance = Math.max(...c.widths) / 2 - rimHalf;
+      assert.ok(clearance >= glowReach(key) * hs - 0.01,
+        `${kind}/${key}: halo clears the rim by ${clearance.toFixed(2)}pt, needs ${(glowReach(key) * hs).toFixed(2)}pt`);
+    }
+  }
+});
+
 test('Bright is visibly more than Soft on both pieces', () => {
   for (const draw of [
     (c, key) => drawFigureGlow(c, 'robot', 0, 0, R, FIGURES.robot.glowRgb, key),
