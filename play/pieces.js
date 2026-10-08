@@ -536,6 +536,19 @@ Object.assign(FIGURES, {
 
 export const FIGURE_KINDS = Object.keys(FIGURES);
 
+/**
+ * Per-piece size trims Rick asked for by eye on a real board (2026-10-08),
+ * as [x, y] multipliers. iOS twin: PieceRenderer.figureTrim / headTrim.
+ * Head trims apply AFTER the size rule (headPieceExtent reads the untrimmed
+ * points), because the rule matches area and would grow a narrowed head
+ * back taller. Figures have no size rule, so their points are trimmed once.
+ */
+export const FIGURE_TRIM = { scarab: [0.90, 1] };
+export const HEAD_TRIM = { knight: [0.86, 1], mummy: [0.92, 1], hourglass: [1, 0.85] };
+for (const [k, [tx, ty]] of Object.entries(FIGURE_TRIM)) {
+  FIGURES[k].points = FIGURES[k].points.map(([x, y]) => [x * tx, y * ty]);
+}
+
 /** Height of a figure in r units (feet at 0). */
 export function figureHeight(kind) {
   return Math.max(...FIGURES[kind].points.map((p) => p[1]));
@@ -1002,7 +1015,8 @@ export const CHIP_HEADS = {
   sheriff: [[0.32,0.32],[0.42,0.05],[0.85,-0.1],[0.55,-0.22],[0.42,-0.42],[0.1,-0.42],[0,-0.55],[-0.1,-0.42],[-0.42,-0.42],[-0.55,-0.22],[-0.85,-0.1],[-0.42,0.05],[-0.32,0.32]],
   skeleton: [[0.3,0.32],[0.42,0.05],[0.5,-0.2],[0.36,-0.42],[0,-0.5],[-0.36,-0.42],[-0.5,-0.2],[-0.42,0.05],[-0.3,0.32]],
   snake: [[0.2,0.32],[0.32,-0],[0.62,-0.2],[0.45,-0.42],[0.18,-0.5],[0,-0.42],[-0.18,-0.5],[-0.45,-0.42],[-0.62,-0.2],[-0.32,-0],[-0.2,0.32]],
-  stone: [[0.55,0.32],[0.55,-0],[0.42,-0.3],[0,-0.45],[-0.42,-0.3],[-0.55,-0],[-0.55,0.32]],
+  // Top-down: a real stone seen from above (Rick, 2026-10-08). Same 32 points as iOS chipHeadPath(.stone).
+  stone: [[0.5,0.0],[0.4904,0.0975],[0.4619,0.1913],[0.4157,0.2778],[0.3536,0.3536],[0.2778,0.4157],[0.1913,0.4619],[0.0975,0.4904],[0.0,0.5],[-0.0975,0.4904],[-0.1913,0.4619],[-0.2778,0.4157],[-0.3536,0.3536],[-0.4157,0.2778],[-0.4619,0.1913],[-0.4904,0.0975],[-0.5,0.0],[-0.4904,-0.0975],[-0.4619,-0.1913],[-0.4157,-0.2778],[-0.3536,-0.3536],[-0.2778,-0.4157],[-0.1913,-0.4619],[-0.0975,-0.4904],[-0.0,-0.5],[0.0975,-0.4904],[0.1913,-0.4619],[0.2778,-0.4157],[0.3536,-0.3536],[0.4157,-0.2778],[0.4619,-0.1913],[0.4904,-0.0975]],
   turtle: [[0.5,0.32],[0.44,-0.05],[0.32,-0.2],[0.18,-0.4],[0,-0.46],[-0.18,-0.4],[-0.32,-0.2],[-0.44,-0.05],[-0.5,0.32]],
   ufo: [[0.74,0.08],[0.7,-0.02],[0.44,-0.1],[0.34,-0.28],[0.16,-0.44],[0,-0.48],[-0.16,-0.44],[-0.34,-0.28],[-0.44,-0.1],[-0.7,-0.02],[-0.74,0.08],[-0.66,0.18],[-0.4,0.26],[0,0.32],[0.4,0.26],[0.66,0.18]],
   vampire: [[0.42,0.32],[0.46,-0.1],[0.3,-0.32],[0.1,-0.3],[0,-0.5],[-0.1,-0.3],[-0.3,-0.32],[-0.46,-0.1],[-0.42,0.32]],
@@ -1022,12 +1036,14 @@ const CHIP_HEAD_ALIAS = {
  *  when there is no head for that kind so callers can fall back rather than
  *  draw nothing. */
 export function traceChipHead(ctx, kind, cx, cy, r) {
-  const pts = CHIP_HEADS[CHIP_HEAD_ALIAS[kind] ?? kind];
+  const key = CHIP_HEAD_ALIAS[kind] ?? kind;
+  const pts = CHIP_HEADS[key];
   if (!pts || pts.length < 3) return false;
+  const [tx, ty] = HEAD_TRIM[key] ?? [1, 1];
   ctx.beginPath();
-  ctx.moveTo(cx + pts[0][0] * r, cy + pts[0][1] * r);
+  ctx.moveTo(cx + pts[0][0] * r * tx, cy + pts[0][1] * r * ty);
   for (let i = 1; i < pts.length; i += 1) {
-    ctx.lineTo(cx + pts[i][0] * r, cy + pts[i][1] * r);
+    ctx.lineTo(cx + pts[i][0] * r * tx, cy + pts[i][1] * r * ty);
   }
   ctx.closePath();
   return true;
@@ -1598,7 +1614,9 @@ export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null)
   // and a tall helmet cannot share one number.
   const half = (W * hs) / 2;
   const halfH = (H * hs) / 2;
-  const drop = half * s.depth;
+  // A stone seen from above shows a sliver of its rounded edge, never a wall
+  // (same 0.07 / 0.16 ratio as iOS), or it reads as a checker.
+  const drop = half * s.depth * ((CHIP_HEAD_ALIAS[kind] ?? kind) === 'stone' ? 0.44 : 1);
 
   c.save();
   c.globalAlpha = alpha;
@@ -1668,7 +1686,12 @@ export function drawHeadPiece(c, kind, x, y, radius, f, alpha = 1, style = null)
   // The eyes are still what turn a silhouette into a face, and they matter
   // MORE here: there is no disc left to say "this is a piece", so the face
   // is carrying the whole read.
-  drawChipEyes(c, kind, x, y, hs, f.accent);
+  const [etx, ety] = HEAD_TRIM[CHIP_HEAD_ALIAS[kind] ?? kind] ?? [1, 1];
+  c.save();
+  c.translate(x, y);
+  c.scale(etx, ety);
+  drawChipEyes(c, kind, 0, 0, hs, f.accent);
+  c.restore();
   c.restore();
   return true;
 }
@@ -1894,6 +1917,9 @@ export function drawFigure(ctx, kind, cx, feetY, r, alpha = 1, opts = {}) {
     ctx.stroke();
   }
 
+  const ft = FIGURE_TRIM[kind];
+  if (ft) { ctx.save(); ctx.translate(cx, feetY); ctx.scale(ft[0], ft[1]); ctx.translate(-cx, -feetY); }
   drawEyeBand(ctx, f.band ?? kind, cx, feetY, r, f.accent);
+  if (ft) ctx.restore();
   ctx.restore();
 }
